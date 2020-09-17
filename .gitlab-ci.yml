@@ -1,0 +1,73 @@
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Go.gitlab-ci.yml
+
+image: golang:latest
+
+variables:
+  # Please edit to your GitLab project
+  REPO_NAME: github.com/develatio/nebulant-cli
+
+# The problem is that to be able to use go get, one needs to put
+# the repository in the $GOPATH. So for example if your gitlab domain
+# is gitlab.com, and that your repository is namespace/project, and
+# the default GOPATH being /go, then you'd need to have your
+# repository in /go/src/gitlab.com/namespace/project
+# Thus, making a symbolic link corrects this.
+before_script:
+  - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
+  - ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
+  - cd $GOPATH/src/$REPO_NAME
+
+stages:
+  - analysis
+  # - analysis
+  # - build
+  # - deploy
+
+unittest:
+  stage: analysis
+  script:
+    - make cover
+
+  rules:
+    - if: $CI_COMMIT_MESSAGE =~ /skip[-_]all/
+      when: never
+    - if: $CI_COMMIT_MESSAGE =~ /skip[-_]unittest/
+      when: never
+    - if: $CI_COMMIT_MESSAGE =~ /Merge tag \'[\w.]+\' into develop/
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: on_success
+    - when: never
+
+self:
+  stage: analysis
+  script:
+    - make builddebug
+    - echo $BLUEPRINT >/tmp/blueprint.json
+    - ./bin/nebulant-debug /tmp/blueprint.json
+
+  rules:
+    - if: $CI_COMMIT_MESSAGE =~ /skip[-_]all/
+      when: never
+    - if: $CI_COMMIT_MESSAGE =~ /skip[-_]self/
+      when: never
+    - if: $CI_COMMIT_MESSAGE =~ /Merge tag \'[\w.]+\' into develop/
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: on_success
+    - when: never
+
+# compile:
+#   stage: build
+#   script:
+#     - make build
+#   artifacts:
+#     paths:
+#       - bin

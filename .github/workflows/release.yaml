@@ -1,0 +1,166 @@
+name: release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build_release:
+    name: build_release
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: version
+        run: echo "::set-output name=version::$(make cliversion)"
+        id: version
+
+      - name: versiondate
+        run: echo "::set-output name=versiondate::$(make versiondate)"
+        id: versiondate
+
+      - name: goversion
+        run: echo "::set-output name=goversion::$(make goversion)"
+        id: goversion
+
+      - name: prerelease
+        run: echo "::set-output name=prerelease::$(make ispre)"
+        id: prerelease
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ steps.goversion.outputs.goversion }}
+
+      - name: build artifacts
+        run: make reproducible_buildall
+
+      - name: create release notes
+        run: shasum bin/* > SHASUM && mkdir -p tmp && cp RELEASE.md tmp/NOTES.md && echo -e "\n## SHASUM\n\`\`\`" >> tmp/NOTES.md && cat SHASUM >> tmp/NOTES.md && echo -e "\n\`\`\`" >> tmp/NOTES.md
+  
+
+      - name: release
+        uses: actions/create-release@v1
+        id: create_release
+        with:
+          draft: false
+          prerelease: ${{ fromJSON(steps.prerelease.outputs.prerelease) }}
+          release_name: nebulant-cli ${{ steps.version.outputs.version }}
+          tag_name: ${{ github.ref }}
+          body_path: tmp/NOTES.md
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: upload linux-arm artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-linux-arm
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-linux-arm
+          asset_content_type: application/x-executable
+
+      - name: upload linux-arm64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-linux-arm64
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-linux-arm64
+          asset_content_type: application/x-executable
+
+      - name: upload linux-386 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-linux-386
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-linux-386
+          asset_content_type: application/x-executable
+
+      - name: upload linux-amd64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-linux-amd64
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-linux-amd64
+          asset_content_type: application/x-executable
+
+      - name: upload freebsd-386 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-freebsd-386
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-freebsd-386
+          asset_content_type: application/x-executable
+
+      - name: upload openbsd-386 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-openbsd-386
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-openbsd-386
+          asset_content_type: application/x-executable
+
+      - name: upload windows-amd64.exe artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-windows-amd64.exe
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-windows-amd64.exe
+          asset_content_type: application/x-dosexec
+
+      - name: upload windows-arm.exe artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-windows-arm.exe
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-windows-arm.exe
+          asset_content_type: application/x-dosexec
+
+      - name: upload darwin-amd64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64
+          asset_content_type: application/x-mach-binary
+
+      - name: upload darwin-arm64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64
+          asset_content_type: application/x-mach-binary
+
+      - name: upload shasum artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./SHASUM
+          asset_name: SHASUM
+          asset_content_type: text/plain
