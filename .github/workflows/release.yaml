@@ -6,30 +6,18 @@ on:
       - '*'
 
 jobs:
-  build_release:
-    name: build_release
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-
-      - name: version
-        run: echo "::set-output name=version::$(make cliversion)"
-        id: version
-
-      - name: versiondate
-        run: echo "::set-output name=versiondate::$(make versiondate)"
-        id: versiondate
-
+  
       - name: goversion
         run: echo "::set-output name=goversion::$(make goversion)"
         id: goversion
-
-      - name: prerelease
-        run: echo "::set-output name=prerelease::$(make ispre)"
-        id: prerelease
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -39,9 +27,100 @@ jobs:
       - name: build artifacts
         run: make reproducible_buildall
 
-      - name: create release notes
-        run: shasum bin/* > SHASUM && mkdir -p tmp && cp RELEASE.md tmp/NOTES.md && echo -e "\n## SHASUM\n\`\`\`" >> tmp/NOTES.md && cat SHASUM >> tmp/NOTES.md && echo -e "\n\`\`\`" >> tmp/NOTES.md
+      - name: Upload binary artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: bin
+          path: bin/
+
+  sign_darwin:
+    needs: build
+    name: Sign Darwin
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Version
+        run: echo "::set-output name=version::$(make cliversion)"
+        id: version
+
+      - name: Versiondate
+        run: echo "::set-output name=versiondate::$(make versiondate)"
+        id: versiondate
   
+      - name: Prerelease
+        run: echo "::set-output name=prerelease::$(make ispre)"
+        id: prerelease
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: bin
+          path: bin/
+
+      - name: Import Certificates
+        uses: Apple-Actions/import-codesign-certs@v1
+        with:
+          p12-file-base64: ${{ secrets.DEVELOPER_ID_CERT }}
+          p12-password: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
+
+      - name: Sign darwin amd64 binary
+        run: codesign -s EF141CA55650788DF2FFE58E51071F048243BFE6 -o runtime --timestamp -f -v ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64
+
+      - name: Sign darwin arm64 binary
+        run: codesign -s EF141CA55650788DF2FFE58E51071F048243BFE6 -o runtime --timestamp -f -v ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64
+
+      - name: Compress darwin amd64 binary
+        run: zip ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64.zip ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64
+
+      - name: Compress darwin arm64 binary
+        run: zip ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64.zip ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64
+
+      - name: Set up atool
+        run: xcrun altool --store-password-in-keychain-item altool -u ${{ secrets.APPLE_ID_APPLICATION_USERNAME }} -p ${{ secrets.APPLE_ID_APPLICATION_PASSWORD }}
+
+      - name: Notarize darwin amd64 binary
+        run: xcrun altool --notarize-app --primary-bundle-id io.develatio.nebulant-cli --username ${{ secrets.APPLE_ID_APPLICATION_USERNAME }} --password "@keychain:altool" --file ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64.zip
+
+      - name: Notarize darwin arm64 binary
+        run: xcrun altool --notarize-app --primary-bundle-id io.develatio.nebulant-cli --username ${{ secrets.APPLE_ID_APPLICATION_USERNAME }} --password "@keychain:altool" --file ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64.zip
+
+      - name: Upload binary artifacts (darwin signed)
+        uses: actions/upload-artifact@v2
+        with:
+          name: bin
+          path: bin/
+
+
+  release:
+    needs: sign_darwin
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: bin
+          path: bin/
+
+      - name: Version
+        run: echo "::set-output name=version::$(make cliversion)"
+        id: version
+
+      - name: Versiondate
+        run: echo "::set-output name=versiondate::$(make versiondate)"
+        id: versiondate
+  
+      - name: Prerelease
+        run: echo "::set-output name=prerelease::$(make ispre)"
+        id: prerelease
+
+      - name: Create release notes
+        run: shasum bin/* > SHASUM && mkdir -p tmp && cp RELEASE.md tmp/NOTES.md && echo -e "\n## SHASUM\n\`\`\`" >> tmp/NOTES.md && cat SHASUM >> tmp/NOTES.md && echo -e "\n\`\`\`" >> tmp/NOTES.md
 
       - name: release
         uses: actions/create-release@v1
@@ -55,7 +134,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: upload linux-arm artifact
+      - name: Upload linux-arm artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -65,7 +144,7 @@ jobs:
           asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-linux-arm
           asset_content_type: application/x-executable
 
-      - name: upload linux-arm64 artifact
+      - name: Upload linux-arm64 artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -75,7 +154,7 @@ jobs:
           asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-linux-arm64
           asset_content_type: application/x-executable
 
-      - name: upload linux-386 artifact
+      - name: Upload linux-386 artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -85,7 +164,7 @@ jobs:
           asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-linux-386
           asset_content_type: application/x-executable
 
-      - name: upload linux-amd64 artifact
+      - name: Upload linux-amd64 artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -95,7 +174,7 @@ jobs:
           asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-linux-amd64
           asset_content_type: application/x-executable
 
-      - name: upload freebsd-386 artifact
+      - name: Upload freebsd-386 artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -105,7 +184,7 @@ jobs:
           asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-freebsd-386
           asset_content_type: application/x-executable
 
-      - name: upload openbsd-386 artifact
+      - name: Upload openbsd-386 artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -115,7 +194,7 @@ jobs:
           asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-openbsd-386
           asset_content_type: application/x-executable
 
-      - name: upload windows-amd64.exe artifact
+      - name: Upload windows-amd64.exe artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -125,7 +204,7 @@ jobs:
           asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-windows-amd64.exe
           asset_content_type: application/x-dosexec
 
-      - name: upload windows-arm.exe artifact
+      - name: Upload windows-arm.exe artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -135,27 +214,27 @@ jobs:
           asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-windows-arm.exe
           asset_content_type: application/x-dosexec
 
-      - name: upload darwin-amd64 artifact
+      - name: Upload darwin-amd64 artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64
-          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64.zip
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64.zip
           asset_content_type: application/x-mach-binary
 
-      - name: upload darwin-arm64 artifact
+      - name: Upload darwin-arm64 artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64
-          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64.zip
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64.zip
           asset_content_type: application/x-mach-binary
 
-      - name: upload shasum artifact
+      - name: Upload shasum artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
