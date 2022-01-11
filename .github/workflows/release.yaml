@@ -72,10 +72,10 @@ jobs:
         run: codesign -s EF141CA55650788DF2FFE58E51071F048243BFE6 -o runtime --timestamp -f -v ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64
 
       - name: Compress darwin amd64 binary
-        run: zip ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64.zip ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64
+        run: zip -jrm ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64.zip ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64
 
       - name: Compress darwin arm64 binary
-        run: zip ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64.zip ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64
+        run: zip -jrm ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64.zip ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64
 
       - name: Set up atool
         run: xcrun altool --store-password-in-keychain-item altool -u ${{ secrets.APPLE_ID_APPLICATION_USERNAME }} -p ${{ secrets.APPLE_ID_APPLICATION_PASSWORD }}
