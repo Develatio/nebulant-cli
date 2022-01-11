@@ -155,6 +155,27 @@ func NewFromBuilder(data []byte) (*Blueprint, error) {
 	return &bp, nil
 }
 
+func NewIRBFromAny(any string) (*IRBlueprint, error) {
+	var bp *Blueprint
+	var err error
+	if len(any) > 11 && any[:11] == "nebulant://" {
+		bp, err = NewFromBackend(any[11:])
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		bp, err = NewFromFile(any)
+		if err != nil {
+			return nil, err
+		}
+	}
+	irb, err := GenerateIRB(bp, &IRBGenConfig{})
+	if err != nil {
+		return nil, err
+	}
+	return irb, nil
+}
+
 // NewFromBackend func
 func NewFromBackend(uuid string) (*Blueprint, error) {
 	if config.CREDENTIALS.AuthToken == nil {

@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/develatio/nebulant-cli/base"
@@ -34,6 +35,23 @@ import (
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/gorilla/websocket"
 )
+
+var ServerWaiter *sync.WaitGroup = &sync.WaitGroup{}
+var ServerError error
+
+func InitServerMode(port string) {
+	ServerError = nil
+	ServerWaiter.Add(1) // Append +1 waiter
+	go func() {
+		defer ServerWaiter.Done() // Append -1 waiter
+		srv := &Httpd{}
+		addr := "localhost:" + port
+		err := srv.Serve(&addr) // serve to address serverModeFlag
+		if err != nil {
+			ServerError = err
+		}
+	}()
+}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -230,6 +248,8 @@ func (h *Httpd) Serve(addr *string) error {
 	}
 
 	// start server
+
+	cast.LogInfo("The server mode is designed to be used with the Builder: "+config.FrontUrl, nil)
 	cast.LogInfo("Listening on "+*addr, nil)
 	http.HandleFunc("/", h.route)
 	err := http.ListenAndServe(*addr, nil)

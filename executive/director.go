@@ -32,10 +32,9 @@ import (
 var MDirector *Director
 
 // InitDirector func
-func InitDirector(oneRun bool) {
+func InitDirector(serverMode bool, interactiveMode bool) error {
 	if MDirector != nil {
-		cast.LogErr("Director already running", nil)
-		return
+		return fmt.Errorf("director already running")
 	}
 	directorWaiter := &sync.WaitGroup{}
 	directorWaiter.Add(1) // self
@@ -46,15 +45,18 @@ func InitDirector(oneRun bool) {
 		ExecInstruction:   make(chan *ExecCtrlInstruction, 10),
 		UnregisterManager: make(chan *Manager, 10),
 		directorWaiter:    directorWaiter,
-		serverMode:        oneRun,
+		serverMode:        serverMode,
+		interactiveMode:   interactiveMode,
 	}
 	go MDirector.startDirector()
+	return nil
 }
 
 // Director struct
 type Director struct {
 	ExecInstruction   chan *ExecCtrlInstruction
 	serverMode        bool
+	interactiveMode   bool
 	HandleIRB         chan *blueprint.IRBlueprint
 	UnregisterManager chan *Manager
 	StopDirector      chan int
@@ -67,6 +69,10 @@ type Director struct {
 // Wait func
 func (d *Director) Wait() {
 	d.directorWaiter.Wait()
+}
+
+func (d *Director) Clean() {
+	MDirector = nil
 }
 
 // startDirector func
@@ -132,7 +138,7 @@ L:
 							cast.LogErr(v, irb.BP.ExecutionUUID)
 							cast.LogErr(string(debug.Stack()), irb.BP.ExecutionUUID)
 						}
-						if !d.serverMode {
+						if !d.serverMode && !d.interactiveMode {
 							os.Exit(1)
 						}
 					}

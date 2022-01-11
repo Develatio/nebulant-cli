@@ -28,15 +28,15 @@ import (
 	// _ "net/http/pprof"
 	// grmon "github.com/bcicen/grmon/agent"
 
-	"sync"
-
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/interactive"
 	"github.com/develatio/nebulant-cli/providers/aws"
 	"github.com/develatio/nebulant-cli/providers/azure"
 	"github.com/develatio/nebulant-cli/providers/generic"
+	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 )
 
@@ -77,34 +77,32 @@ func main() {
 	}()
 
 	var serverModeFlag = flag.Bool("d", false, "Enable server mode at localhost:15678 to use within Nebulant Pipeline Builder.")
-	var versionFlag = flag.Bool("v", false, "Show version and exit")
-	var debugFlag = flag.Bool("vv", false, "Enable debug")
+	var versionFlag = flag.Bool("v", false, "Show version and exit.")
+	var debugFlag = flag.Bool("vv", false, "Enable debug.")
 	var mFlag = flag.Bool("m", false, "Disable colors.")
 
 	flag.Parse()
 	args := flag.Args()
 	bluePrintFilePath := flag.Arg(0)
 
+	// Version and exit
 	if *versionFlag {
-		fmt.Println("Nebulant - A cloud builder by develat.io", config.Version, config.VersionDate)
+		fmt.Println("Nebulant CLI - A cloud builder by develat.io", config.Version, config.VersionDate)
 		os.Exit(0)
 	}
 
-	// Need at least a file config or server mode
-	if len(args) <= 0 && !*serverModeFlag {
-		fmt.Println("Nebulant - A cloud builder by develat.io", config.Version, config.VersionDate)
-		fmt.Println("")
-		fmt.Println("Usage: nebulant [-options] <nebulantblueprint.json>")
-		fmt.Println("")
-		flag.PrintDefaults()
-		return
-	}
-
+	// Debug
 	if *debugFlag {
 		config.DEBUG = true
 	}
 
-	// Providers
+	// Init Term
+	term.InitTerm(!*mFlag)
+
+	// Init console logger
+	cast.InitConsoleLogger(!*mFlag)
+
+	// Init Providers
 	cast.SBus.RegisterProviderInitFunc("aws", aws.New)
 	cast.SBus.RegisterProviderInitFunc("azure", azure.New)
 	cast.SBus.RegisterProviderInitFunc("generic", generic.New)
@@ -118,70 +116,43 @@ func main() {
 	blueprint.ActionValidators["azureValidator"] = azure.ActionValidator
 	blueprint.ActionValidators["genericsValidator"] = generic.ActionValidator
 
-	// Init console logger
-	cast.InitConsoleLogger(!*mFlag)
-	cast.LogInfo("Welcome to Nebulant :)", nil)
+	term.PrintInfo("Welcome to Nebulant :)\n")
 
-	// if "c" flag, start new blueprint and send it to Director
-	var bp *blueprint.Blueprint
 	if bluePrintFilePath != "" {
-		var err error
-
-		if len(bluePrintFilePath) > 11 && bluePrintFilePath[:11] == "nebulant://" {
-			bp, err = blueprint.NewFromBackend(bluePrintFilePath[11:])
-			if err != nil {
-				cast.LogErr(err.Error(), nil)
-				exitCode = 1
-				return // To keep running on server mode even if bp fails, comment this
-			}
-		} else {
-			bp, err = blueprint.NewFromFile(bluePrintFilePath)
-			if err != nil {
-				cast.LogErr(err.Error(), nil)
-				exitCode = 1
-				return // To keep running on server mode even if bp fails, comment this
-			}
+		cast.LogInfo("Obtaining blueprint...", nil)
+		irb, err := blueprint.NewIRBFromAny(bluePrintFilePath)
+		if err != nil {
+			cast.LogErr(err.Error(), nil)
+			exitCode = 1
+			panic(err.Error())
 		}
-	}
-
-	if !*serverModeFlag && bp == nil {
-		cast.LogErr("Nothing to do, exiting...", nil)
-		return
-	}
-
-	serverWaiter := &sync.WaitGroup{}
-	if !*serverModeFlag {
-		// Director
-		executive.InitDirector(false) // NO server mode: run one bp and exit
-	} else {
-		// Director
-		executive.InitDirector(true) // Server mode
-		serverWaiter.Add(1)          // Append +1 waiter
-		go func() {
-			defer serverWaiter.Done() // Append -1 waiter
-			srv := &executive.Httpd{}
-			addr := "localhost:15678"
-			err := srv.Serve(&addr) // serve to address serverModeFlag
-			if err != nil {
-				cast.LogErr(err.Error(), nil)
-				panic(err.Error())
-			}
-		}()
-	}
-
-	if bp != nil {
-		cast.LogInfo("Running blueprint file...", nil)
-		irb, irbErr := blueprint.GenerateIRB(bp, &blueprint.IRBGenConfig{})
-		if irbErr != nil {
-			cast.LogErr(irbErr.Error(), nil)
-			if !*serverModeFlag {
-				cast.LogErr(irbErr.Error(), nil)
-				panic(irbErr.Error())
-			}
-		} else {
-			executive.MDirector.HandleIRB <- irb
+		// Director in one run mode
+		err = executive.InitDirector(false, false)
+		if err != nil {
+			cast.LogErr(err.Error(), nil)
+			exitCode = 1
+			panic(err.Error())
 		}
+		executive.MDirector.HandleIRB <- irb
+	} else if *serverModeFlag {
+		// Director in server mode
+		err := executive.InitDirector(true, false) // Server mode
+		if err != nil {
+			cast.LogErr(err.Error(), nil)
+			panic(err.Error())
+		}
+		executive.InitServerMode("15678")
+	} else if len(args) <= 0 {
+		// Interactive mode
+		err := interactive.Loop()
+		if err != nil {
+			exitCode = 1
+			cast.LogErr(err.Error(), nil)
+			panic(err.Error())
+		}
+		os.Exit(0)
 	}
+
 	// hey hacker:
 	// uncomment for profiling
 	// if config.PROFILING {
@@ -192,7 +163,12 @@ func main() {
 	// 	grmon.Start()
 	// }
 
-	serverWaiter.Wait()        // None to wait if server mode is disabled
+	executive.ServerWaiter.Wait() // None to wait if server mode is disabled
+	if executive.ServerError != nil {
+		exitCode = 1
+		cast.LogErr(executive.ServerError.Error(), nil)
+		panic(executive.ServerError.Error())
+	}
 	executive.MDirector.Wait() // None to wait if director has stoped
 	//
 	// Please don't print anything here, SBus is still closing (because defer)

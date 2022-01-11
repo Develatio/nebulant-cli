@@ -17,36 +17,23 @@
 package cast
 
 import (
-	"fmt"
 	"log"
 	"strconv"
 
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/term"
 )
-
-var reset string = "\033[0m"
-var red string = "\033[31m"
-
-// var green string = "\033[32m"
-var yellow string = "\033[33m"
-
-var blue string = "\033[34m"
-var purple string = "\033[35m"
-
-// var cyan string = "\033[36m"
-// var gray string = "\033[37m"
-// var white string = "\033[97m"
 
 var failprefx string = "[!] "
 var okprefx string = "(·) "
 
 var colormap map[int]string = map[int]string{
-	CriticalLevel: red,
-	ErrorLevel:    red,
-	WarningLevel:  yellow,
-	InfoLevel:     blue,
-	DebugLevel:    purple,
-	NotsetLevel:   blue,
+	CriticalLevel: term.Red,
+	ErrorLevel:    term.Red,
+	WarningLevel:  term.Yellow,
+	InfoLevel:     term.Blue,
+	DebugLevel:    term.Purple,
+	NotsetLevel:   term.Blue,
 }
 
 var prefxmap map[int]string = map[int]string{
@@ -76,9 +63,12 @@ func (c *ConsoleLogger) printMessage(fback *FeedBack) bool {
 	}
 
 	if fback.Raw {
-		fmt.Print(color + string(fback.B) + reset)
+		_, err := term.Print(color + string(fback.B) + term.Reset)
+		if err != nil {
+			return false
+		}
 	} else {
-		log.Println(color + prefx + reset + string(fback.B) + reset)
+		log.Println(color + prefx + term.Reset + string(fback.B) + term.Reset)
 	}
 	return false
 }
