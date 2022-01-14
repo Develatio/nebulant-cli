@@ -1,3 +1,5 @@
+//go:build !js
+
 // Nebulant
 // Copyright (C) 2022  Develatio Technologies S.L.
 

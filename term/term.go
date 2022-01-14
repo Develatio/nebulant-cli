@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	"github.com/chzyer/readline"
 )
 
 var Reset string = "\033[0m"
@@ -40,14 +38,11 @@ var Gray string = "\033[97m"
 
 var Bold string = "\033[1m"
 
-var Stdout = readline.Stdout
-var Stderr = readline.Stderr
-
 // https://github.com/manifoldco/promptui/issues/49
 type noBellStdout struct{}
 
 func (n *noBellStdout) Write(p []byte) (int, error) {
-	if len(p) == 1 && p[0] == readline.CharBell {
+	if len(p) == 1 && p[0] == CharBell {
 		return 0, nil
 	}
 	return Stdout.Write(p)
