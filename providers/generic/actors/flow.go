@@ -222,7 +222,7 @@ func (c *Condition) operate(operator bool) (bool, error) {
 }
 
 type conditionParameters struct {
-	Conditions *Condition `json:"conditions"`
+	Conditions *Condition `json:"conditions" validate:"required"`
 }
 
 type logParameters struct {
