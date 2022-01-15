@@ -120,8 +120,11 @@ const (
 
 // FeedBack struct
 type FeedBack struct {
+	Timestamp int64 `json:"timestamp"`
+	//
 	// Type of feedback
-	TypeID FeedBackType `json:"type_id"`
+	TypeID   FeedBackType `json:"type_id"`
+	ActionID *string      `json:"action_id"`
 	// Msg data in bytes
 	B        []byte `json:"log_bytes"`
 	LogLevel *int   `json:"log_level"`
@@ -135,7 +138,7 @@ type FeedBack struct {
 	// Manager *executive.Manager
 	ExecutionUUID *string `json:"execution_uuid"`
 	// Filtered feedback, sent only to client with this UUID
-	ClientUUIDFilter *string
+	ClientUUIDFilter *string `json:"-"`
 	// Raw data
 	Raw bool `json:"raw"`
 }
@@ -228,6 +231,7 @@ func Log(level int, b []byte, re *string, raw bool) {
 		LogLevel:      &level,
 		ExecutionUUID: re,
 		Raw:           raw,
+		Timestamp:     time.Now().UTC().UnixMicro(),
 	}
 	PublishFeedBack(fback)
 }
@@ -292,6 +296,7 @@ func PublishEvent(eid int, re *string) {
 		TypeID:        FeedBackEvent,
 		EventID:       &eid,
 		ExecutionUUID: &euuid,
+		Timestamp:     time.Now().UTC().UnixMicro(),
 	}
 	PublishFeedBack(fback)
 }
@@ -303,6 +308,7 @@ func PublishEventWithExtra(eid int, re *string, extra map[string]interface{}) {
 		EventID:       &eid,
 		ExecutionUUID: re,
 		Extra:         extra,
+		Timestamp:     time.Now().UTC().UnixMicro(),
 	}
 	PublishFeedBack(fback)
 }
@@ -314,6 +320,7 @@ func PublishState(runningIDs []string, state int, re *string) {
 		TypeID:           FeedBackStatus,
 		LastKnownEventID: &s,
 		ExecutionUUID:    re,
+		Timestamp:        time.Now().UTC().UnixMicro(),
 	}
 	fback.Extra = make(map[string]interface{})
 	fback.Extra["uuids_in_progress"] = runningIDs
@@ -326,6 +333,7 @@ func PublishFiltered(clientUUIDFilter string, extra map[string]interface{}) {
 		TypeID:           FeedBackFiltered,
 		ClientUUIDFilter: &clientUUIDFilter,
 		Extra:            extra,
+		Timestamp:        time.Now().UTC().UnixMicro(),
 	}
 	PublishFeedBack(fback)
 }
