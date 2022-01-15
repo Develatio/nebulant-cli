@@ -64,10 +64,12 @@ func (p *Provider) DumpStore(freshStore base.IStore) {}
 func (p *Provider) HandleAction(action *blueprint.Action) (*base.ActionOutput, error) {
 	p.Logger.LogDebug("GENERIC: Received action " + action.ActionName)
 	if al, exists := actors.ActionFuncMap[action.ActionName]; exists {
+		l := p.Logger.Duplicate()
+		l.SetActionID(action.ActionID)
 		return al.F(&actors.ActionContext{
 			Action: action,
 			Store:  p.store,
-			Logger: p.Logger,
+			Logger: l,
 		})
 	}
 	return nil, fmt.Errorf("GENERIC: Unknown action: " + action.ActionName)

@@ -25,4 +25,6 @@ type ILogger interface {
 	LogInfo(s string)
 	ByteLogInfo(b []byte)
 	LogDebug(s string)
+	Duplicate() ILogger
+	SetActionID(ai string)
 }

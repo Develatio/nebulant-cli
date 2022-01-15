@@ -224,12 +224,13 @@ func (s *SystemBus) Close() *sync.WaitGroup {
 }
 
 // Log func
-func Log(level int, b []byte, re *string, raw bool) {
+func Log(level int, b []byte, ei *string, ai *string, raw bool) {
 	fback := &FeedBack{
 		TypeID:        FeedBackLog,
 		B:             b,
 		LogLevel:      &level,
-		ExecutionUUID: re,
+		ExecutionUUID: ei,
+		ActionID:      ai,
 		Raw:           raw,
 		Timestamp:     time.Now().UTC().UnixMicro(),
 	}
@@ -238,27 +239,27 @@ func Log(level int, b []byte, re *string, raw bool) {
 
 // LogCritical func
 func LogCritical(s string, re *string) {
-	Log(CriticalLevel, []byte(s), re, false)
+	Log(CriticalLevel, []byte(s), re, nil, false)
 }
 
 // LogErr func
 func LogErr(s string, re *string) {
-	Log(ErrorLevel, []byte(s), re, false)
+	Log(ErrorLevel, []byte(s), re, nil, false)
 }
 
 // LogWarn func
 func LogWarn(s string, re *string) {
-	Log(WarningLevel, []byte(s), re, false)
+	Log(WarningLevel, []byte(s), re, nil, false)
 }
 
 // LogInfo func
 func LogInfo(s string, re *string) {
-	Log(InfoLevel, []byte(s), re, false)
+	Log(InfoLevel, []byte(s), re, nil, false)
 }
 
 // LogDebug func
 func LogDebug(s string, re *string) {
-	Log(DebugLevel, []byte(s), re, false)
+	Log(DebugLevel, []byte(s), re, nil, false)
 }
 
 // SBusConnect func
@@ -341,39 +342,59 @@ func PublishFiltered(clientUUIDFilter string, extra map[string]interface{}) {
 // Logger struct
 type Logger struct {
 	ExecutionUUID *string
+	ActionID      *string
+}
+
+// Duplicate func
+func (l *Logger) Duplicate() base.ILogger {
+	newLoger := &Logger{}
+	if l.ExecutionUUID != nil {
+		ei := *l.ExecutionUUID
+		newLoger.ExecutionUUID = &ei
+	}
+	if l.ActionID != nil {
+		ai := *l.ActionID
+		newLoger.ActionID = &ai
+	}
+	return newLoger
+}
+
+// SetActionID func
+func (l *Logger) SetActionID(ai string) {
+	l.ActionID = &ai
 }
 
 // LogCritical func
 func (l *Logger) LogCritical(s string) {
-	Log(CriticalLevel, []byte(s), l.ExecutionUUID, false)
+	Log(CriticalLevel, []byte(s), l.ExecutionUUID, l.ActionID, false)
 }
 
 // LogErr func
 func (l *Logger) LogErr(s string) {
-	Log(ErrorLevel, []byte(s), l.ExecutionUUID, false)
+	Log(ErrorLevel, []byte(s), l.ExecutionUUID, l.ActionID, false)
 }
 
 // ByteLogErr func
 func (l *Logger) ByteLogErr(b []byte) {
-	Log(ErrorLevel, b, l.ExecutionUUID, true)
+	Log(ErrorLevel, b, l.ExecutionUUID, l.ActionID, true)
 }
 
 // LogWarn func
 func (l *Logger) LogWarn(s string) {
-	Log(WarningLevel, []byte(s), l.ExecutionUUID, false)
+	Log(WarningLevel, []byte(s), l.ExecutionUUID, l.ActionID, false)
 }
 
 // LogInfo func
 func (l *Logger) LogInfo(s string) {
-	Log(InfoLevel, []byte(s), l.ExecutionUUID, false)
+	Log(InfoLevel, []byte(s), l.ExecutionUUID, l.ActionID, false)
 }
 
 // ByteLogInfo func
 func (l *Logger) ByteLogInfo(b []byte) {
-	Log(InfoLevel, b, l.ExecutionUUID, true)
+	Log(InfoLevel, b, l.ExecutionUUID, l.ActionID, true)
 }
 
 // LogDebug func
 func (l *Logger) LogDebug(s string) {
-	Log(DebugLevel, []byte(s), l.ExecutionUUID, false)
+	Log(DebugLevel, []byte(s), l.ExecutionUUID, l.ActionID, false)
 }

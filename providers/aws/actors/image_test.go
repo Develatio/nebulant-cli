@@ -32,13 +32,15 @@ import (
 
 type fakeLogger struct{}
 
-func (l *fakeLogger) LogCritical(s string) {}
-func (l *fakeLogger) LogErr(s string)      {}
-func (l *fakeLogger) ByteLogErr(b []byte)  {}
-func (l *fakeLogger) LogWarn(s string)     {}
-func (l *fakeLogger) LogInfo(s string)     {}
-func (l *fakeLogger) ByteLogInfo(b []byte) {}
-func (l *fakeLogger) LogDebug(s string)    {}
+func (l *fakeLogger) LogCritical(s string)    {}
+func (l *fakeLogger) LogErr(s string)         {}
+func (l *fakeLogger) ByteLogErr(b []byte)     {}
+func (l *fakeLogger) LogWarn(s string)        {}
+func (l *fakeLogger) LogInfo(s string)        {}
+func (l *fakeLogger) ByteLogInfo(b []byte)    {}
+func (l *fakeLogger) LogDebug(s string)       {}
+func (l *fakeLogger) Duplicate() base.ILogger { return l }
+func (l *fakeLogger) SetActionID(ai string)   {}
 
 type fakeEC2Client struct {
 	ec2iface.EC2API

@@ -162,11 +162,13 @@ type ActionContext struct {
 }
 
 var NewActionContext = func(awsSess *session.Session, action *blueprint.Action, store base.IStore, logger base.ILogger) *ActionContext {
+	l := logger.Duplicate()
+	l.SetActionID(action.ActionID)
 	return &ActionContext{
 		AwsSess: awsSess,
 		Action:  action,
 		Store:   store,
-		Logger:  logger,
+		Logger:  l,
 		NewEC2Client: func() ec2iface.EC2API {
 			return ec2.New(awsSess)
 		},
