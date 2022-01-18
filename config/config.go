@@ -43,6 +43,9 @@ var BackendURLDomain string = "api.nebulant.io"
 // FrontOrigin var
 var FrontOrigin string = "https://builder.nebulant.io"
 
+// BridgeOrigin var
+var BridgeOrigin string = "https://bridge.nebulant.io"
+
 // FrontUrl var
 var FrontUrl string = "https://builder.nebulant.io"
 

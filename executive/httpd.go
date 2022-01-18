@@ -91,13 +91,22 @@ type Httpd struct {
 func (h *Httpd) validateOrigin(r *http.Request) bool {
 	surl := r.Header.Get("Origin")
 	// Fail on missing Origin header or bad url
-	_, err := url.Parse(surl)
+	url, err := url.Parse(surl)
 	if err != nil || surl == "" {
 		return false
 	}
-	cast.LogDebug("Origin: "+surl, nil)
+	// allow http scheme so safari can connect <https> builder -> <http> localhost
+	if url.Scheme == "http" {
+		url.Scheme = "https"
+	}
+	burl, err := url.MarshalBinary()
+	if err != nil {
+		return false
+	}
+	surl = string(burl)
+	cast.LogDebug("Validating origin: "+surl, nil)
 	// Allow on FrontOrigin match or wildcard in conf
-	if surl == config.FrontOrigin || surl == config.FrontOriginPre || config.FrontOrigin == "*" {
+	if surl == config.FrontOrigin || surl == config.BridgeOrigin || surl == config.FrontOriginPre || config.FrontOrigin == "*" {
 		return true
 	}
 	return false
