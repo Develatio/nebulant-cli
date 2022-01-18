@@ -81,7 +81,7 @@ buildall:
 	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-windows-arm.exe nebulant.go
 	GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-darwin-amd64 nebulant.go
 	GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-darwin-arm64 nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=js GOARCH=wasm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-darwin-arm64 nebulant.go
+	GO111MODULE=on CGO_ENABLED=0 GOOS=js GOARCH=wasm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-js-wasm nebulant.go
 	@echo "Check bin/ for builds"
 
 .PHONY: prepare_reproducible_buildall
