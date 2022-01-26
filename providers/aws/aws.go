@@ -42,6 +42,16 @@ func ActionValidator(action *blueprint.Action) error {
 	if al.N == actors.NextKO && len(action.NextAction.NextOk) > 0 {
 		return fmt.Errorf("generic: action " + action.ActionName + " has no OK port")
 	}
+
+	ac := &actors.ActionContext{
+		Rehearsal: true,
+		Action:    action,
+	}
+	_, err := al.F(ac)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

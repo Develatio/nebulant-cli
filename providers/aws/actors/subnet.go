@@ -17,7 +17,6 @@
 package actors
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -27,9 +26,11 @@ import (
 // FindSubnets func
 func FindSubnets(ctx *ActionContext) (*base.ActionOutput, error) {
 	awsinput := new(ec2.DescribeSubnetsInput)
-	jsonErr := json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
+		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	region := ctx.AwsSess.Config.Region
@@ -51,6 +52,9 @@ func FindOneSubnet(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err != nil {
 		return nil, err
 	}
+	if ctx.Rehearsal {
+		return nil, nil
+	}
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no subnet found")
 	}
@@ -70,9 +74,11 @@ func FindOneSubnet(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteSubnet(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DeleteSubnetInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)

@@ -17,7 +17,6 @@
 package actors
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -29,9 +28,11 @@ import (
 func FindKeyPairs(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DescribeKeyPairsInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -64,6 +65,9 @@ func FindOneKeyPair(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err != nil {
 		return nil, err
 	}
+	if ctx.Rehearsal {
+		return nil, nil
+	}
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("key Pair Not Found")
 	}
@@ -89,9 +93,11 @@ func FindOneKeyPair(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteKeyPair(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DeleteKeyPairInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)

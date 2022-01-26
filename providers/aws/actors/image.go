@@ -17,7 +17,6 @@
 package actors
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -28,9 +27,11 @@ import (
 func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DescribeImagesInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -56,6 +57,9 @@ func FindOneImage(ctx *ActionContext) (*base.ActionOutput, error) {
 	aout, err := FindImages(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no image found")

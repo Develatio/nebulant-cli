@@ -30,14 +30,16 @@ import (
 func RunInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.RunInstancesInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
 	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
 	if err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -100,14 +102,16 @@ func RunInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.TerminateInstancesInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
 	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
 	if err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -147,14 +151,16 @@ func DeleteInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 func StopInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.StopInstancesInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
 	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
 	if err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -194,14 +200,16 @@ func StopInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 func StartInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.StartInstancesInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
 	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
 	if err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -250,9 +258,11 @@ func StartInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 func FindInstances(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DescribeInstancesInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -282,6 +292,9 @@ func FindOneInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 	aout, err := FindInstances(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no machine found")

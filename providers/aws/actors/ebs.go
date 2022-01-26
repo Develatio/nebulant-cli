@@ -30,9 +30,11 @@ import (
 func FindVolumes(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DescribeVolumesInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -59,6 +61,9 @@ func FindOneVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err != nil {
 		return nil, err
 	}
+	if ctx.Rehearsal {
+		return nil, nil
+	}
 	raw := aout.Records[0].Value.(*ec2.DescribeVolumesOutput)
 	found := len(raw.Volumes)
 	if found > 1 {
@@ -75,14 +80,16 @@ func FindOneVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 // CreateVolume func
 func CreateVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	awsinput := new(ec2.CreateVolumeInput)
-	jsonErr := json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
+		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
-	jsonErr = json.Unmarshal(ctx.Action.Parameters, internalparams)
-	if jsonErr != nil {
-		return nil, jsonErr
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
+		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	// awsinput.AvailabilityZone can be nil because its a pointer
@@ -133,14 +140,16 @@ func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	svc := ctx.NewEC2Client()
 
 	awsinput := new(ec2.AttachVolumeInput)
-	jsonErr := json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
+		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
-	jsonErr = json.Unmarshal(ctx.Action.Parameters, internalparams)
-	if jsonErr != nil {
-		return nil, jsonErr
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
+		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -180,9 +189,11 @@ func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 func DetachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DetachVolumeInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -204,14 +215,16 @@ func DetachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DeleteVolumeInput)
-	jsonErr := json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
+		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
-	jsonErr = json.Unmarshal(ctx.Action.Parameters, internalparams)
-	if jsonErr != nil {
-		return nil, jsonErr
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
+		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)

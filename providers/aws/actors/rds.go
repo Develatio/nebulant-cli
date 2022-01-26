@@ -17,7 +17,6 @@
 package actors
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/service/rds"
@@ -28,9 +27,11 @@ import (
 func FindDatabases(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(rds.DescribeDBInstancesInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -54,6 +55,9 @@ func FindOneDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err != nil {
 		return nil, err
 	}
+	if ctx.Rehearsal {
+		return nil, nil
+	}
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no database found")
 	}
@@ -73,9 +77,11 @@ func FindOneDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 func CreateDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(rds.CreateDBInstanceInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	svc := rds.New(ctx.AwsSess)
@@ -92,9 +98,11 @@ func CreateDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(rds.DeleteDBInstanceInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -115,9 +123,11 @@ func DeleteDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 func CreateSnapshotDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(rds.CreateDBSnapshotInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)

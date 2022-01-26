@@ -17,7 +17,6 @@
 package actors
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -27,9 +26,11 @@ import (
 // FindVpcs func
 func FindVpcs(ctx *ActionContext) (*base.ActionOutput, error) {
 	awsinput := new(ec2.DescribeVpcsInput)
-	jsonErr := json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
+		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	region := ctx.AwsSess.Config.Region
@@ -51,6 +52,9 @@ func FindOneVpc(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err != nil {
 		return nil, err
 	}
+	if ctx.Rehearsal {
+		return nil, nil
+	}
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no VPC found")
 	}
@@ -70,9 +74,11 @@ func FindOneVpc(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteVpc(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DeleteVpcInput)
-	jsonErr := json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
+		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)

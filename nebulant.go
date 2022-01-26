@@ -119,12 +119,12 @@ func main() {
 	term.PrintInfo("Welcome to Nebulant :)\n")
 
 	if bluePrintFilePath != "" {
-		cast.LogInfo("Obtaining blueprint...", nil)
+		cast.LogInfo("Processing blueprint...", nil)
 		irb, err := blueprint.NewIRBFromAny(bluePrintFilePath)
 		if err != nil {
 			cast.LogErr(err.Error(), nil)
 			exitCode = 1
-			panic(err.Error())
+			return
 		}
 		// Director in one run mode
 		err = executive.InitDirector(false, false)

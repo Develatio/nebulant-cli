@@ -17,7 +17,6 @@
 package actors
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -28,9 +27,11 @@ import (
 // FindSecurityGroups func
 func FindSecurityGroups(ctx *ActionContext) (*base.ActionOutput, error) {
 	awsinput := new(ec2.DescribeSecurityGroupsInput)
-	jsonErr := json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
+		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	region := ctx.AwsSess.Config.Region
@@ -59,6 +60,9 @@ func FindOneSecurityGroup(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err != nil {
 		return nil, err
 	}
+	if ctx.Rehearsal {
+		return nil, nil
+	}
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("security Group Not Found")
 	}
@@ -84,9 +88,11 @@ func FindOneSecurityGroup(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteSecurityGroup(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DeleteSecurityGroupInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)

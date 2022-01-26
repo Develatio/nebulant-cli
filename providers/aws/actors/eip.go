@@ -17,7 +17,6 @@
 package actors
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -28,9 +27,11 @@ import (
 // AllocateAddress func
 func AllocateAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 	awsinput := new(ec2.AllocateAddressInput)
-	err := json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	svc := ctx.NewEC2Client()
@@ -56,9 +57,11 @@ func AllocateAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 func FindAddresses(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DescribeAddressesInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -81,6 +84,9 @@ func FindOneAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err != nil {
 		return nil, err
 	}
+	if ctx.Rehearsal {
+		return nil, nil
+	}
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no address found")
 	}
@@ -100,9 +106,11 @@ func FindOneAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 func AttachAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.AssociateAddressInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -129,9 +137,11 @@ func AttachAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 func DetachAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DisassociateAddressInput)
-	err = json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if err != nil {
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
 		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)
@@ -153,9 +163,11 @@ func DetachAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 func ReleaseAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.ReleaseAddressInput)
-	jsonErr := json.Unmarshal(ctx.Action.Parameters, awsinput)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
+		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	err = ctx.Store.DeepInterpolation(awsinput)

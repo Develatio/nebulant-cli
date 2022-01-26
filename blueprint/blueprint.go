@@ -323,7 +323,7 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 
 		for _, vl := range ActionValidators {
 			if err := vl(action); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("Error found in action " + action.ActionID + ":\n" + err.Error())
 			}
 		}
 	}

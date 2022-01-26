@@ -19,7 +19,6 @@ package actors
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/util"
 )
 
 type setRegionParameters struct {
@@ -28,14 +27,16 @@ type setRegionParameters struct {
 
 // SetRegion func
 func SetRegion(ctx *ActionContext) (*base.ActionOutput, error) {
-	params := new(setRegionParameters)
-	jsonErr := util.UnmarshalValidJSON(ctx.Action.Parameters, params)
-	if jsonErr != nil {
-		return nil, jsonErr
+	awsinput := new(setRegionParameters)
+	if err := CleanInput(ctx.Action, awsinput); err != nil {
+		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
-	ctx.Logger.LogInfo("Setting new region to " + *params.Region)
-	newSess := ctx.AwsSess.Copy(&aws.Config{Region: aws.String(*params.Region)})
+	ctx.Logger.LogInfo("Setting new region to " + *awsinput.Region)
+	newSess := ctx.AwsSess.Copy(&aws.Config{Region: aws.String(*awsinput.Region)})
 	ctx.Store.SetPrivateVar("awsSess", newSess)
 
 	return nil, nil

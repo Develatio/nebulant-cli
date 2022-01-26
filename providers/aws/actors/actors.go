@@ -17,11 +17,14 @@
 package actors
 
 import (
+	"reflect"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
+	"github.com/develatio/nebulant-cli/util"
 )
 
 // ActionCreateVolume const
@@ -154,11 +157,30 @@ type ec2Client func() ec2iface.EC2API
 
 // ActionContext struct
 type ActionContext struct {
+	Rehearsal    bool
 	AwsSess      *session.Session
 	Action       *blueprint.Action
 	Store        base.IStore
 	Logger       base.ILogger
 	NewEC2Client ec2Client
+}
+
+// CleanInput func
+func CleanInput(action *blueprint.Action, awsinput interface{}) error {
+	err := util.UnmarshalValidJSON(action.Parameters, awsinput)
+	if err != nil {
+		return err
+	}
+	awsit := reflect.TypeOf(awsinput)
+	_, validable := awsit.MethodByName("Validate")
+	if validable {
+		ret := reflect.ValueOf(awsinput).MethodByName("Validate").Call([]reflect.Value{})
+		switch ret[0].Interface().(type) {
+		case error:
+			return ret[0].Interface().(error)
+		}
+	}
+	return nil
 }
 
 var NewActionContext = func(awsSess *session.Session, action *blueprint.Action, store base.IStore, logger base.ILogger) *ActionContext {
