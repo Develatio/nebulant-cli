@@ -108,8 +108,13 @@ func NewFromFile(path string) (*Blueprint, error) {
 	}
 	defer jsonFile.Close()
 	byteValue, _ := ioutil.ReadAll(jsonFile)
+	wrap := &wrappedBlueprint{}
+	err = json.Unmarshal(byteValue, wrap)
+	if err != nil {
+		return nil, err
+	}
 	var bp Blueprint
-	jErr := util.UnmarshalValidJSON(byteValue, &bp)
+	jErr := util.UnmarshalValidJSON(wrap.Blueprint, &bp)
 	if jErr != nil {
 		return nil, jErr
 	}
