@@ -18,6 +18,7 @@ require (
 	github.com/manifoldco/promptui v0.9.0
 	github.com/povsister/scp v0.0.0-20210427074412-33febfd9f13e
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
+	golang.org/x/mod v0.5.1 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/validator.v9 v9.31.0

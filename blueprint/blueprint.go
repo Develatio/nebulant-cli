@@ -31,6 +31,7 @@ import (
 
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/util"
+	"golang.org/x/mod/semver"
 )
 
 // JoinThreadsActionName const
@@ -46,6 +47,7 @@ type wrappedBlueprint struct {
 type Blueprint struct {
 	ExecutionUUID *string
 	Actions       []Action `json:"actions"`
+	MinCLIVersion *string  `json:"min_cli_version"`
 	Raw           *[]byte
 }
 
@@ -100,6 +102,22 @@ type InternalParameters struct {
 	Waiters []string `json:"_waiters"`
 }
 
+func TestMinCliVersion(bp *Blueprint) error {
+	if bp.MinCLIVersion == nil {
+		return nil
+	}
+	if !semver.IsValid("v" + *bp.MinCLIVersion) {
+		return fmt.Errorf("invalid min_cli_version value: " + *bp.MinCLIVersion)
+	}
+	if !semver.IsValid("v" + config.Version) {
+		return fmt.Errorf("invalid nebulant version: " + config.Version)
+	}
+	if c := semver.Compare("v"+*bp.MinCLIVersion, "v"+config.Version); c == 1 {
+		return fmt.Errorf("min CLI version not satisfied for this blueprint. Needed: " + *bp.MinCLIVersion + ". Got: " + config.Version)
+	}
+	return nil
+}
+
 // NewFromFile func
 func NewFromFile(path string) (*Blueprint, error) {
 	jsonFile, err := os.Open(path) //#nosec G304 -- Not a file inclusion, just a json read
@@ -109,14 +127,15 @@ func NewFromFile(path string) (*Blueprint, error) {
 	defer jsonFile.Close()
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 	wrap := &wrappedBlueprint{}
-	err = json.Unmarshal(byteValue, wrap)
-	if err != nil {
+	if err := json.Unmarshal(byteValue, wrap); err != nil {
 		return nil, err
 	}
 	var bp Blueprint
-	jErr := util.UnmarshalValidJSON(wrap.Blueprint, &bp)
-	if jErr != nil {
-		return nil, jErr
+	if err := util.UnmarshalValidJSON(wrap.Blueprint, &bp); err != nil {
+		return nil, err
+	}
+	if err := TestMinCliVersion(&bp); err != nil {
+		return nil, err
 	}
 	if bp.ExecutionUUID == nil || *bp.ExecutionUUID == "" {
 		rand.Seed(time.Now().UnixNano())
@@ -130,11 +149,13 @@ func NewFromFile(path string) (*Blueprint, error) {
 // NewFromBytes func
 func NewFromBytes(data []byte) (*Blueprint, error) {
 	var bp Blueprint
-	jErr := util.UnmarshalValidJSON(data, &bp)
-	if jErr != nil {
-		return nil, jErr
+	if err := util.UnmarshalValidJSON(data, &bp); err != nil {
+		return nil, err
 	}
 	bp.Raw = &data
+	if err := TestMinCliVersion(&bp); err != nil {
+		return nil, err
+	}
 	return &bp, nil
 }
 
@@ -142,13 +163,14 @@ func NewFromBytes(data []byte) (*Blueprint, error) {
 func NewFromBuilder(data []byte) (*Blueprint, error) {
 	var bp Blueprint
 	wrap := &wrappedBlueprint{}
-	err := json.Unmarshal(data, wrap)
-	if err != nil {
+	if err := json.Unmarshal(data, wrap); err != nil {
 		return nil, err
 	}
-	jErr := util.UnmarshalValidJSON(wrap.Blueprint, &bp)
-	if jErr != nil {
-		return nil, jErr
+	if err := util.UnmarshalValidJSON(wrap.Blueprint, &bp); err != nil {
+		return nil, err
+	}
+	if err := TestMinCliVersion(&bp); err != nil {
+		return nil, err
 	}
 	bp.ExecutionUUID = wrap.ExecutionUUID
 	if bp.ExecutionUUID == nil || *bp.ExecutionUUID == "" {
