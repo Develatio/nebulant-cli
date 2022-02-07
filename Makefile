@@ -2,7 +2,7 @@
 # github.com/develation/nebulant-cli
 
 VERSION = 0
-PATCHLEVEL = 1
+PATCHLEVEL = 2
 SUBLEVEL = 0
 EXTRAVERSION = -beta
 NAME =
