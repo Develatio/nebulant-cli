@@ -81,10 +81,10 @@ jobs:
         run: xcrun altool --store-password-in-keychain-item altool -u ${{ secrets.APPLE_ID_APPLICATION_USERNAME }} -p ${{ secrets.APPLE_ID_APPLICATION_PASSWORD }}
 
       - name: Notarize darwin amd64 binary
-        run: xcrun altool --notarize-app --primary-bundle-id io.develatio.nebulant-cli --username ${{ secrets.APPLE_ID_APPLICATION_USERNAME }} --password "@keychain:altool" --file ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64.zip
+        run: xcrun altool --notarize-app --primary-bundle-id io.develat.nebulant-cli --username ${{ secrets.APPLE_ID_APPLICATION_USERNAME }} --password "@keychain:altool" --file ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-amd64.zip
 
       - name: Notarize darwin arm64 binary
-        run: xcrun altool --notarize-app --primary-bundle-id io.develatio.nebulant-cli --username ${{ secrets.APPLE_ID_APPLICATION_USERNAME }} --password "@keychain:altool" --file ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64.zip
+        run: xcrun altool --notarize-app --primary-bundle-id io.develat.nebulant-cli --username ${{ secrets.APPLE_ID_APPLICATION_USERNAME }} --password "@keychain:altool" --file ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-darwin-arm64.zip
 
       - name: Upload binary artifacts (darwin signed)
         uses: actions/upload-artifact@v2
