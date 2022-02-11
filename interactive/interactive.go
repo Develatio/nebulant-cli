@@ -45,7 +45,8 @@ func Loop() error {
 	menuItems := []*menuItem{
 		{Name: "Serve ", Description: "Start server mode", Cmd: "serve"},
 		{Name: "Build ", Description: "Open builder app and start server mode", Cmd: "build"},
-		{Name: "Browse", Description: "Browse your blueprints and run", Cmd: "browse"},
+		{Name: "Browse", Description: "Brwose and run the blueprints stored in your account", Cmd: "browse"},
+		{Name: "Path", Description: "Manually indicates the path to a blueprint", Cmd: "path"},
 		// {Name: "Config", Description: "Configuration stuff", Cmd: "noim"},
 		{Name: "Args  ", Description: "Print available commandline args", Cmd: "args"},
 		{Name: "Exit  ", Description: "Exit Nebulant CLI", Cmd: "exit"},
@@ -92,6 +93,12 @@ L:
 				continue
 			}
 			executive.MDirector.Wait()
+		case "path":
+			err := Path()
+			if err != nil {
+				term.PrintErr(err.Error() + "\n")
+				continue
+			}
 		case "build":
 			err := util.OpenUrl(config.FrontUrl)
 			if err != nil {
