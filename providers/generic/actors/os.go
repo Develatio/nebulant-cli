@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -112,7 +113,17 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 			stin = *p.Entrypoint + " " + stin
 		}
 		if p.ScriptParameters != nil {
-			stin = stin + *p.ScriptParameters
+			stin = stin + " " + *p.ScriptParameters
+			if p.Entrypoint != nil {
+				a := *p.Entrypoint
+				b := strings.Split(strings.Trim(a, " "), " ")
+				if len(b) >= 2 {
+					c := strings.Split(b[0], string(os.PathSeparator))
+					if c[len(c)-1] == "bash" && b[1] == "-c" {
+						ctx.Logger.LogWarn("You are using 'bash -c' entrypoint along with additional script parameters that will not be taken into account, use 'bash' entrypoint without '-c'")
+					}
+				}
+			}
 		}
 		argv, err := util.CommandLineToArgv(stin)
 		if err != nil {
