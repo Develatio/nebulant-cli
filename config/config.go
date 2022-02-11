@@ -67,6 +67,12 @@ var ACTIVE_CONF_PROFILE = "default"
 // CREDENTIALS
 var CREDENTIALS *Credential = &Credential{}
 
+// Server addr
+var SERVER_ADDR = "localhost"
+
+// Server port
+var SERVER_PORT = "15678"
+
 // Order of credentials:
 // * Environment Variables
 // * Shared Credentials file

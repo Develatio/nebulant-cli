@@ -22,6 +22,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strconv"
+	"strings"
 
 	// hey hacker:
 	// uncomment for profiling
@@ -77,14 +78,27 @@ func main() {
 		os.Exit(exitCode)
 	}()
 
-	var serverModeFlag = flag.Bool("d", false, "Enable server mode at localhost:15678 to use within Nebulant Pipeline Builder.")
+	var serverModeFlag = flag.Bool("d", false, "Enable server mode to be used within Nebulant Pipeline Builder.")
+	var addrFlag = flag.String("b", config.SERVER_ADDR+":"+config.SERVER_PORT, "Use addr[:port] for server mode.")
 	var versionFlag = flag.Bool("v", false, "Show version and exit.")
-	var debugFlag = flag.Bool("vv", false, "Enable debug.")
+	var debugFlag = flag.Bool("x", false, "Enable debug.")
 	var mFlag = flag.Bool("m", false, "Disable colors.")
 
 	flag.Parse()
 	args := flag.Args()
 	bluePrintFilePath := flag.Arg(0)
+
+	paddr := strings.Split(*addrFlag, ":")
+	if len(paddr) == 1 {
+		config.SERVER_ADDR = paddr[0]
+	} else if len(paddr) == 2 {
+		config.SERVER_ADDR = paddr[0]
+		config.SERVER_PORT = paddr[1]
+	} else {
+		fmt.Println("Cannot parse bind addr.")
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
 
 	// Version and exit
 	if *versionFlag {
@@ -142,7 +156,7 @@ func main() {
 			cast.LogErr(err.Error(), nil)
 			panic(err.Error())
 		}
-		executive.InitServerMode("15678")
+		executive.InitServerMode(config.SERVER_ADDR + ":" + config.SERVER_PORT)
 	} else if len(args) <= 0 {
 		// Interactive mode
 		err := interactive.Loop()

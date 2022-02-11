@@ -39,13 +39,12 @@ import (
 var ServerWaiter *sync.WaitGroup = &sync.WaitGroup{}
 var ServerError error
 
-func InitServerMode(port string) {
+func InitServerMode(addr string) {
 	ServerError = nil
 	ServerWaiter.Add(1) // Append +1 waiter
 	go func() {
 		defer ServerWaiter.Done() // Append -1 waiter
 		srv := &Httpd{}
-		addr := "localhost:" + port
 		err := srv.Serve(&addr) // serve to address serverModeFlag
 		if err != nil {
 			ServerError = err

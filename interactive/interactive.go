@@ -86,7 +86,7 @@ L:
 				term.PrintErr(err.Error() + "\n")
 				continue
 			}
-			executive.InitServerMode("15678")
+			executive.InitServerMode(config.SERVER_ADDR + ":" + config.SERVER_PORT)
 			executive.ServerWaiter.Wait()
 			if executive.ServerError != nil {
 				term.PrintErr(executive.ServerError.Error() + "\n")
@@ -111,7 +111,7 @@ L:
 				term.PrintErr(err.Error() + "\n")
 				continue
 			}
-			executive.InitServerMode("15678")
+			executive.InitServerMode(config.SERVER_ADDR + ":" + config.SERVER_PORT)
 			executive.ServerWaiter.Wait()
 			if executive.ServerError != nil {
 				term.PrintErr(executive.ServerError.Error() + "\n")
