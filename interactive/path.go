@@ -33,7 +33,10 @@ func Path() error {
 	if err != nil {
 		return err
 	}
-
+	if len(path) <= 0 {
+		term.PrintInfo("No path provided.\n")
+		return nil
+	}
 	term.PrintInfo("Processing blueprint...\n")
 	irb, err := blueprint.NewIRBFromAny(path)
 	if err != nil {
