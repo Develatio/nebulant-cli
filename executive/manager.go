@@ -175,7 +175,6 @@ func (m *Manager) Run() error {
 			switch r.(type) {
 			case *util.PanicData:
 				panic(r)
-
 			}
 			panic(&util.PanicData{
 				PanicValue: r,
