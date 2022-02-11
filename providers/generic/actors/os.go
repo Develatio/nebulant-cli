@@ -52,9 +52,9 @@ type runLocalParameters struct {
 	// Port           *string `json:"port"`
 	Vars        map[string]string `json:"vars"`
 	VarsTargets []string          `json:"vars_targets"`
-	ScriptPath  *string           `json:"scriptPath"`
 	ScriptText  *string           `json:"script"`
 	Command     *string           `json:"command"`
+	Entrypoint  *string           `json:"entrypoint"`
 }
 
 // RunLocalScript func
@@ -69,17 +69,11 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	var cmd *exec.Cmd
 	if p.Command != nil { // run cmd
-		argv, err := util.CommandLineToArgv(*p.Command)
-		if err != nil {
-			return nil, err
+		stin := *p.Command
+		if p.Entrypoint != nil {
+			stin = *p.Entrypoint + " " + stin
 		}
-		if len(argv) > 1 {
-			cmd = exec.Command(argv[0], argv[1:]...) //#nosec G204 -- Tainted arguments here are the responsibility of the user
-		} else {
-			cmd = exec.Command(argv[0]) //#nosec G204 -- Tainted arguments here are the responsibility of the user
-		}
-	} else if p.ScriptPath != nil {
-		argv, err := util.CommandLineToArgv(*p.ScriptPath)
+		argv, err := util.CommandLineToArgv(stin)
 		if err != nil {
 			return nil, err
 		}
@@ -112,9 +106,21 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		if err := os.Chmod(f.Name(), 0755); err != nil {
 			return nil, err
 		}
-		cmd = exec.Command(f.Name()) //#nosec G204 -- Tainted arguments here are the responsibility of the user
+		stin := f.Name()
+		if p.Entrypoint != nil {
+			stin = *p.Entrypoint + " " + stin
+		}
+		argv, err := util.CommandLineToArgv(stin)
+		if err != nil {
+			return nil, err
+		}
+		if len(argv) > 1 {
+			cmd = exec.Command(argv[0], argv[1:]...) //#nosec G204 -- Tainted arguments here are the responsibility of the user
+		} else {
+			cmd = exec.Command(argv[0]) //#nosec G204 -- Tainted arguments here are the responsibility of the user
+		}
 	} else {
-		return nil, fmt.Errorf("no script provided")
+		return nil, fmt.Errorf("no command nor embedded script provided")
 	}
 
 	envVars := os.Environ()

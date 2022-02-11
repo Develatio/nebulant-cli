@@ -116,7 +116,7 @@ func main() {
 	blueprint.ActionValidators["azureValidator"] = azure.ActionValidator
 	blueprint.ActionValidators["genericsValidator"] = generic.ActionValidator
 
-	term.PrintInfo("Welcome to Nebulant v" + config.Version + " :)")
+	term.PrintInfo("Welcome to Nebulant v" + config.Version + " :)\n")
 
 	if bluePrintFilePath != "" {
 		cast.LogInfo("Processing blueprint...", nil)
