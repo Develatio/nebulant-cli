@@ -22,7 +22,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/executive"
@@ -38,10 +37,6 @@ type menuItem struct {
 }
 
 func Loop() error {
-	_, err := term.Println(term.Purple+"Nebulant CLI - A cloud builder by develat.io"+term.Reset, config.Version, config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler)
-	if err != nil {
-		return err
-	}
 	menuItems := []*menuItem{
 		{Name: "Serve ", Description: "Start server mode", Cmd: "serve"},
 		{Name: "Build ", Description: "Open builder app and start server mode", Cmd: "build"},

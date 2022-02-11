@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -102,7 +103,7 @@ func main() {
 
 	// Version and exit
 	if *versionFlag {
-		fmt.Println("Nebulant CLI - A cloud builder by develat.io", config.Version, config.VersionDate)
+		term.Println("Nebulant CLI - A cloud builder by develat.io", "v"+config.Version, config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler)
 		os.Exit(0)
 	}
 
@@ -113,6 +114,9 @@ func main() {
 
 	// Init Term
 	term.InitTerm(!*mFlag)
+
+	term.Println(term.Purple+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Cyan+"develat.io"+term.Reset)
+	term.Println(term.Gray+"Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler, term.Reset)
 
 	// Init console logger
 	cast.InitConsoleLogger(!*mFlag)
@@ -131,7 +135,7 @@ func main() {
 	blueprint.ActionValidators["azureValidator"] = azure.ActionValidator
 	blueprint.ActionValidators["genericsValidator"] = generic.ActionValidator
 
-	term.PrintInfo("Welcome to Nebulant v" + config.Version + " :)\n")
+	term.PrintInfo("Welcome :)\n")
 
 	if bluePrintFilePath != "" {
 		cast.LogInfo("Processing blueprint...", nil)
