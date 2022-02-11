@@ -33,7 +33,7 @@ func Path() error {
 		if len(input) <= 0 {
 			return nil
 		}
-		if len(input) >= 12 && input[:12] == "nebulant://" {
+		if len(input) >= 12 && input[:11] == "nebulant://" {
 			return nil
 		}
 		fi, err := os.Stat(input)
