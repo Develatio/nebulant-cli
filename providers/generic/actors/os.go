@@ -50,11 +50,12 @@ type runLocalParameters struct {
 	// PrivateKeyPath *string `json:"keyfile"`
 	// Password       *string `json:"password"`
 	// Port           *string `json:"port"`
-	Vars        map[string]string `json:"vars"`
-	VarsTargets []string          `json:"vars_targets"`
-	ScriptText  *string           `json:"script"`
-	Command     *string           `json:"command"`
-	Entrypoint  *string           `json:"entrypoint"`
+	Vars             map[string]string `json:"vars"`
+	VarsTargets      []string          `json:"vars_targets"`
+	ScriptText       *string           `json:"script"`
+	ScriptParameters *string           `json:"scriptParameters"`
+	Command          *string           `json:"command"`
+	Entrypoint       *string           `json:"entrypoint"`
 }
 
 // RunLocalScript func
@@ -109,6 +110,9 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		stin := f.Name()
 		if p.Entrypoint != nil {
 			stin = *p.Entrypoint + " " + stin
+		}
+		if p.ScriptParameters != nil {
+			stin = stin + *p.ScriptParameters
 		}
 		argv, err := util.CommandLineToArgv(stin)
 		if err != nil {
