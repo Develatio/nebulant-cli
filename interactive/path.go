@@ -19,6 +19,9 @@
 package interactive
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/executive"
 	"github.com/develatio/nebulant-cli/term"
@@ -26,8 +29,25 @@ import (
 )
 
 func Path() error {
+	validate := func(input string) error {
+		if len(input) <= 0 {
+			return nil
+		}
+		if len(input) >= 12 && input[:12] == "nebulant://" {
+			return nil
+		}
+		fi, err := os.Stat(input)
+		if err != nil {
+			return err
+		}
+		if fi.IsDir() {
+			return fmt.Errorf("directory not allowed")
+		}
+		return nil
+	}
 	prompt := promptui.Prompt{
-		Label: "Path",
+		Label:    "Path",
+		Validate: validate,
 	}
 	path, err := prompt.Run()
 	if err != nil {
