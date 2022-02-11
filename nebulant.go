@@ -103,7 +103,7 @@ func main() {
 
 	// Version and exit
 	if *versionFlag {
-		term.Println("Nebulant CLI - A cloud builder by develat.io", "v"+config.Version, config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler)
+		fmt.Println("Nebulant CLI - A cloud builder by develat.io", "v"+config.Version, config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler)
 		os.Exit(0)
 	}
 
@@ -115,8 +115,14 @@ func main() {
 	// Init Term
 	term.InitTerm(!*mFlag)
 
-	term.Println(term.Purple+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Cyan+"develat.io"+term.Reset)
-	term.Println(term.Gray+"Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler, term.Reset)
+	_, err := term.Println(term.Purple+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Cyan+"develat.io"+term.Reset)
+	if err != nil {
+		fmt.Println("Nebulant CLI - A cloud builder by develat.io")
+	}
+	_, err = term.Println(term.Gray+"Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler, term.Reset)
+	if err != nil {
+		fmt.Println("Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler)
+	}
 
 	// Init console logger
 	cast.InitConsoleLogger(!*mFlag)
