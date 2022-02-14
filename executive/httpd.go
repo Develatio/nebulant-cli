@@ -22,10 +22,12 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,6 +44,11 @@ var ServerError error
 func InitServerMode(addr string) {
 	ServerError = nil
 	ServerWaiter.Add(1) // Append +1 waiter
+
+	pip := net.ParseIP(strings.Split(addr, ":")[0])
+	if !pip.IsPrivate() {
+		cast.LogWarn("You are using a public ip. Please note that this could result in a security hole!", nil)
+	}
 	go func() {
 		defer ServerWaiter.Done() // Append -1 waiter
 		srv := &Httpd{}
