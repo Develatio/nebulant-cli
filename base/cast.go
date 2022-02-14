@@ -27,4 +27,5 @@ type ILogger interface {
 	LogDebug(s string)
 	Duplicate() ILogger
 	SetActionID(ai string)
+	SetThreadID(ti string)
 }

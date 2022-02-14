@@ -88,11 +88,13 @@ func (s *Stage) Divide(actions []*blueprint.Action) []*Stage {
 	if s.stageParentsID != "" {
 		parentsStringSeparator = "|"
 	}
+
 	for _, action := range actions {
+		logger := s.logger.Duplicate()
 		store := s.store.Duplicate()
 		stage := &Stage{
 			store:           store,
-			logger:          s.logger,
+			logger:          logger,
 			StartAction:     action,
 			stageStatus:     StageStatusStopped,
 			CurrentAction:   action,
@@ -125,7 +127,7 @@ func (s *Stage) GetStore() base.IStore {
 
 func (s *Stage) lpfx() string {
 	if config.DEBUG {
-		return "( Stage )-[" + s.stageParentsID + "]-(" + s.stageID + ")> "
+		return "( Thread )-[" + s.stageParentsID + "]-(" + s.stageID + ")> "
 	}
 	if s.stageParentsID == "" {
 		return "( Main )> "
@@ -136,6 +138,11 @@ func (s *Stage) lpfx() string {
 // SetStageID func
 func (s *Stage) SetStageID(stageID string) {
 	s.stageID = stageID
+	var parentsStringSeparator string
+	if s.stageParentsID != "" {
+		parentsStringSeparator = "|"
+	}
+	s.logger.SetThreadID(s.stageParentsID + parentsStringSeparator + stageID)
 }
 
 // GetProvider func
