@@ -92,7 +92,9 @@ func (s *Stage) Divide(actions []*blueprint.Action) []*Stage {
 	for _, action := range actions {
 		store := s.store.Duplicate()
 		stage := &Stage{
-			store:           store,
+			store: store,
+			// logger should be a new fresh instance of base.ILogger
+			// store.Duplicate should call sotore.logger.Duplicate
 			logger:          store.GetLogger(),
 			StartAction:     action,
 			stageStatus:     StageStatusStopped,
@@ -101,6 +103,10 @@ func (s *Stage) Divide(actions []*blueprint.Action) []*Stage {
 			execInstruction: make(chan *ExecCtrlInstruction, 10),
 			stageID:         "",
 			stageParentsID:  s.stageParentsID + parentsStringSeparator + s.stageID,
+		}
+		// prevent bad things
+		if s.logger == stage.logger {
+			panic("No fresh copy of logger at stage division")
 		}
 
 		stageaddr := fmt.Sprintf("%p", stage)

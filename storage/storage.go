@@ -126,7 +126,8 @@ func (s *Store) Duplicate() base.IStore {
 	store.aoutByActionID = aoutByActionID
 	store.private = private
 	//
-	if store.logger != nil {
+	vr := reflect.ValueOf(s.logger)
+	if vr.Kind() == reflect.Ptr {
 		store.logger = s.logger.Duplicate()
 	}
 	// NOTE: On Store duplication, no current providers instance are copied.
