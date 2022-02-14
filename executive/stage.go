@@ -90,11 +90,10 @@ func (s *Stage) Divide(actions []*blueprint.Action) []*Stage {
 	}
 
 	for _, action := range actions {
-		logger := s.logger.Duplicate()
 		store := s.store.Duplicate()
 		stage := &Stage{
 			store:           store,
-			logger:          logger,
+			logger:          store.GetLogger(),
 			StartAction:     action,
 			stageStatus:     StageStatusStopped,
 			CurrentAction:   action,
@@ -432,7 +431,7 @@ func (s *Stage) PostAction(actionOutput *base.ActionOutput, actionErr error) boo
 		s.logger.LogDebug(s.lpfx() + "[" + s.LastAction.ActionID + "] Next ---> " + actions[0].ActionID)
 		s.setNextAction(actions[0])
 
-	// Thread init detected -> back to master
+	// Thread init detected -> back to manager
 	default:
 		if s.LastActionError != nil {
 			s.logger.LogWarn("Caught KO error: " + s.LastActionError.Error())

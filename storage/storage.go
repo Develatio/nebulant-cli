@@ -98,8 +98,6 @@ func (s *Store) Duplicate() base.IStore {
 	var recordsByValueID = make(map[string]*base.StorageRecord)
 	var aoutByActionID = make(map[string]*base.ActionOutput)
 	var private = make(map[string]interface{})
-	// NOTE provider is not copied: newly providers with proper store
-	// should be created.
 
 	for k, v := range s.recordsByRefName {
 		vv := *v
@@ -127,7 +125,14 @@ func (s *Store) Duplicate() base.IStore {
 	store.recordsByValueID = recordsByValueID
 	store.aoutByActionID = aoutByActionID
 	store.private = private
-	store.logger = s.logger
+	//
+	if store.logger != nil {
+		store.logger = s.logger.Duplicate()
+	}
+	// NOTE: On Store duplication, no current providers instance are copied.
+	// This is the desired behavior. Every stage/thread should start his own
+	// provider instance with his own store. This is performed
+	// by stage.GetProvider()
 
 	// Dump src store complex values (private) into newly created store.
 	// Commonly this includes a session copy
