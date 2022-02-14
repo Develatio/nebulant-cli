@@ -79,11 +79,11 @@ func main() {
 		os.Exit(exitCode)
 	}()
 
-	var serverModeFlag = flag.Bool("d", false, "Enable server mode to be used within Nebulant Pipeline Builder.")
-	var addrFlag = flag.String("b", config.SERVER_ADDR+":"+config.SERVER_PORT, "Use addr[:port] for server mode.")
+	var serverModeFlag = flag.Bool("s", false, "Server mode to be used within Nebulant Pipeline Builder.")
+	var addrFlag = flag.String("b", config.SERVER_ADDR+":"+config.SERVER_PORT, "Bind addr[:port] for server mode.")
 	var versionFlag = flag.Bool("v", false, "Show version and exit.")
 	var debugFlag = flag.Bool("x", false, "Enable debug.")
-	var mFlag = flag.Bool("m", false, "Disable colors.")
+	var colorFlag = flag.Bool("c", false, "Disable colors.")
 
 	flag.Parse()
 	args := flag.Args()
@@ -113,7 +113,7 @@ func main() {
 	}
 
 	// Init Term
-	term.InitTerm(!*mFlag)
+	term.InitTerm(!*colorFlag)
 
 	_, err := term.Println(term.Purple+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Cyan+"develat.io"+term.Reset)
 	if err != nil {
@@ -125,7 +125,7 @@ func main() {
 	}
 
 	// Init console logger
-	cast.InitConsoleLogger(!*mFlag)
+	cast.InitConsoleLogger(!*colorFlag)
 
 	// Init Providers
 	cast.SBus.RegisterProviderInitFunc("aws", aws.New)
