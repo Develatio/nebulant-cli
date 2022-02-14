@@ -26,5 +26,5 @@ type ProviderInitFunc func(store IStore) (IProvider, error)
 // IProvider interface
 type IProvider interface {
 	HandleAction(action *blueprint.Action) (*ActionOutput, error)
-	DumpStore(freshStore IStore)
+	DumpPrivateVars(freshStore IStore)
 }

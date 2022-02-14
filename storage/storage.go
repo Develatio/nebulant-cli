@@ -137,7 +137,7 @@ func (s *Store) Duplicate() base.IStore {
 	// Dump src store complex values (private) into newly created store.
 	// Commonly this includes a session copy
 	for _, v := range s.providers {
-		v.DumpStore(store)
+		v.DumpPrivateVars(store)
 	}
 	return store
 }

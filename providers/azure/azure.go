@@ -40,8 +40,8 @@ type Provider struct {
 	Logger base.ILogger
 }
 
-// DumpStore func
-func (p *Provider) DumpStore(freshStore base.IStore) {}
+// DumpPrivateVars func
+func (p *Provider) DumpPrivateVars(freshStore base.IStore) {}
 
 // HandleAction func
 func (p *Provider) HandleAction(action *blueprint.Action) (*base.ActionOutput, error) {

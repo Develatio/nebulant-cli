@@ -32,8 +32,8 @@ import (
 type testProvider struct {
 }
 
-// DumpStore func
-func (p *testProvider) DumpStore(freshStore base.IStore) {
+// DumpPrivateVars func
+func (p *testProvider) DumpPrivateVars(freshStore base.IStore) {
 }
 
 // HandleAction func
