@@ -19,8 +19,7 @@
 package interactive
 
 import (
-	"flag"
-	"fmt"
+	"net"
 	"os"
 
 	"github.com/develatio/nebulant-cli/config"
@@ -38,7 +37,7 @@ type menuItem struct {
 
 func Loop() error {
 	menuItems := []*menuItem{
-		{Name: "Serve ", Description: "Start server mode", Cmd: "serve"},
+		{Name: "Serve ", Description: "Start server mode at " + net.JoinHostPort(config.SERVER_ADDR, config.SERVER_PORT), Cmd: "serve"},
 		{Name: "Build ", Description: "Open builder app and start server mode", Cmd: "build"},
 		{Name: "Browse", Description: "Brwose and run the blueprints stored in your account", Cmd: "browse"},
 		{Name: "Path", Description: "Manually indicates the path to a blueprint", Cmd: "path"},
@@ -68,9 +67,7 @@ L:
 
 		switch input {
 		case "args":
-			fmt.Println("Usage: nebulant [-options] [file.json | nebulant://UUID]")
-			fmt.Println("")
-			flag.PrintDefaults()
+			util.PrintUsage(nil)
 		case "exit":
 			os.Exit(0)
 		case "serve":
@@ -81,7 +78,7 @@ L:
 				term.PrintErr(err.Error() + "\n")
 				continue
 			}
-			executive.InitServerMode(config.SERVER_ADDR + ":" + config.SERVER_PORT)
+			executive.InitServerMode(config.SERVER_ADDR, config.SERVER_PORT)
 			executive.ServerWaiter.Wait()
 			if executive.ServerError != nil {
 				term.PrintErr(executive.ServerError.Error() + "\n")
@@ -106,7 +103,7 @@ L:
 				term.PrintErr(err.Error() + "\n")
 				continue
 			}
-			executive.InitServerMode(config.SERVER_ADDR + ":" + config.SERVER_PORT)
+			executive.InitServerMode(config.SERVER_ADDR, config.SERVER_PORT)
 			executive.ServerWaiter.Wait()
 			if executive.ServerError != nil {
 				term.PrintErr(executive.ServerError.Error() + "\n")

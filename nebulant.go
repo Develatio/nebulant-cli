@@ -19,11 +19,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"runtime"
 	"runtime/debug"
 	"strconv"
-	"strings"
 
 	// hey hacker:
 	// uncomment for profiling
@@ -80,26 +80,36 @@ func main() {
 	}()
 
 	var serverModeFlag = flag.Bool("s", false, "Server mode to be used within Nebulant Pipeline Builder.")
-	var addrFlag = flag.String("b", config.SERVER_ADDR+":"+config.SERVER_PORT, "Bind addr[:port] for server mode.")
+	var addrFlag = flag.String("b", config.SERVER_ADDR+":"+config.SERVER_PORT, "Bind addr:port (ipv4) or [::1]:port (ipv6) for server mode.")
 	var versionFlag = flag.Bool("v", false, "Show version and exit.")
 	var debugFlag = flag.Bool("x", false, "Enable debug.")
+	var ipv6Flag = flag.Bool("6", false, "Force ipv6")
 	var colorFlag = flag.Bool("c", false, "Disable colors.")
 
 	flag.Parse()
 	args := flag.Args()
 	bluePrintFilePath := flag.Arg(0)
 
-	paddr := strings.Split(*addrFlag, ":")
-	if len(paddr) == 1 {
-		config.SERVER_ADDR = paddr[0]
-	} else if len(paddr) == 2 {
-		config.SERVER_ADDR = paddr[0]
-		config.SERVER_PORT = paddr[1]
+	var tcpaddr *net.TCPAddr
+	var err error
+	if *ipv6Flag {
+		tcpaddr, err = net.ResolveTCPAddr("tcp6", *addrFlag)
 	} else {
-		fmt.Println("Cannot parse bind addr.")
-		flag.PrintDefaults()
+		tcpaddr, err = net.ResolveTCPAddr("tcp", *addrFlag)
+	}
+	if err != nil {
+		util.PrintUsage(err)
 		os.Exit(1)
 	}
+
+	host, port, err := net.SplitHostPort(tcpaddr.String())
+	if err != nil {
+		util.PrintUsage(err)
+		os.Exit(1)
+	}
+
+	config.SERVER_ADDR = host
+	config.SERVER_PORT = port
 
 	// Version and exit
 	if *versionFlag {
@@ -115,7 +125,7 @@ func main() {
 	// Init Term
 	term.InitTerm(!*colorFlag)
 
-	_, err := term.Println(term.Purple+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Cyan+"develat.io"+term.Reset)
+	_, err = term.Println(term.Purple+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Cyan+"develat.io"+term.Reset)
 	if err != nil {
 		fmt.Println("Nebulant CLI - A cloud builder by develat.io")
 	}
@@ -166,7 +176,7 @@ func main() {
 			cast.LogErr(err.Error(), nil)
 			panic(err.Error())
 		}
-		executive.InitServerMode(config.SERVER_ADDR + ":" + config.SERVER_PORT)
+		executive.InitServerMode(config.SERVER_ADDR, config.SERVER_PORT)
 	} else if len(args) <= 0 {
 		// Interactive mode
 		err := interactive.Loop()

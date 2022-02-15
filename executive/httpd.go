@@ -27,7 +27,6 @@ import (
 	"net/url"
 	"path"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -41,12 +40,13 @@ import (
 var ServerWaiter *sync.WaitGroup = &sync.WaitGroup{}
 var ServerError error
 
-func InitServerMode(addr string) {
+func InitServerMode(ip, port string) {
+	addr := net.JoinHostPort(ip, port)
 	ServerError = nil
 	ServerWaiter.Add(1) // Append +1 waiter
 
-	pip := net.ParseIP(strings.Split(addr, ":")[0])
-	if !pip.IsPrivate() {
+	pip := net.ParseIP(ip)
+	if !pip.IsPrivate() && !pip.IsLoopback() {
 		cast.LogWarn("You are using a public ip. Please note that this could result in a security hole!", nil)
 	}
 	go func() {
