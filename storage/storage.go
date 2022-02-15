@@ -23,6 +23,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 	"unicode"
 
@@ -269,6 +270,21 @@ func (s *Store) Interpolate(sourcetext *string) error {
 				s.logger.LogWarn("Interpolation results in an empty string replacement for " + match[0])
 			}
 			*sourcetext = strings.Replace(*sourcetext, match[0], varval, 1)
+			continue
+		}
+
+		if strings.ToLower(refname) == "runtime" {
+			refpath = strings.TrimPrefix(refpath, refname)
+			refpath = strings.TrimPrefix(refpath, ".")
+			if len(refpath) <= 0 {
+				return fmt.Errorf("runtime var access with empty var name")
+			}
+			switch strings.ToLower(refpath) {
+			case "os":
+				*sourcetext = strings.Replace(*sourcetext, match[0], runtime.GOOS, 1)
+			default:
+				return fmt.Errorf("Unknown runtime var name " + match[0])
+			}
 			continue
 		}
 
