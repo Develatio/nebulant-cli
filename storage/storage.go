@@ -24,11 +24,13 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"unicode"
 
 	"github.com/bhmj/jsonslice"
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/config"
 )
 
 // Store struct
@@ -282,8 +284,16 @@ func (s *Store) Interpolate(sourcetext *string) error {
 			switch strings.ToLower(refpath) {
 			case "os":
 				*sourcetext = strings.Replace(*sourcetext, match[0], runtime.GOOS, 1)
+			case "arch":
+				*sourcetext = strings.Replace(*sourcetext, match[0], runtime.GOARCH, 1)
+			case "numcpu":
+				*sourcetext = strings.Replace(*sourcetext, match[0], strconv.Itoa(runtime.NumCPU()), 1)
+			case "version":
+				*sourcetext = strings.Replace(*sourcetext, match[0], config.Version, 1)
+			case "versiondate":
+				*sourcetext = strings.Replace(*sourcetext, match[0], config.VersionDate, 1)
 			default:
-				return fmt.Errorf("Unknown runtime var name " + match[0])
+				return fmt.Errorf("Unknown runtime var name " + refpath)
 			}
 			continue
 		}
