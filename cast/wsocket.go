@@ -117,6 +117,8 @@ func (c *WSocketLogger) lockedSetWriteDeadline(t time.Time) error {
 }
 
 func (c *WSocketLogger) joinExecution(remoteExecutionUUID string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	ER.mu.Lock()
 	defer ER.mu.Unlock()
 	if _, exists := ER.ByClientUUID[c.fLink.ClientUUID]; !exists {
@@ -128,6 +130,8 @@ func (c *WSocketLogger) joinExecution(remoteExecutionUUID string) {
 func (c *WSocketLogger) canReadExecution(remoteExecutionUUID string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	ER.mu.Lock()
+	defer ER.mu.Unlock()
 	if _, exists := ER.ByClientUUID[c.fLink.ClientUUID]; !exists {
 		// no client
 		return false
