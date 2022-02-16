@@ -22,8 +22,11 @@ import (
 	"fmt"
 
 	"github.com/chzyer/readline"
+	"github.com/manifoldco/promptui"
 )
 
 var Stdout = readline.Stdout
 var Stderr = readline.Stderr
 var CharBell = []byte(fmt.Sprintf("%c", readline.CharBell))[0]
+var ErrInterrupt = promptui.ErrInterrupt
+var ErrEOF = promptui.ErrEOF

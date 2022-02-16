@@ -26,3 +26,7 @@ import (
 var Stdout = os.Stdout
 var Stderr = os.Stderr
 var CharBell = []byte(fmt.Sprintf("%c", 7))[0]
+
+// Jus for bypass build, not really used
+var ErrInterrupt = fmt.Errorf("^C")
+var ErrEOF = fmt.Errorf("^D")

@@ -40,7 +40,6 @@ import (
 	"github.com/develatio/nebulant-cli/providers/generic"
 	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
-	"github.com/manifoldco/promptui"
 )
 
 func main() {
@@ -181,11 +180,11 @@ func main() {
 		// Interactive mode
 		err := interactive.Loop()
 		if err != nil {
-			if err == promptui.ErrInterrupt {
+			if err == term.ErrInterrupt {
 				fmt.Println("^C")
 				os.Exit(0)
 			}
-			if err == promptui.ErrEOF {
+			if err == term.ErrEOF {
 				fmt.Println("^D")
 				os.Exit(0)
 			}

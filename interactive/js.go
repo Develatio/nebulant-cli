@@ -24,3 +24,7 @@ func Loop() error {
 	fmt.Println("Not supported")
 	return nil
 }
+
+func Path() error {
+	return nil
+}
