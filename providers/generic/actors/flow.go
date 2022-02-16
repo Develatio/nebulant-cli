@@ -166,8 +166,10 @@ func (c *Condition) evaluate() (bool, error) {
 
 	switch c.Operator {
 	case "=":
+		c.ctx.Logger.LogDebug("Evaluating as " + rawA + " == " + rawB)
 		return rawA == rawB, nil
 	case "!=":
+		c.ctx.Logger.LogDebug("Evaluating as " + rawA + " != " + rawB)
 		return rawA != rawB, nil
 	case ">":
 		return utf8.RuneCountInString(rawA) > utf8.RuneCountInString(rawB), nil
@@ -202,6 +204,7 @@ func (c *Condition) operate(operator bool) (bool, error) {
 			c.ctx.Logger.LogDebug("Evaluation error")
 			return false, err
 		}
+		c.ctx.Logger.LogDebug("Condition evaluated as " + strconv.FormatBool(r) + " within operator " + strconv.FormatBool(operator))
 		// AND -> true
 		// OR -> false
 		//
@@ -213,12 +216,14 @@ func (c *Condition) operate(operator bool) (bool, error) {
 		// if true != false -> entra en el if y sale con return true ya que
 		// uno solo de los operandos a true es suficiente
 		if r != operator {
-			c.ctx.Logger.LogDebug("Evaluated r!operator " + strconv.FormatBool(r) + "!" + strconv.FormatBool(operator))
+			c.ctx.Logger.LogDebug("Group evaluated r!operator " + strconv.FormatBool(r) + "!" + strconv.FormatBool(operator))
 			return !operator, nil
 		}
 	}
-	c.ctx.Logger.LogDebug("Evaluated true")
-	return true, nil
+
+	// None rules are met, return operator
+	c.ctx.Logger.LogDebug("Group evaluated as " + strconv.FormatBool(operator))
+	return operator, nil
 }
 
 type conditionParameters struct {
