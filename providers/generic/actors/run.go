@@ -45,19 +45,22 @@ type runScriptParameters struct {
 
 func RunScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	p := &runScriptParameters{}
-	jsonErr := json.Unmarshal(ctx.Action.Parameters, p)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := json.Unmarshal(ctx.Action.Parameters, p); err != nil {
+		return nil, err
 	}
 
 	if p.Target == nil {
-		ctx.Logger.LogDebug("Running remote script")
 		return nil, fmt.Errorf("target cannot be empty")
 	}
 
 	if strings.ToLower(*p.Target) == "local" {
-		ctx.Logger.LogDebug("Running local script")
+		if !ctx.Rehearsal {
+			ctx.Logger.LogDebug("Running local script")
+		}
 		return RunLocalScript(ctx)
+	}
+	if !ctx.Rehearsal {
+		ctx.Logger.LogDebug("Running remote script")
 	}
 	return RunRemoteScript(ctx)
 }

@@ -64,9 +64,12 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 
 	p := &runLocalParameters{}
-	jsonErr := json.Unmarshal(ctx.Action.Parameters, p)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := json.Unmarshal(ctx.Action.Parameters, p); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	var cmd *exec.Cmd
@@ -218,10 +221,14 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 
 func DefineEnvs(ctx *ActionContext) (*base.ActionOutput, error) {
 	params := new(defineEnvsParameters)
-	jsonErr := util.UnmarshalValidJSON(ctx.Action.Parameters, params)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
+		return nil, err
 	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
 	for varname := range params.Vars {
 		varvalue := params.Vars[varname]
 		ctx.Logger.LogInfo("Setting env var " + varname)

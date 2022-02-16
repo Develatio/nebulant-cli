@@ -47,9 +47,10 @@ func (l *logWriter) Write(p []byte) (int, error) {
 
 // ActionContext struct
 type ActionContext struct {
-	Action *blueprint.Action
-	Store  base.IStore
-	Logger base.ILogger
+	Rehearsal bool
+	Action    *blueprint.Action
+	Store     base.IStore
+	Logger    base.ILogger
 }
 
 // ActionFunc func

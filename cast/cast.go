@@ -410,3 +410,40 @@ func (l *Logger) ByteLogInfo(b []byte) {
 func (l *Logger) LogDebug(s string) {
 	Log(DebugLevel, []byte(s), l.ExecutionUUID, l.ActionID, l.ThreadID, false)
 }
+
+type DummyLogger struct {
+	ExecutionUUID *string
+	ActionID      *string
+	ThreadID      *string
+}
+
+// Duplicate func
+func (l *DummyLogger) Duplicate() base.ILogger {
+	newLoger := &DummyLogger{}
+	if l.ExecutionUUID != nil {
+		ei := *l.ExecutionUUID
+		newLoger.ExecutionUUID = &ei
+	}
+	if l.ActionID != nil {
+		ai := *l.ActionID
+		newLoger.ActionID = &ai
+	}
+	if l.ThreadID != nil {
+		ti := *l.ThreadID
+		newLoger.ThreadID = &ti
+	}
+	return newLoger
+}
+func (l *DummyLogger) SetActionID(ai string) {
+	l.ActionID = &ai
+}
+func (l *DummyLogger) SetThreadID(ti string) {
+	l.ThreadID = &ti
+}
+func (l *DummyLogger) LogCritical(s string) {}
+func (l *DummyLogger) LogErr(s string)      {}
+func (l *DummyLogger) ByteLogErr(b []byte)  {}
+func (l *DummyLogger) LogWarn(s string)     {}
+func (l *DummyLogger) LogInfo(s string)     {}
+func (l *DummyLogger) ByteLogInfo(b []byte) {}
+func (l *DummyLogger) LogDebug(s string)    {}

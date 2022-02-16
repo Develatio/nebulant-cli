@@ -169,13 +169,17 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	host := net.JoinHostPort(*params.Server, *params.Port)
-	auth := smtp.PlainAuth("", *params.Username, *params.Password, host)
 
 	// Sending "Bcc" messages is accomplished by including an email address in
 	// the to parameter but not including it in the msg headers.
 	to := append(params.To, params.BCC...)
 	to = append(to, params.CC...)
 
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	auth := smtp.PlainAuth("", *params.Username, *params.Password, host)
 	err := smtp.SendMail(host, auth, *params.From, to, msg)
 	if err != nil {
 		return nil, err

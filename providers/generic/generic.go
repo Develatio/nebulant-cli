@@ -21,6 +21,7 @@ import (
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
+	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/providers/generic/actors"
 )
 
@@ -39,6 +40,17 @@ func ActionValidator(action *blueprint.Action) error {
 	if al.N == actors.NextKO && len(action.NextAction.NextOk) > 0 {
 		return fmt.Errorf("generic: action " + action.ActionName + " has no OK port")
 	}
+
+	ac := &actors.ActionContext{
+		Rehearsal: true,
+		Action:    action,
+		Logger:    &cast.DummyLogger{},
+	}
+	_, err := al.F(ac)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

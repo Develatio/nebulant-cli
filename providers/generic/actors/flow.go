@@ -67,15 +67,14 @@ func (c *Condition) evaluate() (bool, error) {
 		}
 		return false, fmt.Errorf("unknown combinator")
 	}
-	var err error
+
 	var rawA = c.Field
 	var rawB = c.Value
-	err = c.ctx.Store.Interpolate(&rawA)
-	if err != nil {
+
+	if err := c.ctx.Store.Interpolate(&rawA); err != nil {
 		return false, err
 	}
-	err = c.ctx.Store.Interpolate(&rawB)
-	if err != nil {
+	if err := c.ctx.Store.Interpolate(&rawB); err != nil {
 		return false, err
 	}
 
@@ -254,15 +253,20 @@ func Stop(ctx *ActionContext) (*base.ActionOutput, error) {
 func ConditionParse(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	params := new(conditionParameters)
-	err = util.UnmarshalValidJSON(ctx.Action.Parameters, params)
-	if err != nil {
+	if err = util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
 		return nil, err
 	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
 	params.Conditions.ctx = ctx
 	r, err := params.Conditions.evaluate()
 	if err != nil {
 		return nil, err
 	}
+
 	aout := base.NewActionOutput(ctx.Action, r, nil)
 	return aout, nil
 }
@@ -270,9 +274,12 @@ func ConditionParse(ctx *ActionContext) (*base.ActionOutput, error) {
 // Sleep func
 func Sleep(ctx *ActionContext) (*base.ActionOutput, error) {
 	params := new(sleepParameters)
-	jsonErr := util.UnmarshalValidJSON(ctx.Action.Parameters, params)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 	ctx.Logger.LogInfo("Sleeping for " + strconv.FormatInt(params.Seconds, 10) + " seconds")
 	// Duration == type int64
@@ -283,10 +290,14 @@ func Sleep(ctx *ActionContext) (*base.ActionOutput, error) {
 // OKKO func
 func OKKO(ctx *ActionContext) (*base.ActionOutput, error) {
 	params := new(okkoParameters)
-	jsonErr := util.UnmarshalValidJSON(ctx.Action.Parameters, params)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
+		return nil, err
 	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
 	if params.Ok {
 		if params.OkMsg != nil && *params.OkMsg != "" {
 			err := ctx.Store.Interpolate(params.OkMsg)
@@ -312,13 +323,15 @@ func OKKO(ctx *ActionContext) (*base.ActionOutput, error) {
 func Log(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	params := new(logParameters)
-	err = util.UnmarshalValidJSON(ctx.Action.Parameters, params)
-	if err != nil {
+	if err = util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
 		return nil, err
 	}
 
-	err = ctx.Store.Interpolate(params.Content)
-	if err != nil {
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	if err = ctx.Store.Interpolate(params.Content); err != nil {
 		return nil, err
 	}
 
@@ -332,10 +345,16 @@ func Panic(ctx *ActionContext) (*base.ActionOutput, error) {
 	params := new(panicParameters)
 	err = util.UnmarshalValidJSON(ctx.Action.Parameters, params)
 	if err != nil {
+		if ctx.Rehearsal {
+			return nil, err
+		}
 		panic(&util.PanicData{
 			PanicValue: "Halt for unknown reason. Bad halt params. Halting anyway.",
 			PanicTrace: []byte("--"),
 		})
+	}
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 	if params.Content == nil {
 		panic(&util.PanicData{
@@ -360,9 +379,12 @@ func Panic(ctx *ActionContext) (*base.ActionOutput, error) {
 // DefineVars func
 func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 	params := new(defineVarsParameters)
-	jsonErr := util.UnmarshalValidJSON(ctx.Action.Parameters, params)
-	if jsonErr != nil {
-		return nil, jsonErr
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
 	}
 
 	for varname := range params.Vars {

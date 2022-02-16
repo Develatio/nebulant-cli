@@ -132,6 +132,10 @@ func ScpCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, fmt.Errorf("please set source OR target")
 	}
 
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
 	upload := true
 	// Remote to local (upload)
 	remoteAddress := params.Target

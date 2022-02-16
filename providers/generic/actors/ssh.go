@@ -65,13 +65,15 @@ type runRemoteScriptOutput struct {
 func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	p := &runRemoteParameters{}
-	err = json.Unmarshal(ctx.Action.Parameters, p)
-	if err != nil {
+	if err = json.Unmarshal(ctx.Action.Parameters, p); err != nil {
 		return nil, err
 	}
 
-	err = ctx.Store.Interpolate(p.Target)
-	if err != nil {
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	if err = ctx.Store.Interpolate(p.Target); err != nil {
 		return nil, err
 	}
 
