@@ -234,7 +234,7 @@ type logParameters struct {
 }
 
 type panicParameters struct {
-	Content *string `json:"content" validate:"required"`
+	Content *string `json:"content"`
 }
 
 func NOOP(ctx *ActionContext) (*base.ActionOutput, error) {
