@@ -73,7 +73,7 @@ func NewClient(conn net.Conn, host string) (*Client, error) {
 	text := textproto.NewConn(conn)
 	_, _, err := text.ReadResponse(220)
 	if err != nil {
-		text.Close()
+		text.Close() // #nosec G104 -- Unhandle is OK here
 		return nil, err
 	}
 	c := &Client{Text: text, conn: conn, serverName: host, localName: "localhost"}
@@ -213,7 +213,7 @@ func (c *Client) Auth(a Auth) error {
 	encoding := base64.StdEncoding
 	mech, resp, err := a.Start(&ServerInfo{c.serverName, c.tls, c.auth})
 	if err != nil {
-		c.Quit()
+		c.Quit() // #nosec G104 -- Unhandle is OK here
 		return err
 	}
 	resp64 := make([]byte, encoding.EncodedLen(len(resp)))
@@ -235,8 +235,8 @@ func (c *Client) Auth(a Auth) error {
 		}
 		if err != nil {
 			// abort the AUTH
-			c.cmd(501, "*")
-			c.Quit()
+			c.cmd(501, "*") // #nosec G104 -- Unhandle is OK here
+			c.Quit()        // #nosec G104 -- Unhandle is OK here
 			break
 		}
 		if resp == nil {
@@ -291,7 +291,7 @@ type dataCloser struct {
 }
 
 func (d *dataCloser) Close() error {
-	d.WriteCloser.Close()
+	d.WriteCloser.Close() // #nosec G104 -- Unhandle is OK here
 	_, _, err := d.c.Text.ReadResponse(250)
 	return err
 }
@@ -355,7 +355,10 @@ func SendMail(conn net.Conn, a Auth, from string, to []string, msg []byte) error
 	}
 
 	if ok, _ := c.Extension("STARTTLS"); ok {
-		config := &tls.Config{ServerName: c.serverName}
+		config := &tls.Config{
+			ServerName: c.serverName,
+			MinVersion: tls.VersionTLS12,
+		}
 		if testHookStartTLS != nil {
 			testHookStartTLS(config)
 		}

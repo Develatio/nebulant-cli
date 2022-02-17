@@ -189,9 +189,10 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 	var conn net.Conn
 	var err error
 
-	if params.SSL {
+	if params.SSL { // #nosec G402 -- Leave to user the choose to be insecure
 		// Use SSL at beginning
 		conn, err = tls.Dial("tcp", host, &tls.Config{
+			MinVersion:         tls.VersionTLS12,
 			InsecureSkipVerify: params.IgnoreInvalidSSL,
 			ServerName:         host,
 		})
