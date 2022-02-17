@@ -17,26 +17,30 @@
 package actors
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
-	"net/smtp"
+	"strconv"
 	"strings"
+
+	"github.com/develatio/nebulant-cli/netproto/smtp"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
 )
 
 type sendMailParametersBody struct {
-	HTML  []byte `json:"html"`
-	Plain []byte `json:"plain"`
+	HTML  *string `json:"html"`
+	Plain *string `json:"plain"`
 }
 
 type sendMailParameters struct {
 	Username         *string                 `json:"username" validate:"required"`
 	Password         *string                 `json:"password" validate:"required"`
 	Server           *string                 `json:"server" validate:"required"`
-	Port             *string                 `json:"port"`
+	Port             *int                    `json:"port"`
 	IgnoreInvalidSSL bool                    `json:"ignore_invalid_ssl"`
+	SSL              bool                    `json:"ssl"`
 	Subject          *string                 `json:"subject"`
 	Body             *sendMailParametersBody `json:"body"`
 	From             *string                 `json:"from" validate:"required"`
@@ -104,7 +108,7 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 		// similar to an RFC 822 message in syntax, but different in meaning.
 		// rfc2046
 		// https://datatracker.ietf.org/doc/html/rfc2046#section-5.1
-		if len(params.Body.HTML) > 0 && len(params.Body.Plain) > 0 {
+		if params.Body.HTML != nil && len(*params.Body.HTML) > 0 && params.Body.Plain != nil && len(*params.Body.Plain) > 0 {
 			msg = append(msg, []byte("MIME-Version: 1.0\r\n")...)
 			// alternative subtype for same data
 			// rfc2046 5.1.4.
@@ -126,36 +130,36 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 			msg = append(msg, []byte("--boundary42\r\n")...)
 			msg = append(msg, []byte("Content-Type: text/plain; charset=utf-8\r\n")...)
 			msg = append(msg, []byte("\r\n")...)
-			msg = append(msg, params.Body.Plain...)
+			msg = append(msg, []byte(*params.Body.Plain)...)
 			msg = append(msg, []byte("\r\n")...)
 
 			// html boundary
 			msg = append(msg, []byte("--boundary42\r\n")...)
 			msg = append(msg, []byte("Content-Type: text/html; charset=utf-8\r\n")...)
 			msg = append(msg, []byte("\r\n")...)
-			msg = append(msg, params.Body.HTML...)
+			msg = append(msg, []byte(*params.Body.HTML)...)
 			msg = append(msg, []byte("\r\n")...)
 
 			// finish boundary
 			msg = append(msg, []byte("--boundary42--\r\n")...)
 			msg = append(msg, []byte("\r\n")...)
 
-		} else if len(params.Body.HTML) > 0 {
+		} else if params.Body.HTML != nil && len(*params.Body.HTML) > 0 {
 			// html body
 			msg = append(msg, []byte("MIME-Version: 1.0\r\n")...)
 			msg = append(msg, []byte("Content-Type: text/html; charset=utf-8\r\n")...)
 			// line break to start body
 			msg = append(msg, []byte("\r\n")...)
 			// body
-			msg = append(msg, params.Body.HTML...)
+			msg = append(msg, []byte(*params.Body.HTML)...)
 			msg = append(msg, []byte("\r\n")...)
-		} else if len(params.Body.Plain) > 0 {
+		} else if params.Body.Plain != nil && len(*params.Body.Plain) > 0 {
 			msg = append(msg, []byte("MIME-Version: 1.0\r\n")...)
 			msg = append(msg, []byte("Content-Type: text/plain; charset=utf-8\r\n")...)
 			// line break to start body
 			msg = append(msg, []byte("\r\n")...)
 			// body
-			msg = append(msg, params.Body.Plain...)
+			msg = append(msg, []byte(*params.Body.Plain)...)
 			msg = append(msg, []byte("\r\n")...)
 		} else {
 			// empty body
@@ -168,7 +172,7 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
-	host := net.JoinHostPort(*params.Server, *params.Port)
+	host := net.JoinHostPort(*params.Server, strconv.Itoa(*params.Port))
 
 	// Sending "Bcc" messages is accomplished by including an email address in
 	// the to parameter but not including it in the msg headers.
@@ -179,8 +183,30 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	auth := smtp.PlainAuth("", *params.Username, *params.Password, host)
-	err := smtp.SendMail(host, auth, *params.From, to, msg)
+	auth := smtp.PlainAuth("", *params.Username, *params.Password, *params.Server)
+	ctx.Logger.LogDebug("Sending mail...")
+
+	var conn net.Conn
+	var err error
+
+	if params.SSL {
+		// Use SSL at beginning
+		conn, err = tls.Dial("tcp", host, &tls.Config{
+			InsecureSkipVerify: params.IgnoreInvalidSSL,
+			ServerName:         host,
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Use regular tcp for startls
+		conn, err = net.Dial("tcp", host)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = smtp.SendMail(conn, auth, *params.From, to, msg)
 	if err != nil {
 		return nil, err
 	}

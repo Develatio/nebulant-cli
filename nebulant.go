@@ -73,7 +73,11 @@ func main() {
 		if exitCode == 0 && executive.MDirector != nil {
 			exitCode = executive.MDirector.ExitCode
 		}
-		cast.LogErr("Done with status "+strconv.Itoa(exitCode), nil)
+		if exitCode > 0 {
+			cast.LogErr("Done with status "+strconv.Itoa(exitCode), nil)
+		} else {
+			cast.LogInfo("Done with status "+strconv.Itoa(exitCode), nil)
+		}
 		cast.SBus.Close().Wait()
 		os.Exit(exitCode)
 	}()
