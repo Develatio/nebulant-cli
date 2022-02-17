@@ -34,6 +34,7 @@ import (
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/websocket"
 )
 
@@ -69,6 +70,13 @@ type HandshakeResponse struct {
 	Version string `json:"version"`
 }
 
+type ValidationError struct {
+	ValActionID string `json:"validation_actionid"`
+	ValKey      string `json:"validation_key"`
+	ValTag      string `json:"validation_tag"`
+	ValError    string `json:"validation_error"`
+}
+
 // HandshakeRequest struct
 type HandshakeRequest struct {
 	Version string `json:"version"`
@@ -76,15 +84,19 @@ type HandshakeRequest struct {
 
 // AutocompleteResponse struct
 type AutocompleteResponse struct {
-	Fail   bool                             `json:"Fail"`
-	Errors []string                         `json:"Errors"`
-	Result map[string][]*base.StorageRecord `json:"result"`
+	Code             string                           `json:"code"`
+	Fail             bool                             `json:"Fail"`
+	Errors           []string                         `json:"Errors"`
+	ValidationErrors []*ValidationError               `json:"validation_errors"`
+	Result           map[string][]*base.StorageRecord `json:"result"`
 }
 
 // GenericResponse struct
 type GenericResponse struct {
-	Fail   bool     `json:"Fail"`
-	Errors []string `json:"Errors"`
+	Code             string             `json:"code"`
+	Fail             bool               `json:"Fail"`
+	Errors           []string           `json:"Errors"`
+	ValidationErrors []*ValidationError `json:"validation_errors"`
 }
 
 type viewFunc func(w http.ResponseWriter, r *http.Request)
@@ -92,6 +104,41 @@ type viewFunc func(w http.ResponseWriter, r *http.Request)
 // Httpd struct
 type Httpd struct {
 	urls map[*regexp.Regexp]viewFunc
+}
+
+func parseErrors(err error) ([]string, []*ValidationError) {
+	var errs []string
+	var valerrs []*ValidationError
+	if valErrs, isValErr := err.(validator.ValidationErrors); isValErr {
+		// Field() returns the fields name with the tag name taking
+		// precedence over the field's actual name.
+		// eq. JSON name "fname"
+		for _, fieldErr := range valErrs {
+			errs = append(errs, fieldErr.Error())
+			valerrs = append(valerrs, &ValidationError{ValKey: fieldErr.Field(), ValError: fieldErr.Error()})
+		}
+	} else if irbErrs, isIrbErrs := err.(blueprint.IRBErrors); isIrbErrs {
+		// irb errors
+		for _, irbErr := range irbErrs {
+			// validation err, could be many
+			if valErrs, isValErr := irbErr.WErr().(validator.ValidationErrors); isValErr {
+				for _, fieldErr := range valErrs {
+					valerrs = append(valerrs, &ValidationError{
+						ValActionID: irbErr.ActionID(),
+						ValKey:      fieldErr.Field(),
+						ValTag:      fieldErr.Tag(),
+						ValError:    fieldErr.Error(),
+					})
+					errs = append(errs, fieldErr.Error())
+				}
+			} else {
+				errs = append(errs, irbErr.Error())
+			}
+		}
+	} else {
+		errs = append(errs, err.Error())
+	}
+	return errs, valerrs
 }
 
 func (h *Httpd) validateOrigin(r *http.Request) bool {
@@ -455,12 +502,23 @@ func (h *Httpd) resumeBlueprintView(w http.ResponseWriter, r *http.Request) {
 func (h *Httpd) blueprintView(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Origin")
+	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 	if r.Method != "POST" {
-		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		resp := &GenericResponse{
+			Code:             "E01",
+			Fail:             true,
+			Errors:           []string{http.StatusText(http.StatusMethodNotAllowed)},
+			ValidationErrors: nil,
+		}
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			http.Error(w, "E01 "+err.Error(), http.StatusMethodNotAllowed)
+		}
 		return
 	}
 
@@ -468,12 +526,34 @@ func (h *Httpd) blueprintView(w http.ResponseWriter, r *http.Request) {
 	body := http.MaxBytesReader(w, r.Body, 4000000)
 	data, err := ioutil.ReadAll(body)
 	if err != nil {
-		http.Error(w, "E02 "+err.Error(), http.StatusRequestEntityTooLarge)
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		errs, valerrs := parseErrors(err)
+		resp := &GenericResponse{
+			Code:             "E02",
+			Fail:             true,
+			Errors:           append(errs, http.StatusText(http.StatusRequestEntityTooLarge)),
+			ValidationErrors: valerrs,
+		}
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			http.Error(w, "E02 "+err.Error(), http.StatusRequestEntityTooLarge)
+		}
 		return
 	}
 	bp, err := blueprint.NewFromBuilder(data)
 	if err != nil {
-		http.Error(w, "E03 "+err.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		errs, valerrs := parseErrors(err)
+		resp := &GenericResponse{
+			Code:             "E03",
+			Fail:             true,
+			Errors:           append(errs, http.StatusText(http.StatusBadRequest)),
+			ValidationErrors: valerrs,
+		}
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			http.Error(w, "E03 "+err.Error(), http.StatusBadRequest)
+		}
 		return
 	}
 
@@ -491,8 +571,19 @@ func (h *Httpd) blueprintView(w http.ResponseWriter, r *http.Request) {
 	cast.PublishEvent(cast.EventManagerPrepareBPStart, bp.ExecutionUUID)
 	irb, err := blueprint.GenerateIRB(bp, &blueprint.IRBGenConfig{})
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		errs, valerrs := parseErrors(err)
+		resp := &GenericResponse{
+			Code:             "E04",
+			Fail:             true,
+			Errors:           errs,
+			ValidationErrors: valerrs,
+		}
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			http.Error(w, "E04 "+err.Error(), http.StatusBadRequest)
+		}
 		cast.PublishEvent(cast.EventManagerPrepareBPEndWithErr, bp.ExecutionUUID)
-		http.Error(w, "E04 "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	cast.PublishEvent(cast.EventManagerPrepareBPEnd, bp.ExecutionUUID)

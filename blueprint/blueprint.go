@@ -266,9 +266,48 @@ type IRBGenConfig struct {
 	// PreventLoop       bool
 }
 
+type IRBError interface {
+	// String representation, needed for error interface
+	Error() string
+	// ActionID if exists, empty string if not
+	ActionID() string
+	// The raw wrapped error
+	WErr() error
+}
+
+type iRBError struct {
+	actionID string
+	wErr     error
+}
+
+func (ie *iRBError) Error() string {
+	return ie.wErr.Error()
+}
+
+func (ie *iRBError) ActionID() string {
+	return ie.actionID
+}
+
+func (ie *iRBError) WErr() error {
+	return ie.wErr
+}
+
+type IRBErrors []IRBError
+
+func (ies IRBErrors) Error() string {
+	var res string
+	var ie *iRBError
+
+	for i := 0; i < len(ies); i++ {
+		ie = ies[i].(*iRBError)
+		res = res + "\n" + ie.Error()
+	}
+	return res
+}
+
 // GenerateIRB func
 func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
-
+	var errors IRBErrors
 	irb := &IRBlueprint{
 		BP:               bp,
 		Actions:          make(map[string]*Action),
@@ -277,7 +316,7 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 
 	err := PreValidate(bp)
 	if err != nil {
-		return nil, err
+		errors = append(errors, &iRBError{wErr: err})
 	}
 
 	irb.ExecutionUUID = bp.ExecutionUUID
@@ -305,7 +344,8 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	}
 
 	if irb.StartAction == nil {
-		return nil, fmt.Errorf("no first action found in blueprint")
+		errors = append(errors, &iRBError{wErr: fmt.Errorf("no first action found in blueprint")})
+		// return nil, fmt.Errorf("no first action found in blueprint")
 	}
 
 	for _, action := range irb.Actions {
@@ -319,13 +359,18 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 		}
 
 		if action.Output != nil && strings.ToLower(*action.Output) == "env" {
-			return nil, fmt.Errorf("invalid output var name ENV. ENV is a reserved word")
+			errors = append(errors, &iRBError{
+				actionID: action.ActionID,
+				wErr:     fmt.Errorf("no first action found in blueprint"),
+			})
+			// return nil, fmt.Errorf("invalid output var name ENV. ENV is a reserved word")
 		}
 
 		// parse and fill next and parents
 		nextOkActions, nextTrueActions, nextFalseActions, err := parseNextActions(action.NextAction.Ok, irb.Actions)
 		if err != nil {
-			return nil, err
+			errors = append(errors, &iRBError{wErr: err})
+			// return nil, err
 		}
 		if nextOkActions != nil {
 			for _, nextact := range nextOkActions {
@@ -339,7 +384,8 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 
 		nextKoActions, _, _, err := parseNextActions(action.NextAction.Ko, irb.Actions)
 		if err != nil {
-			return nil, err
+			errors = append(errors, &iRBError{wErr: err})
+			// return nil, err
 		}
 		if nextKoActions != nil {
 			for _, nextact := range nextKoActions {
@@ -350,7 +396,8 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 
 		for _, vl := range ActionValidators {
 			if err := vl(action); err != nil {
-				return nil, fmt.Errorf("Error found in action " + action.ActionID + ":\n" + err.Error())
+				errors = append(errors, &iRBError{actionID: action.ActionID, wErr: err})
+				// return nil, fmt.Errorf("Error found in action " + action.ActionID + ":\n" + err.Error())
 			}
 		}
 	}
@@ -359,6 +406,10 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	for _, action := range irb.JoinThreadPoints {
 		knowParents := buildParentPaths(action)
 		action.KnowParentIDs = knowParents
+	}
+
+	if len(errors) > 0 {
+		return nil, errors
 	}
 
 	return irb, nil
