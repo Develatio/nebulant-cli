@@ -24,6 +24,8 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/user"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -51,12 +53,14 @@ type runLocalParameters struct {
 	// PrivateKeyPath *string `json:"keyfile"`
 	// Password       *string `json:"password"`
 	// Port           *string `json:"port"`
-	Vars             map[string]string `json:"vars"`
-	VarsTargets      []string          `json:"vars_targets"`
-	ScriptText       *string           `json:"script"`
-	ScriptParameters *string           `json:"scriptParameters"`
-	Command          *string           `json:"command"`
-	Entrypoint       *string           `json:"entrypoint"`
+	Vars               map[string]string `json:"vars"`
+	VarsTargets        []string          `json:"vars_targets"`
+	ScriptText         *string           `json:"script"`
+	ScriptParameters   *string           `json:"scriptParameters"`
+	ScriptName         string            `json:"scriptName"`
+	Command            *string           `json:"command"`
+	CommandAsSingleArg bool              `json:"pass_to_entrypoint_as_single_param"`
+	Entrypoint         *string           `json:"entrypoint"`
 }
 
 // RunLocalScript func
@@ -72,28 +76,13 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	var cmd *exec.Cmd
-	if p.Command != nil { // run cmd
-		stin := *p.Command
-		if p.Entrypoint != nil {
-			stin = *p.Entrypoint + " " + stin
-		}
-		argv, err := util.CommandLineToArgv(stin)
-		if err != nil {
-			return nil, err
-		}
-		if len(argv) > 1 {
-			cmd = exec.Command(argv[0], argv[1:]...) //#nosec G204 -- Tainted arguments here are the responsibility of the user
-		} else {
-			cmd = exec.Command(argv[0]) //#nosec G204 -- Tainted arguments here are the responsibility of the user
-		}
-	} else if p.ScriptText != nil {
+	if p.ScriptText != nil {
 		// If dir is the empty string, CreateTemp uses
 		// the default directory for temporary files,
 		// as returned by TempDir.
 		// If pattern includes a "*", the random
 		// string replaces the last "*"
-		f, err := os.CreateTemp("", "nblscript.*")
+		f, err := os.CreateTemp("", "nblscript.*"+p.ScriptName)
 		if err != nil {
 			return nil, err
 		}
@@ -117,29 +106,87 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 		if p.ScriptParameters != nil {
 			stin = stin + " " + *p.ScriptParameters
-			if p.Entrypoint != nil {
-				a := *p.Entrypoint
-				b := strings.Split(strings.Trim(a, " "), " ")
-				if len(b) >= 2 {
-					c := strings.Split(b[0], string(os.PathSeparator))
-					if c[len(c)-1] == "bash" && b[1] == "-c" {
-						ctx.Logger.LogWarn("You are using 'bash -c' entrypoint along with additional script parameters that will not be taken into account, use 'bash' entrypoint without '-c'")
-					}
-				}
+		}
+		p.Command = &stin
+	} else if p.Command != nil {
+		if p.ScriptParameters != nil {
+			*p.Command = *p.Command + " " + *p.ScriptParameters
+		}
+	} else {
+		return nil, fmt.Errorf("embedded script or command are needed")
+	}
+
+	if p.Entrypoint == nil || p.Entrypoint != nil && len(strings.Replace(*p.Entrypoint, " ", "", -1)) <= 0 {
+		var shell string
+		switch runtime.GOOS {
+		case "windows":
+			shell = os.Getenv("COMSPEC")
+			if len(shell) <= 0 {
+				shell = "cmd.exe"
+			}
+		case "darwin":
+			user, err := user.Current()
+			if err != nil {
+				return nil, err
+			}
+			argv, err := util.CommandLineToArgv("dscl /Search -read \"/Users/" + user.Username + "\" UserShell")
+			if err != nil {
+				return nil, err
+			}
+			out, err := exec.Command(argv[0], argv[1:]...).Output()
+			if err != nil {
+				return nil, err
+			}
+			shell = string(out)
+			shell = strings.Replace(shell, "UserShell: ", "", 1)
+			shell = strings.Trim(shell, "\n")
+			if len(shell) <= 0 {
+				shell = "/bin/zsh"
+			}
+		case "linux", "openbsd", "freebsd":
+			user, err := user.Current()
+			if err != nil {
+				return nil, err
+			}
+			out, err := exec.Command("getent", "passwd", user.Uid).Output()
+			if err != nil {
+				return nil, err
+			}
+			shell = string(out)
+			if len(shell) <= 0 {
+				shell = "/bin/bash"
 			}
 		}
-		argv, err := util.CommandLineToArgv(stin)
+		ss := strings.Split(string(shell), string(os.PathSeparator))
+		rr := ss[len(ss)-1]
+		rr = strings.ToLower(rr)
+		switch rr {
+		case "zsh", "bash", "tcsh", "csh", "ksh", "ash", "rc", "bash.exe":
+			shell = shell + " -c"
+		case "cmd.exe":
+			shell = shell + " /c"
+		}
+		p.Entrypoint = &shell
+		p.CommandAsSingleArg = true
+	}
+
+	var cmd *exec.Cmd
+	var argv []string
+
+	if p.CommandAsSingleArg {
+		argv, err = util.CommandLineToArgv(*p.Entrypoint)
 		if err != nil {
 			return nil, err
 		}
-		if len(argv) > 1 {
-			cmd = exec.Command(argv[0], argv[1:]...) //#nosec G204 -- Tainted arguments here are the responsibility of the user
-		} else {
-			cmd = exec.Command(argv[0]) //#nosec G204 -- Tainted arguments here are the responsibility of the user
-		}
+		argv = append(argv, *p.Command)
 	} else {
-		return nil, fmt.Errorf("no command nor embedded script provided")
+		argv, err = util.CommandLineToArgv(*p.Entrypoint + " " + *p.Command)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	cmd = exec.Command(argv[0], argv[1:]...)
 
 	envVars := os.Environ()
 	for varname := range p.Vars {
