@@ -157,6 +157,7 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 				return nil, fmt.Errorf("cannot determine OS shell")
 			}
 			shell = parts[6]
+			shell = strings.Trim(shell, "\n")
 			if len(shell) <= 0 {
 				shell = "/bin/bash"
 			}
@@ -190,6 +191,7 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
+	ctx.Logger.LogInfo("Running cmd [" + strings.Join(argv, ", ") + "]")
 	cmd = exec.Command(argv[0], argv[1:]...) // #nosec G204 -- allowed here
 
 	envVars := os.Environ()

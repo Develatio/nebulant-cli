@@ -58,7 +58,6 @@ rundockerdev:
 	# ej: make rundockerdev ARGS="-x -s -b 0.0.0.0:15678"
 	docker run --rm -v "$(PWD)":/usr/src/myapp -w /usr/src/myapp -p 15678:15678 golang:$(GOVERSION) go run -race -ldflags "$(LDFLAGS) $(DEVLDFLAGS)" nebulant.go $(ARGS)
 
-
 .PHONY: build
 build:
 	GO111MODULE=on CGO_ENABLED=0 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant nebulant.go
