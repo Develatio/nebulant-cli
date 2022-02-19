@@ -133,7 +133,7 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 			if err != nil {
 				return nil, err
 			}
-			out, err := exec.Command(argv[0], argv[1:]...).Output()
+			out, err := exec.Command(argv[0], argv[1:]...).Output() // #nosec G204 -- allowed here
 			if err != nil {
 				return nil, err
 			}
@@ -148,11 +148,15 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 			if err != nil {
 				return nil, err
 			}
-			out, err := exec.Command("getent", "passwd", user.Uid).Output()
+			out, err := exec.Command("getent", "passwd", user.Uid).Output() // #nosec G204 -- allowed here
 			if err != nil {
 				return nil, err
 			}
-			shell = string(out)
+			parts := strings.SplitN(string(out), ":", 7)
+			if len(parts) < 7 || parts[0] == "" || parts[0][0] == '+' || parts[0][0] == '-' {
+				return nil, fmt.Errorf("cannot determine OS shell")
+			}
+			shell = parts[6]
 			if len(shell) <= 0 {
 				shell = "/bin/bash"
 			}
@@ -186,7 +190,7 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
-	cmd = exec.Command(argv[0], argv[1:]...)
+	cmd = exec.Command(argv[0], argv[1:]...) // #nosec G204 -- allowed here
 
 	envVars := os.Environ()
 	for varname := range p.Vars {
