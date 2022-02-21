@@ -27,6 +27,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -173,6 +174,13 @@ func (h *Httpd) httpMiddleware(w http.ResponseWriter, r *http.Request) error {
 	surl := r.Header.Get("Origin")
 	cast.LogDebug("Access-Control-Allow-Origin: "+surl, nil)
 	w.Header().Set("Access-Control-Allow-Origin", surl)
+	if r.Method == "OPTIONS" {
+		pnacors := r.Header.Get("Access-Control-Request-Private-Network")
+		if pnacors == strings.Trim(strings.ToLower("true"), " ") {
+			w.Header().Set("Access-Control-Request-Private-Network", "true")
+		}
+	}
+
 	return nil
 }
 
