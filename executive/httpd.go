@@ -177,7 +177,7 @@ func (h *Httpd) httpMiddleware(w http.ResponseWriter, r *http.Request) error {
 	if r.Method == "OPTIONS" {
 		pnacors := r.Header.Get("Access-Control-Request-Private-Network")
 		if pnacors == strings.Trim(strings.ToLower("true"), " ") {
-			w.Header().Set("Access-Control-Request-Private-Network", "true")
+			w.Header().Set("Access-Control-Allow-Private-Network", "true")
 		}
 	}
 
