@@ -28,6 +28,8 @@ stages:
 
 unittest:
   stage: analysis
+  tags:
+    - local
   script:
     - make cover
 
@@ -46,6 +48,8 @@ unittest:
 
 self:
   stage: analysis
+  tags:
+    - local
   script:
     - make builddebug
     - echo $BLUEPRINT >/tmp/blueprint.json
