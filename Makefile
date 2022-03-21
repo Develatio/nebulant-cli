@@ -36,7 +36,7 @@ DEVLDFLAGS = -X github.com/develatio/nebulant-cli/config.WSScheme=wss\
 
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 CLIPATH := $(realpath $(dir $(MAKEFILE_PATH)))
-GOVERSION = 1.17.5
+GOVERSION = 1.17.8
 
 ifndef $(GOPATH)
     GOPATH=$(shell go env GOPATH)
