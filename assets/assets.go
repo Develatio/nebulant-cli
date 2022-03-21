@@ -409,9 +409,12 @@ func MakeMainIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
 
-	n, err := writeIndexFile(assetdef.IndexPath, idx)
+	n, err := writeIndexFile(assetdef.IndexPath+".tmp", idx)
 	if err != nil {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
+	}
+	if err := os.Rename(assetdef.IndexPath+".tmp", assetdef.IndexPath); err != nil {
+		return 0, err
 	}
 	return n, nil
 }
@@ -475,9 +478,12 @@ func MakeSubIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("SubIndex:" + err.Error())
 	}
 
-	n, err := writeIndexFile(assetdef.SubIndexPath, idx)
+	n, err := writeIndexFile(assetdef.SubIndexPath+".tmp", idx)
 	if err != nil {
 		return 0, fmt.Errorf("SubIndex:" + err.Error())
+	}
+	if err := os.Rename(assetdef.SubIndexPath+".tmp", assetdef.SubIndexPath); err != nil {
+		return 0, err
 	}
 	return n, nil
 }
