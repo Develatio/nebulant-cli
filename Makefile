@@ -25,12 +25,14 @@ LDFLAGS = -X github.com/develatio/nebulant-cli/config.Version=$(CLIVERSION)\
 LOCALLDFLAGS = -X github.com/develatio/nebulant-cli/config.WSScheme=ws\
 	-X github.com/develatio/nebulant-cli/config.BackendProto=http\
 	-X github.com/develatio/nebulant-cli/config.BackendURLDomain=localhost:8008\
-	-X github.com/develatio/nebulant-cli/config.FrontOrigin=*
+	-X github.com/develatio/nebulant-cli/config.FrontOrigin=*\
+	-X github.com/develatio/nebulant-cli/config.AssetDescriptorURL=https://builder-assets.nebulant.dev/assets.json
 
 DEVLDFLAGS = -X github.com/develatio/nebulant-cli/config.WSScheme=wss\
 	-X github.com/develatio/nebulant-cli/config.BackendProto=https\
 	-X github.com/develatio/nebulant-cli/config.BackendURLDomain=api.nebulant.dev\
-	-X github.com/develatio/nebulant-cli/config.FrontOrigin=*
+	-X github.com/develatio/nebulant-cli/config.FrontOrigin=*\
+	-X github.com/develatio/nebulant-cli/config.AssetDescriptorURL=https://builder-assets.nebulant.dev/assets.json
 
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 CLIPATH := $(realpath $(dir $(MAKEFILE_PATH)))

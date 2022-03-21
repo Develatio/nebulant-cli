@@ -17,20 +17,26 @@
 package executive
 
 import (
+	"crypto/md5" //#nosec G501-- weak, but ok
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/develatio/nebulant-cli/assets"
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
@@ -199,8 +205,143 @@ func (h *Httpd) route(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func updateDescriptor(descpath string) error {
+	err := os.MkdirAll(filepath.Dir(descpath), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	cast.LogInfo("Updating asset descriptor "+config.AssetDescriptorURL+"...", nil)
+	tr := &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    30 * time.Second,
+		DisableCompression: false,
+	}
+	client := &http.Client{Transport: tr}
+	resp, err := client.Get(config.AssetDescriptorURL)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(http.StatusText(resp.StatusCode))
+	}
+
+	file, err := os.OpenFile(descpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) //#nosec G304-- file inclusion from var needed
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, resp.Body)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func loadAssets() error {
+	var descriptor []*assets.AssetRemoteDescription
+	descpath := filepath.Join(config.AppHomePath(), "assets", "descriptor.json")
+
+	if err := updateDescriptor(descpath); err != nil {
+		return err
+	}
+
+	descfile, err := os.Open(descpath) //#nosec G304 -- Not a file inclusion, just a json read
+	if err != nil {
+		return err
+	}
+	defer descfile.Close()
+	byteValue, _ := ioutil.ReadAll(descfile)
+	if err := json.Unmarshal(byteValue, &descriptor); err != nil {
+		return err
+	}
+
+	for _, desc := range descriptor {
+		if desc.UsedBy == assets.USED_BY_SPA {
+			continue
+		}
+		cast.LogInfo("Building "+desc.ID+" index in bg... ("+desc.URL+")", nil)
+
+		if def, exists := assets.AssetsDefinition[desc.ID]; exists {
+			if _, err := os.Stat(def.FilePath); err == nil {
+				f, err := os.Open(def.FilePath)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+
+				h := md5.New() //#nosec G401-- weak, but ok
+				if _, err := io.Copy(h, f); err != nil {
+					cast.LogErr("Cannot determine asset"+desc.ID+" integrity due to "+err.Error(), nil)
+					continue
+				}
+
+				filemd5 := fmt.Sprintf("%x", h.Sum(nil))
+				if filemd5 != desc.Hash {
+					err = assets.DownloadAsset(desc.URL, def)
+					if err != nil {
+						cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
+						continue
+					}
+					err := os.Remove(def.IndexPath)
+					if err != nil && !errors.Is(err, os.ErrNotExist) {
+						cast.LogErr("Cannot purge old index file "+err.Error(), nil)
+						continue
+					}
+					err = os.Remove(def.SubIndexPath)
+					if err != nil && !errors.Is(err, os.ErrNotExist) {
+						cast.LogErr("Cannot purge old index file "+err.Error(), nil)
+						continue
+					}
+				} else {
+					cast.LogInfo("Asset file "+desc.ID+" up to date. No download needed.", nil)
+				}
+			} else if errors.Is(err, os.ErrNotExist) {
+				err = assets.DownloadAsset(desc.URL, def)
+				if err != nil {
+					cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
+					continue
+				}
+			} else {
+				return err
+			}
+
+			if _, err := os.Stat(def.IndexPath); err == nil {
+				cast.LogInfo("Index of "+desc.ID+" up to date.", nil)
+			} else if errors.Is(err, os.ErrNotExist) {
+				cast.LogInfo("Building index of "+desc.ID+"...", nil)
+				_, err := assets.MakeIndex(def)
+				if err != nil {
+					cast.LogErr("Cannot build index of "+desc.ID+" due to "+err.Error(), nil)
+					continue
+				}
+				cast.LogInfo("Building index of "+desc.ID+"...DONE", nil)
+			} else {
+				cast.LogErr("Cannot determine index status "+err.Error(), nil)
+			}
+
+		} else {
+			cast.LogWarn("Unknown asset descriptor "+desc.ID, nil)
+		}
+	}
+
+	cast.LogInfo("All assets up to date", nil)
+	return nil
+}
+
 // Serve func
 func (h *Httpd) Serve(addr *string) error {
+	go func() {
+		cast.LogInfo("Updating assets in bg...", nil)
+		aerr := loadAssets()
+		if aerr != nil {
+			cast.LogErr("Error loading assets", nil)
+			cast.LogErr(aerr.Error(), nil)
+		}
+	}()
 	h.urls = make(map[*regexp.Regexp]viewFunc)
 
 	h.urls[regexp.MustCompile(`/ws/.+$`)] = func(w http.ResponseWriter, r *http.Request) {
@@ -315,6 +456,15 @@ func (h *Httpd) Serve(addr *string) error {
 			return
 		}
 		h.autocompleteView(w, r)
+	}
+
+	h.urls[regexp.MustCompile(`/assets/.+$`)] = func(w http.ResponseWriter, r *http.Request) {
+		err := h.httpMiddleware(w, r)
+		if err != nil {
+			cast.LogErr("Asset Request fail: "+err.Error(), nil)
+			return
+		}
+		h.assetsView(w, r)
 	}
 
 	// start server
@@ -598,4 +748,86 @@ func (h *Httpd) blueprintView(w http.ResponseWriter, r *http.Request) {
 
 	MDirector.HandleIRB <- irb
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Origin")
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != "GET" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		resp := &GenericResponse{
+			Code:             "E01",
+			Fail:             true,
+			Errors:           []string{http.StatusText(http.StatusMethodNotAllowed)},
+			ValidationErrors: nil,
+		}
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			http.Error(w, "E01 "+err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+
+	u := r.URL
+	asset_id := path.Base(u.Path)
+	assetdef, ok := assets.AssetsDefinition[asset_id]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		resp := &GenericResponse{
+			Code:             "E02",
+			Fail:             true,
+			Errors:           []string{http.StatusText(http.StatusBadRequest), "Unknown asset " + asset_id},
+			ValidationErrors: nil,
+		}
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			http.Error(w, "E02 "+err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+
+	q := u.Query()
+	searchq := q.Get("search")
+	if len(searchq) <= 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		resp := &GenericResponse{
+			Code:             "E03",
+			Fail:             true,
+			Errors:           []string{http.StatusText(http.StatusBadRequest), "Search query not found" + u.RawQuery},
+			ValidationErrors: nil,
+		}
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			http.Error(w, "E03 "+err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+
+	// TODO: implement sort and spagination
+	searchres, err := assets.Search(&assets.SearchRequest{SearchTerm: searchq}, assetdef)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		resp := &GenericResponse{
+			Code:             "E04",
+			Fail:             true,
+			Errors:           []string{http.StatusText(http.StatusBadRequest), err.Error()},
+			ValidationErrors: nil,
+		}
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			http.Error(w, "E04 "+err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	err = json.NewEncoder(w).Encode(searchres)
+	if err != nil {
+		http.Error(w, "E05"+err.Error(), http.StatusBadRequest)
+	}
 }

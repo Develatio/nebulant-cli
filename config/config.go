@@ -22,6 +22,8 @@ package config
 import (
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 )
 
@@ -72,6 +74,19 @@ var SERVER_ADDR = "localhost"
 
 // Server port
 var SERVER_PORT = "15678"
+
+// AssetDescriptorURL conf
+var AssetDescriptorURL = "https://builder-assets.nebulant.io/assets.json"
+
+func AppHomePath() string {
+	var userHomePath string
+	if runtime.GOOS == "windows" {
+		userHomePath = os.Getenv("USERPROFILE")
+	} else {
+		userHomePath = os.Getenv("HOME")
+	}
+	return filepath.Join(userHomePath, ".nebulant")
+}
 
 // Order of credentials:
 // * Environment Variables

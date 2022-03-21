@@ -25,7 +25,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 )
 
 //
@@ -48,13 +47,7 @@ type Credential struct {
 
 // ReadCredential func
 func ReadCredential(credentialName string) (*Credential, error) {
-	var userHomePath string
-	if runtime.GOOS == "windows" {
-		userHomePath = os.Getenv("USERPROFILE")
-	} else {
-		userHomePath = os.Getenv("HOME")
-	}
-	credentialsPath := filepath.Join(userHomePath, ".nebulant", "credentials")
+	credentialsPath := filepath.Join(AppHomePath(), "credentials")
 
 	jsonFile, err := os.Open(credentialsPath) //#nosec G304 -- Not a file inclusion, just a json read
 	if err != nil {
