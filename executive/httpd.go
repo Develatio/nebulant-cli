@@ -17,20 +17,15 @@
 package executive
 
 import (
-	"crypto/md5" //#nosec G501-- weak, but ok
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -206,136 +201,11 @@ func (h *Httpd) route(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func updateDescriptor(descpath string) error {
-	err := os.MkdirAll(filepath.Dir(descpath), os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	cast.LogInfo("Updating asset descriptor "+config.AssetDescriptorURL+"...", nil)
-	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    30 * time.Second,
-		DisableCompression: false,
-	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Get(config.AssetDescriptorURL)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(http.StatusText(resp.StatusCode))
-	}
-
-	file, err := os.OpenFile(descpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) //#nosec G304-- file inclusion from var needed
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = io.Copy(file, resp.Body)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func loadAssets() error {
-	var descriptor []*assets.AssetRemoteDescription
-	descpath := filepath.Join(config.AppHomePath(), "assets", "descriptor.json")
-
-	if err := updateDescriptor(descpath); err != nil {
-		return err
-	}
-
-	descfile, err := os.Open(descpath) //#nosec G304 -- Not a file inclusion, just a json read
-	if err != nil {
-		return err
-	}
-	defer descfile.Close()
-	byteValue, _ := ioutil.ReadAll(descfile)
-	if err := json.Unmarshal(byteValue, &descriptor); err != nil {
-		return err
-	}
-
-	for _, desc := range descriptor {
-		if desc.UsedBy == assets.USED_BY_SPA {
-			continue
-		}
-		if def, exists := assets.AssetsDefinition[desc.ID]; exists {
-			if _, err := os.Stat(def.FilePath); err == nil {
-				f, err := os.Open(def.FilePath)
-				if err != nil {
-					return err
-				}
-				defer f.Close()
-
-				h := md5.New() //#nosec G401-- weak, but ok
-				if _, err := io.Copy(h, f); err != nil {
-					cast.LogErr("Cannot determine asset"+desc.ID+" integrity due to "+err.Error(), nil)
-					continue
-				}
-
-				filemd5 := fmt.Sprintf("%x", h.Sum(nil))
-				if filemd5 != desc.Hash {
-					err = assets.DownloadAsset(desc.URL, def)
-					if err != nil {
-						cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
-						continue
-					}
-					err := os.Remove(def.IndexPath)
-					if err != nil && !errors.Is(err, os.ErrNotExist) {
-						cast.LogErr("Cannot purge old index file "+err.Error(), nil)
-						continue
-					}
-					err = os.Remove(def.SubIndexPath)
-					if err != nil && !errors.Is(err, os.ErrNotExist) {
-						cast.LogErr("Cannot purge old index file "+err.Error(), nil)
-						continue
-					}
-				} else {
-					cast.LogInfo("Asset file "+desc.ID+" up to date. No download needed", nil)
-				}
-			} else if errors.Is(err, os.ErrNotExist) {
-				err = assets.DownloadAsset(desc.URL, def)
-				if err != nil {
-					cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
-					continue
-				}
-			} else {
-				return err
-			}
-
-			if _, err := os.Stat(def.IndexPath); err == nil {
-				cast.LogInfo("Index of "+desc.ID+" up to date", nil)
-			} else if errors.Is(err, os.ErrNotExist) {
-				cast.LogInfo("Building "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
-				_, err := assets.MakeIndex(def)
-				if err != nil {
-					cast.LogErr("Cannot build index of "+desc.ID+" due to "+err.Error(), nil)
-					continue
-				}
-				cast.LogInfo("Building index of "+desc.ID+"...DONE", nil)
-			} else {
-				cast.LogErr("Cannot determine index status "+err.Error(), nil)
-			}
-
-		} else {
-			cast.LogWarn("Unknown asset descriptor "+desc.ID, nil)
-		}
-	}
-
-	cast.LogInfo("All assets up to date", nil)
-	return nil
-}
-
 // Serve func
 func (h *Httpd) Serve(addr *string) error {
 	go func() {
 		cast.LogInfo("Updating assets in bg...", nil)
-		aerr := loadAssets()
+		aerr := assets.UpgradeAssets()
 		if aerr != nil {
 			cast.LogErr("Error loading assets", nil)
 			cast.LogErr(aerr.Error(), nil)

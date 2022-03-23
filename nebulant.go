@@ -24,12 +24,14 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strconv"
+	"strings"
 
 	// hey hacker:
 	// uncomment for profiling
 	// _ "net/http/pprof"
 	// grmon "github.com/bcicen/grmon/agent"
 
+	"github.com/develatio/nebulant-cli/assets"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
@@ -88,6 +90,8 @@ func main() {
 	var debugFlag = flag.Bool("x", false, "Enable debug.")
 	var ipv6Flag = flag.Bool("6", false, "Force ipv6")
 	var colorFlag = flag.Bool("c", false, "Disable colors.")
+	var upgradeAssets = flag.Bool("u", false, "Upgrade assets from remote location and exit. Build search index as needed.")
+	var lookupAsset = flag.String("l", "", "Test asset search and exit. Use assetid:searchterm syntax. Ej. nebulant -l \"aws_image:linux x86\"")
 
 	flag.Parse()
 	args := flag.Args()
@@ -102,6 +106,10 @@ func main() {
 	}
 	if err != nil {
 		util.PrintUsage(err)
+		os.Exit(1)
+	}
+	if *upgradeAssets && *serverModeFlag {
+		util.PrintUsage(fmt.Errorf("server mode and force asset upgrading are incompatible flags. Set only one of both"))
 		os.Exit(1)
 	}
 
@@ -139,6 +147,47 @@ func main() {
 
 	// Init console logger
 	cast.InitConsoleLogger(!*colorFlag)
+
+	if *upgradeAssets {
+		err := assets.UpgradeAssets()
+		if err != nil {
+			util.PrintUsage(err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	if len(*lookupAsset) > 0 {
+		cut := strings.Split(*lookupAsset, ":")
+		if len(cut) <= 1 {
+			util.PrintUsage(fmt.Errorf("invalid search syntax "))
+			os.Exit(1)
+		}
+		assetid := cut[0]
+		term := strings.Join(cut[1:], ":")
+		assetdef, ok := assets.AssetsDefinition[assetid]
+		if !ok {
+			util.PrintUsage(fmt.Errorf("unknown asset id"))
+			os.Exit(1)
+		}
+		cast.LogInfo("Looking for "+term+" in "+assetid, nil)
+		searchres, err := assets.Search(&assets.SearchRequest{SearchTerm: term}, assetdef)
+		if err != nil {
+			util.PrintUsage(err)
+			os.Exit(1)
+		}
+		cast.LogInfo("Found "+fmt.Sprintf("%v", searchres.Count)+" items", nil)
+
+		for e, item := range searchres.Results {
+			cast.LogInfo(fmt.Sprintf("Result %v / %v -> %v", e, searchres.Count, item), nil)
+			if e >= 10 {
+				cast.LogInfo("[...]", nil)
+				break
+			}
+		}
+		cast.LogInfo("Done.", nil)
+		os.Exit(0)
+	}
 
 	// Init Providers
 	cast.SBus.RegisterProviderInitFunc("aws", aws.New)
