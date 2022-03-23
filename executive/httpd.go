@@ -714,9 +714,20 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusAccepted)
 	err = json.NewEncoder(w).Encode(searchres)
 	if err != nil {
-		http.Error(w, "E06"+err.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		resp := &GenericResponse{
+			Code:             "E06",
+			Fail:             true,
+			Errors:           []string{http.StatusText(http.StatusUnprocessableEntity), err.Error()},
+			ValidationErrors: nil,
+		}
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			http.Error(w, "E06 "+err.Error(), http.StatusUnprocessableEntity)
+		}
+		return
 	}
+	w.WriteHeader(http.StatusAccepted)
 }
