@@ -32,6 +32,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -263,8 +264,6 @@ func loadAssets() error {
 		if desc.UsedBy == assets.USED_BY_SPA {
 			continue
 		}
-		cast.LogInfo("Building "+desc.ID+" index in bg... ("+desc.URL+")", nil)
-
 		if def, exists := assets.AssetsDefinition[desc.ID]; exists {
 			if _, err := os.Stat(def.FilePath); err == nil {
 				f, err := os.Open(def.FilePath)
@@ -297,7 +296,7 @@ func loadAssets() error {
 						continue
 					}
 				} else {
-					cast.LogInfo("Asset file "+desc.ID+" up to date. No download needed.", nil)
+					cast.LogInfo("Asset file "+desc.ID+" up to date. No download needed", nil)
 				}
 			} else if errors.Is(err, os.ErrNotExist) {
 				err = assets.DownloadAsset(desc.URL, def)
@@ -310,9 +309,9 @@ func loadAssets() error {
 			}
 
 			if _, err := os.Stat(def.IndexPath); err == nil {
-				cast.LogInfo("Index of "+desc.ID+" up to date.", nil)
+				cast.LogInfo("Index of "+desc.ID+" up to date", nil)
 			} else if errors.Is(err, os.ErrNotExist) {
-				cast.LogInfo("Building index of "+desc.ID+"...", nil)
+				cast.LogInfo("Building "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
 				_, err := assets.MakeIndex(def)
 				if err != nil {
 					cast.LogErr("Cannot build index of "+desc.ID+" due to "+err.Error(), nil)
@@ -798,7 +797,7 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 		resp := &GenericResponse{
 			Code:             "E03",
 			Fail:             true,
-			Errors:           []string{http.StatusText(http.StatusBadRequest), "Search query not found" + u.RawQuery},
+			Errors:           []string{http.StatusText(http.StatusBadRequest), "Search query not found"},
 			ValidationErrors: nil,
 		}
 		err := json.NewEncoder(w).Encode(resp)
@@ -808,19 +807,39 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: implement sort and spagination
-	searchres, err := assets.Search(&assets.SearchRequest{SearchTerm: searchq}, assetdef)
+	// TODO: implement sort and pagination
+	rlimit := q.Get("limit")
+	var limit int64 = 0
+	if len(rlimit) > 0 {
+		var err error
+		limit, err = strconv.ParseInt(rlimit, 10, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			resp := &GenericResponse{
+				Code:             "E04",
+				Fail:             true,
+				Errors:           []string{http.StatusText(http.StatusBadRequest), err.Error()},
+				ValidationErrors: nil,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			if err != nil {
+				http.Error(w, "E04 "+err.Error(), http.StatusBadRequest)
+			}
+			return
+		}
+	}
+	searchres, err := assets.Search(&assets.SearchRequest{SearchTerm: searchq, Limit: int(limit)}, assetdef)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		resp := &GenericResponse{
-			Code:             "E04",
+			Code:             "E05",
 			Fail:             true,
 			Errors:           []string{http.StatusText(http.StatusBadRequest), err.Error()},
 			ValidationErrors: nil,
 		}
 		err := json.NewEncoder(w).Encode(resp)
 		if err != nil {
-			http.Error(w, "E04 "+err.Error(), http.StatusBadRequest)
+			http.Error(w, "E05 "+err.Error(), http.StatusBadRequest)
 		}
 		return
 	}
@@ -828,6 +847,6 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 	err = json.NewEncoder(w).Encode(searchres)
 	if err != nil {
-		http.Error(w, "E05"+err.Error(), http.StatusBadRequest)
+		http.Error(w, "E06"+err.Error(), http.StatusBadRequest)
 	}
 }

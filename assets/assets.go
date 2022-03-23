@@ -655,6 +655,11 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 
 		count++
 		searchres.Results = append(searchres.Results, vof.Interface())
+		// WIP limit implementation
+		// TODO: sort and pagination
+		if sr.Limit > 0 && count >= sr.Limit {
+			break
+		}
 	}
 
 	searchres.Count = count
