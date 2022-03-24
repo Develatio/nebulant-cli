@@ -599,10 +599,14 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 		}
 
 		// test if index data is relevant
-		// to all search token,
+		// to all search tokens,
 		// discard if not
 		for _, stk := range schtkns {
-			if stk == idxitem.Token {
+			stklen := len(stk)
+			if stklen > len(idxitem.Token) {
+				continue
+			}
+			if stk == idxitem.Token[:stklen] {
 				// valid index data found due to match
 				// between index token term and one of the
 				// tokens inside schtkns.
