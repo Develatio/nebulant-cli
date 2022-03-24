@@ -526,7 +526,12 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 	// From sub-index file, extract relevant byte num of
 	// relevant positions of the index file.
 	var idxpositions map[int64]bool = make(map[int64]bool)
+	e := 0
 	for _, stk := range schtkns {
+		if len(stk) < 2 {
+			continue
+		}
+		e++
 		start := string(stk[0:2])
 		for _, subidxitem := range subidx.Parts {
 			if subidxitem.Token != start {
@@ -538,6 +543,10 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 				idxpositions[ip] = true
 			}
 		}
+	}
+
+	if e <= 0 {
+		return nil, fmt.Errorf("not enough alphanumeric characters. Min char needed: 2")
 	}
 
 	if len(idxpositions) <= 0 {
