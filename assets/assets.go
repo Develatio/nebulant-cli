@@ -257,7 +257,7 @@ func splitstring(aa string, size int) ([]string, error) {
 
 	for _, cc := range strings.Split(bb, " ") {
 		t := strings.ToLower(strings.Trim(cc, " "))
-		if len(t) <= 0 {
+		if len(t) <= 1 {
 			continue
 		}
 		if len(t) <= size {
