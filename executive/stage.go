@@ -420,6 +420,7 @@ func (s *Stage) PostAction(actionOutput *base.ActionOutput, actionErr error) boo
 		s.logger.LogDebug(s.lpfx() + "[" + s.LastAction.ActionID + "] Stop ---> X")
 		if s.LastActionError != nil {
 			sr.ExitCode = 1
+			sr.Error = s.LastActionError
 			actionLogger.LogErr(s.LastActionError.Error())
 		}
 		s.logger.LogDebug(s.lpfx() + "No more actions, stop this stage")

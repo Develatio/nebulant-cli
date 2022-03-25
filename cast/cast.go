@@ -116,6 +116,8 @@ const (
 	EventRegisteredManager
 	// EventWaitingStatus 15
 	EventWaitingForState
+	// EventActionUnCaughtKO 16
+	EventActionUnCaughtKO
 )
 
 // FeedBack struct
@@ -305,13 +307,18 @@ func PublishEvent(eid int, re *string) {
 }
 
 // PublishEvent func
-func PublishEventWithExtra(eid int, re *string, extra map[string]interface{}) {
+func PublishEventWithExtra(eid int, euuid *string, extra map[string]interface{}) {
 	fback := &FeedBack{
 		TypeID:        FeedBackEvent,
 		EventID:       &eid,
-		ExecutionUUID: re,
+		ExecutionUUID: euuid,
 		Extra:         extra,
 		Timestamp:     time.Now().UTC().UnixMicro(),
+	}
+	_, ok := extra["action_id"]
+	if ok {
+		actionid := extra["action_id"].(string)
+		fback.ActionID = &actionid
 	}
 	PublishFeedBack(fback)
 }

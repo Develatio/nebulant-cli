@@ -310,6 +310,12 @@ L:
 					m.internalRegistry.ExitCode = sr.ExitCode
 					m.ExternalRegistry.ExitCode = sr.ExitCode
 				}
+				if sr.Error != nil {
+					extra := make(map[string]interface{})
+					extra["action_id"] = sr.LastAction.ActionID
+					extra["action_error"] = sr.Error.Error()
+					cast.PublishEventWithExtra(cast.EventActionUnCaughtKO, m.ExecutionUUID, extra)
+				}
 				if sr.Panic {
 					m.Logger.LogDebug("[Manager] Panic in stage, exiting...")
 					inst := &ExecCtrlInstruction{

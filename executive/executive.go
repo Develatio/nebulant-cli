@@ -81,6 +81,7 @@ type stageReport struct {
 	LastAction      *blueprint.Action
 	Next            []*blueprint.Action
 	ExitCode        int
+	Error           error
 	Panic           bool
 	PanicValue      interface{}
 	PanicTrace      []byte
