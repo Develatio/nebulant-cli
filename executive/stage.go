@@ -408,6 +408,10 @@ func (s *Stage) PostAction(actionOutput *base.ActionOutput, actionErr error) boo
 		actions = s.LastAction.NextAction.NextOk
 	}
 
+	// A dupe of logger with the action id.
+	// Useful for builder context.
+	actionLogger := s.logger.Duplicate()
+	actionLogger.SetActionID(s.LastAction.ActionID)
 	switch len(actions) {
 
 	// No more actions -> instruct exit
@@ -416,7 +420,7 @@ func (s *Stage) PostAction(actionOutput *base.ActionOutput, actionErr error) boo
 		s.logger.LogDebug(s.lpfx() + "[" + s.LastAction.ActionID + "] Stop ---> X")
 		if s.LastActionError != nil {
 			sr.ExitCode = 1
-			s.logger.LogErr(s.LastActionError.Error())
+			actionLogger.LogErr(s.LastActionError.Error())
 		}
 		s.logger.LogDebug(s.lpfx() + "No more actions, stop this stage")
 		s.chanStageReport(sr)
@@ -432,7 +436,7 @@ func (s *Stage) PostAction(actionOutput *base.ActionOutput, actionErr error) boo
 			Next:            []*blueprint.Action{actions[0]},
 		})
 		if s.LastActionError != nil {
-			s.logger.LogWarn("Caught KO error: " + s.LastActionError.Error())
+			actionLogger.LogWarn("Caught KO error: " + s.LastActionError.Error())
 		}
 		s.logger.LogDebug(s.lpfx() + "[" + s.LastAction.ActionID + "] Next ---> " + actions[0].ActionID)
 		s.setNextAction(actions[0])
@@ -440,7 +444,7 @@ func (s *Stage) PostAction(actionOutput *base.ActionOutput, actionErr error) boo
 	// Thread init detected -> back to manager
 	default:
 		if s.LastActionError != nil {
-			s.logger.LogWarn("Caught KO error: " + s.LastActionError.Error())
+			actionLogger.LogWarn("Caught KO error: " + s.LastActionError.Error())
 		}
 		s.logger.LogDebug(s.lpfx() + "Thread detected")
 		// Inform to manager to split exec

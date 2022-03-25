@@ -452,7 +452,6 @@ func (h *Httpd) autocompleteView(w http.ResponseWriter, r *http.Request) {
 					}
 					resp.Fail = true
 					resp.Errors = append(resp.Errors, record.Error.Error())
-
 				}
 			}
 		}
