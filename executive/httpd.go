@@ -443,9 +443,16 @@ func (h *Httpd) autocompleteView(w http.ResponseWriter, r *http.Request) {
 			for e := 0; e < len(manager.ExternalRegistry.SavedOutputs[i].Records); e++ {
 				record := manager.ExternalRegistry.SavedOutputs[i].Records[e]
 				if record.Fail {
-					status = http.StatusBadRequest
+					if status == http.StatusAccepted {
+						status = http.StatusBadRequest
+					}
+					_, ok := err.(*base.ProviderAuthError)
+					if ok {
+						status = http.StatusUnauthorized
+					}
 					resp.Fail = true
 					resp.Errors = append(resp.Errors, record.Error.Error())
+
 				}
 			}
 		}

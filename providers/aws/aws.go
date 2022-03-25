@@ -112,7 +112,7 @@ func (p *Provider) touchSession() error {
 		SharedConfigState: session.SharedConfigEnable,
 	})
 	if serr != nil {
-		return serr
+		return &base.ProviderAuthError{Err: serr}
 	}
 
 	// Save session into store, this struct and his values are ephemeral
@@ -122,7 +122,7 @@ func (p *Provider) touchSession() error {
 	// is not checked, only its existence.
 	credentials, err := sess.Config.Credentials.Get()
 	if err != nil {
-		return err
+		return &base.ProviderAuthError{Err: err}
 	}
 
 	p.Logger.LogInfo("AWS: Using access key id: " + credentials.AccessKeyID[:3] + "..." + credentials.AccessKeyID[len(credentials.AccessKeyID)-3:])

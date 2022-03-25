@@ -28,3 +28,11 @@ type IProvider interface {
 	HandleAction(action *blueprint.Action) (*ActionOutput, error)
 	DumpPrivateVars(freshStore IStore)
 }
+
+type ProviderAuthError struct {
+	Err error
+}
+
+func (r *ProviderAuthError) Error() string {
+	return r.Err.Error()
+}
