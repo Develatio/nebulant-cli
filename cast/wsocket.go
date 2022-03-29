@@ -223,7 +223,7 @@ func (c *WSocketLogger) readCastBus() {
 // NewWebSocketLogger handles websocket requests from the peer.
 func NewWebSocketLogger(conn *websocket.Conn, clientUUID string) {
 	fLink := &FeedBackLink{
-		FeedBackBus: make(chan *FeedBack, 100),
+		FeedBackBus: make(chan *FeedBack, 1000),
 		ClientUUID:  clientUUID,
 	}
 	logger := &WSocketLogger{conn: conn, fLink: fLink}

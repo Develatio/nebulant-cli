@@ -193,11 +193,17 @@ func (s *SystemBus) Start() {
 				if fback.ClientUUIDFilter != nil && fLink.ClientUUID != *fback.ClientUUIDFilter {
 					continue
 				}
-				select {
-				case fLink.FeedBackBus <- fback:
-				default:
-					// Hi developer! :)
+			L:
+				for i := 0; i < 10; i++ {
+					select {
+					case fLink.FeedBackBus <- fback:
+						break L
+					default:
+						log.Println("Log client flood, waiting...")
+						time.Sleep(100 * time.Millisecond)
+					}
 				}
+
 			}
 		}
 	}

@@ -387,6 +387,12 @@ L:
 	m.Logger.LogInfo("[Manager] out")
 	elapsedTime := time.Since(startTime).String()
 	m.Logger.LogInfo("[Manager] stats: " + strconv.Itoa(m.Stats.actions) + " actions executed by " + strconv.Itoa(m.Stats.stages) + " stages in " + elapsedTime)
+	if m.ExecutionUUID != nil {
+		m.Logger.LogDebug("Sending EventManagerOut for UUID" + *m.ExecutionUUID)
+	} else {
+		m.Logger.LogDebug("Sending EventManagerOut for no UUID")
+	}
+
 	cast.PublishEvent(cast.EventManagerOut, m.ExecutionUUID)
 	m.internalRegistry.SetManagerState(cast.EventManagerOut)
 	m.ExternalRegistry.SetManagerState(cast.EventManagerOut)
