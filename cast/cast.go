@@ -130,24 +130,24 @@ type BusData struct {
 	//
 	// Type of data
 	TypeID   BusDataType `json:"type_id"`
-	ActionID *string     `json:"action_id"`
+	ActionID *string     `json:"action_id,omitempty"`
 	// Msg data in bytes
-	ThreadID *string `json:"thread_id"`
-	B        []byte  `json:"log_bytes"`
-	LogLevel *int    `json:"log_level"`
-	EOF      bool
+	ThreadID *string `json:"thread_id,omitempty"`
+	B        []byte  `json:"log_bytes,omitempty"`
+	LogLevel *int    `json:"log_level,omitempty"`
+	EOF      bool    `json:"EOF,omitempty"`
 	// Event id
-	EventID *int `json:"event_id"`
+	EventID *int `json:"event_id,omitempty"`
 	// State id
-	LastKnownEventID *int `json:"last_known_event_id"`
+	LastKnownEventID *int `json:"last_known_event_id,omitempty"`
 	// Extra data
-	Extra map[string]interface{} `json:"extra"`
+	Extra map[string]interface{} `json:"extra,omitempty"`
 	// Manager *executive.Manager
 	ExecutionUUID *string `json:"execution_uuid"`
 	// Filtered feedback, sent only to client with this UUID
 	ClientUUIDFilter *string `json:"-"`
 	// Raw data
-	Raw bool `json:"raw"`
+	Raw bool `json:"raw,omitempty"`
 }
 
 // BusConsumerLink struct.

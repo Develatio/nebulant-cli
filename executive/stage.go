@@ -205,6 +205,7 @@ func (s *Stage) Init() {
 	s.logger.LogDebug(s.lpfx() + "Stage init")
 	s.stageStatus = StageStatusStopped
 	exit := false
+	waitcount := 0
 
 	// Recover from panic
 	defer func() {
@@ -283,13 +284,19 @@ L:
 		// Normal flow
 		default:
 			if cast.BusLoad > 10.0 {
+				waitcount++
 				// reduce run speed on high bus load
 				var fa time.Duration = time.Duration(cast.BusLoad * 10.0)
 				// for debug:
 				// fmt.Println("Bus load up 10:", cast.BusLoad, "Sleeping", fa)
 				time.Sleep(fa * time.Millisecond)
+				if waitcount > 100 {
+					fmt.Println("High bus load detected. Waiting load reduction...")
+					waitcount = 0
+				}
 				continue
 			}
+			waitcount = 0
 
 			// After panic, try to recover
 			if s.recoveringStatus {
