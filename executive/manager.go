@@ -265,6 +265,7 @@ L:
 			case StagePause:
 				allPaused := true
 				for stage := range m.stages {
+					// TODO: maybe datarace on write/read: check it
 					if stage.stageStatus != StageStatusPaused {
 						allPaused = false
 						break

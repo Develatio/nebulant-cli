@@ -382,8 +382,9 @@ L:
 			break L
 		default:
 			// this happends when s.busBuffer buffer is full :(
-			log.Println("Problem pushing data to SBus buffer. Maybe Flood ocurr. Retrying... ", i)
-			time.Sleep(100 * time.Millisecond)
+			// this is really bad :_(
+			log.Printf("Problem pushing data to SBus buffer. Maybe Flood ocurr. Bus at %v%% of load. Retrying...\n", BusLoad)
+			time.Sleep(5000 * time.Millisecond)
 		}
 	}
 }
