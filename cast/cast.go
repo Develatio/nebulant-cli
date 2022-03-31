@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/config"
 )
 
 // CriticalLevel const
@@ -43,8 +44,14 @@ const DebugLevel = 10
 // NotsetLevel const
 const NotsetLevel = 0
 
+// SBusBufferSize const
+const SBusBufferSize = 100000
+
 // SBus is a globally shared system bus
 var SBus *SystemBus
+
+// Load of the system bus channel
+var BusLoad float64 = 0.0
 
 // InitSystemBus func
 func InitSystemBus() {
@@ -52,11 +59,12 @@ func InitSystemBus() {
 	castWaiter.Add(1) // self
 
 	SBus = &SystemBus{
+		Executions: make(map[string]bool),
 		// feedback
-		connect:          make(chan *FeedBackLink),
-		disconnect:       make(chan *FeedBackLink),
-		dispatchFeedBack: make(chan *FeedBack, 100000),
-		links:            make(map[*FeedBackLink]bool),
+		connect:    make(chan *BusConsumerLink),
+		disconnect: make(chan *BusConsumerLink),
+		busBuffer:  make(chan *BusData, SBusBufferSize),
+		links:      make(map[*BusConsumerLink]bool),
 		// waiter
 		castWaiter: castWaiter,
 		// providers
@@ -65,22 +73,18 @@ func InitSystemBus() {
 	go SBus.Start()
 }
 
-// FeedBackType int
-type FeedBackType int
+// BusDataType int
+type BusDataType int
 
 const (
-	// FeedBackLog const 0
-	FeedBackLog FeedBackType = iota
-	// FeedBackEvent const 1
-	FeedBackEvent
-	// FeedBackStatus const 2
-	FeedBackStatus
-	// FeedBackFiltered const used in conjuction with ClientUUIDFilter to send
-	// messages only to one log/event listener: commonly the websocket logger
-	// to command to join into uuid channel using Extra["join"]=uuid
-	FeedBackFiltered
-	// FeedBackEOF const 4
-	FeedBackEOF
+	// BusDataTypeLog const 0
+	BusDataTypeLog BusDataType = iota
+	// BusDataTypeEvent const 1
+	BusDataTypeEvent
+	// BusDataTypeStatus const 2
+	BusDataTypeStatus
+	// BusDataTypeEOF const 4
+	BusDataTypeEOF
 )
 
 const (
@@ -120,13 +124,13 @@ const (
 	EventActionUnCaughtKO
 )
 
-// FeedBack struct
-type FeedBack struct {
+// BusData struct
+type BusData struct {
 	Timestamp int64 `json:"timestamp"`
 	//
-	// Type of feedback
-	TypeID   FeedBackType `json:"type_id"`
-	ActionID *string      `json:"action_id"`
+	// Type of data
+	TypeID   BusDataType `json:"type_id"`
+	ActionID *string     `json:"action_id"`
 	// Msg data in bytes
 	ThreadID *string `json:"thread_id"`
 	B        []byte  `json:"log_bytes"`
@@ -146,28 +150,64 @@ type FeedBack struct {
 	Raw bool `json:"raw"`
 }
 
-// FeedBackLink struct.
-// Used to connect consumer with FeedBack dispatcher
-type FeedBackLink struct {
-	ClientUUID  string
-	FeedBackBus chan *FeedBack
+// BusConsumerLink struct.
+// Used to connect consumer with BusData dispatcher
+type BusConsumerLink struct {
+	Name            string
+	ClientUUID      string
+	LogChan         chan *BusData
+	CommonChan      chan *BusData
+	AllowEventData  bool
+	AllowStatusData bool
 }
 
 // SystemBus struct
 type SystemBus struct {
+	mu         sync.Mutex
+	Executions map[string]bool
 	// FEEDBACK
-	connect          chan *FeedBackLink
-	disconnect       chan *FeedBackLink
-	links            map[*FeedBackLink]bool
-	dispatchFeedBack chan *FeedBack
+	connect    chan *BusConsumerLink
+	disconnect chan *BusConsumerLink
+	links      map[*BusConsumerLink]bool
+	busBuffer  chan *BusData
 	// Link (connected goroutines) control
 	castWaiter *sync.WaitGroup
 	// Pproviders
 	providerInitFuncs map[string]base.ProviderInitFunc
 }
 
+// SetExecutionStatus func. Early status of execution (true/false).
+// true indicates that the execution is running. False indicates
+// that the execution is stopping or stopped: logs will be dicarded
+func (s *SystemBus) SetExecutionStatus(eid string, status bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Executions[eid] = status
+}
+
+// ExistsExecution func
+func (s *SystemBus) ExistsExecution(eid string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.Executions[eid]; ok {
+		return true
+	}
+	return false
+}
+
+// GetExecutionStatus func
+func (s *SystemBus) GetExecutionStatus(eid string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if on, ok := s.Executions[eid]; ok && on {
+		return true
+	}
+	return false
+}
+
 // Start func
 func (s *SystemBus) Start() {
+
 	for {
 		// Remember how it works:
 		// The select statement lets a goroutine wait on multiple
@@ -184,26 +224,73 @@ func (s *SystemBus) Start() {
 		// told there are no more values coming, such as to terminate a
 		// range loop.
 		select {
-		case fLink := <-s.connect:
-			s.links[fLink] = true
-		case fLink := <-s.disconnect:
-			delete(s.links, fLink)
-		case fback := <-s.dispatchFeedBack:
-			for fLink := range s.links {
-				if fback.ClientUUIDFilter != nil && fLink.ClientUUID != *fback.ClientUUIDFilter {
+		case busConsumerLink := <-s.connect:
+			s.links[busConsumerLink] = true
+		case busConsumerLink := <-s.disconnect:
+			delete(s.links, busConsumerLink)
+		case busdata := <-s.busBuffer:
+			// Calculate bus buffer load
+			e := len(SBus.busBuffer)
+			if e > 0 {
+				load := (float64(e) / float64(SBusBufferSize)) * 100.0
+				BusLoad = load
+			}
+
+			// Discard logs as needed
+			if busdata.TypeID == BusDataTypeEvent && busdata.ExecutionUUID != nil && busdata.EventID != nil {
+				switch *busdata.EventID {
+				case EventManagerResuming, EventManagerStarted, EventManagerStarting:
+					s.SetExecutionStatus(*busdata.ExecutionUUID, true)
+				case EventManagerOut, EventManagerStopping:
+					s.SetExecutionStatus(*busdata.ExecutionUUID, false)
+				}
+			}
+			if (busdata.TypeID == BusDataTypeLog || busdata.TypeID == BusDataTypeStatus) && busdata.ExecutionUUID != nil {
+				if s.ExistsExecution(*busdata.ExecutionUUID) && !s.GetExecutionStatus(*busdata.ExecutionUUID) {
 					continue
 				}
-			L:
-				for i := 0; i < 10; i++ {
-					select {
-					case fLink.FeedBackBus <- fback:
-						break L
-					default:
-						log.Println("Log client flood, waiting...")
-						time.Sleep(100 * time.Millisecond)
-					}
+			}
+
+			// Dispatch busdata to consumers
+			for busConsumerLink := range s.links {
+				// apply busdata filter
+				if busdata.ClientUUIDFilter != nil && busConsumerLink.ClientUUID != *busdata.ClientUUIDFilter {
+					continue
 				}
 
+				sent := false                         // always ensure data receipt
+				if busdata.TypeID == BusDataTypeLog { // dispatch log data
+					if !config.DEBUG && *busdata.LogLevel == DebugLevel {
+						continue
+					}
+					for !sent {
+						select {
+						case busConsumerLink.LogChan <- busdata:
+							sent = true
+						default:
+							// on dispatch fail, wait and retry
+							time.Sleep(100 * time.Millisecond)
+						}
+					}
+				} else { // dispatch non-log data
+					// discard just-log links
+					if busdata.TypeID == BusDataTypeEvent && !busConsumerLink.AllowEventData {
+						continue
+					}
+					if busdata.TypeID == BusDataTypeStatus && !busConsumerLink.AllowStatusData {
+						continue
+					}
+					for !sent {
+						select {
+						case busConsumerLink.CommonChan <- busdata:
+							sent = true
+						default:
+							// on dispatch fail, wait and retry
+							time.Sleep(100 * time.Millisecond)
+						}
+					}
+
+				}
 			}
 		}
 	}
@@ -225,17 +312,21 @@ func (s *SystemBus) GetProviderInitFunc(strname string) (base.ProviderInitFunc, 
 // Close func
 func (s *SystemBus) Close() *sync.WaitGroup {
 	defer s.castWaiter.Done() // self
-	fback := &FeedBack{
-		TypeID: FeedBackEOF,
+	bdata := &BusData{
+		TypeID: BusDataTypeEOF,
 	}
-	PublishFeedBack(fback)
+	PushBusData(bdata)
 	return s.castWaiter
 }
 
 // Log func
 func Log(level int, b []byte, ei *string, ai *string, ti *string, raw bool) {
-	fback := &FeedBack{
-		TypeID:        FeedBackLog,
+	// prevent debug messages on non-debug mode
+	if !config.DEBUG && level == DebugLevel {
+		return
+	}
+	bdata := &BusData{
+		TypeID:        BusDataTypeLog,
 		B:             b,
 		LogLevel:      &level,
 		ExecutionUUID: ei,
@@ -244,7 +335,7 @@ func Log(level int, b []byte, ei *string, ai *string, ti *string, raw bool) {
 		Raw:           raw,
 		Timestamp:     time.Now().UTC().UnixMicro(),
 	}
-	PublishFeedBack(fback)
+	PushBusData(bdata)
 }
 
 // LogCritical func
@@ -273,49 +364,49 @@ func LogDebug(s string, re *string) {
 }
 
 // SBusConnect func
-func SBusConnect(fLink *FeedBackLink) {
+func SBusConnect(fLink *BusConsumerLink) {
 	SBus.connect <- fLink
 }
 
 // SBusDisconnect func
-func SBusDisconnect(fLink *FeedBackLink) {
+func SBusDisconnect(fLink *BusConsumerLink) {
 	SBus.disconnect <- fLink
 }
 
-// PublishFeedBack func
-func PublishFeedBack(fback *FeedBack) {
+// PushBusData func
+func PushBusData(bdata *BusData) {
 L:
 	for i := 0; i < 10; i++ {
 		select {
-		case SBus.dispatchFeedBack <- fback:
+		case SBus.busBuffer <- bdata:
 			break L
 		default:
-			// this happends when s.dispatchFeedBack buffer is full
-			log.Println("Problem publishing feedback data across SBus. Maybe Flood ocurr. Retrying...")
+			// this happends when s.busBuffer buffer is full :(
+			log.Println("Problem pushing data to SBus buffer. Maybe Flood ocurr. Retrying... ", i)
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
 }
 
-// PublishEvent func
-func PublishEvent(eid int, re *string) {
+// PushEvent func
+func PushEvent(eid int, re *string) {
 	var euuid string
 	if re != nil {
 		euuid = *re
 	}
-	fback := &FeedBack{
-		TypeID:        FeedBackEvent,
+	bdata := &BusData{
+		TypeID:        BusDataTypeEvent,
 		EventID:       &eid,
 		ExecutionUUID: &euuid,
 		Timestamp:     time.Now().UTC().UnixMicro(),
 	}
-	PublishFeedBack(fback)
+	PushBusData(bdata)
 }
 
-// PublishEvent func
-func PublishEventWithExtra(eid int, euuid *string, extra map[string]interface{}) {
-	fback := &FeedBack{
-		TypeID:        FeedBackEvent,
+// PushEvent func
+func PushEventWithExtra(eid int, euuid *string, extra map[string]interface{}) {
+	bdata := &BusData{
+		TypeID:        BusDataTypeEvent,
 		EventID:       &eid,
 		ExecutionUUID: euuid,
 		Extra:         extra,
@@ -324,34 +415,34 @@ func PublishEventWithExtra(eid int, euuid *string, extra map[string]interface{})
 	_, ok := extra["action_id"]
 	if ok {
 		actionid := extra["action_id"].(string)
-		fback.ActionID = &actionid
+		bdata.ActionID = &actionid
 	}
-	PublishFeedBack(fback)
+	PushBusData(bdata)
 }
 
-// PublishState func
-func PublishState(runningIDs []string, state int, re *string) {
+// PushState func
+func PushState(runningIDs []string, state int, re *string) {
 	var s = state
-	fback := &FeedBack{
-		TypeID:           FeedBackStatus,
+	bdata := &BusData{
+		TypeID:           BusDataTypeStatus,
 		LastKnownEventID: &s,
 		ExecutionUUID:    re,
 		Timestamp:        time.Now().UTC().UnixMicro(),
 	}
-	fback.Extra = make(map[string]interface{})
-	fback.Extra["uuids_in_progress"] = runningIDs
-	PublishFeedBack(fback)
+	bdata.Extra = make(map[string]interface{})
+	bdata.Extra["uuids_in_progress"] = runningIDs
+	PushBusData(bdata)
 }
 
-// PublishFiltered func
-func PublishFiltered(clientUUIDFilter string, extra map[string]interface{}) {
-	fback := &FeedBack{
-		TypeID:           FeedBackFiltered,
+// PushFilteredBusData func
+func PushFilteredBusData(clientUUIDFilter string, extra map[string]interface{}) {
+	bdata := &BusData{
+		TypeID:           BusDataTypeEvent,
 		ClientUUIDFilter: &clientUUIDFilter,
 		Extra:            extra,
 		Timestamp:        time.Now().UTC().UnixMicro(),
 	}
-	PublishFeedBack(fback)
+	PushBusData(bdata)
 }
 
 // Logger struct

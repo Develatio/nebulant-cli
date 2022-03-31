@@ -78,8 +78,8 @@ func (d *Director) Clean() {
 // startDirector func
 func (d *Director) startDirector() error {
 	defer d.directorWaiter.Done()
-	cast.PublishEvent(cast.EventDirectorStarting, nil)
-	cast.PublishEvent(cast.EventDirectorStarted, nil)
+	cast.PushEvent(cast.EventDirectorStarting, nil)
+	cast.PushEvent(cast.EventDirectorStarted, nil)
 
 L:
 	for { // Infine loop until break L
@@ -88,7 +88,7 @@ L:
 			cast.LogInfo("[Director] Received instruction with id "+*instr.ExecutionUUID, nil)
 			if len(d.managers) <= 0 {
 				cast.LogInfo("[Director] No managers available", nil)
-				cast.PublishEvent(cast.EventManagerOut, instr.ExecutionUUID)
+				cast.PushEvent(cast.EventManagerOut, instr.ExecutionUUID)
 				continue
 			}
 			managerFound := false
@@ -106,7 +106,7 @@ L:
 			}
 			if !managerFound {
 				cast.LogInfo("[Director] No manager found for instruction", nil)
-				cast.PublishEvent(cast.EventManagerOut, instr.ExecutionUUID)
+				cast.PushEvent(cast.EventManagerOut, instr.ExecutionUUID)
 			}
 		case irb := <-d.HandleIRB:
 			manager := NewManager()
@@ -114,7 +114,7 @@ L:
 			d.managers[manager] = irb
 			extra := make(map[string]interface{})
 			extra["manager"] = manager
-			cast.PublishEventWithExtra(cast.EventRegisteredManager, irb.BP.ExecutionUUID, extra)
+			cast.PushEventWithExtra(cast.EventRegisteredManager, irb.BP.ExecutionUUID, extra)
 			manager.PrepareIRB(irb)
 			go func() {
 				exit := false
@@ -171,7 +171,7 @@ L:
 		}
 	}
 
-	cast.PublishEvent(cast.EventDirectorOut, nil)
+	cast.PushEvent(cast.EventDirectorOut, nil)
 	cast.LogInfo("Director out", nil)
 	return nil
 }

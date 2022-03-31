@@ -152,5 +152,5 @@ func (r *Registry) publishStatus() {
 		ids = append(ids, actionID)
 	}
 	state := r.managerState
-	cast.PublishState(ids, state, r.ExecutionUUID)
+	cast.PushState(ids, state, r.ExecutionUUID)
 }

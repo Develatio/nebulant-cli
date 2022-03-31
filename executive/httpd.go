@@ -65,7 +65,7 @@ func InitServerMode(ip, port string) {
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
+	WriteBufferSize: 400,
 }
 
 // HandshakeResponse struct
@@ -230,7 +230,7 @@ func (h *Httpd) Serve(addr *string) error {
 					continue
 				}
 				// Wait for state luser! With love :*
-				cast.PublishEvent(cast.EventWaitingForState, &reu)
+				cast.PushEvent(cast.EventWaitingForState, &reu)
 				MDirector.ExecInstruction <- &ExecCtrlInstruction{
 					Instruction:   ExecState,
 					ExecutionUUID: &reu,
@@ -388,8 +388,8 @@ func (h *Httpd) autocompleteView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fLink := &cast.FeedBackLink{
-		FeedBackBus: make(chan *cast.FeedBack, 100),
+	fLink := &cast.BusConsumerLink{
+		LogChan: make(chan *cast.BusData, 100),
 	}
 	cast.SBusConnect(fLink)
 	// MDirector.RegisterManager <- manager
@@ -398,7 +398,7 @@ func (h *Httpd) autocompleteView(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var manager *Manager
 
-	for fback := range fLink.FeedBackBus {
+	for fback := range fLink.LogChan {
 		// Ignore feedback without exec id
 		if fback.ExecutionUUID == nil {
 			continue
@@ -408,11 +408,11 @@ func (h *Httpd) autocompleteView(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		// exit on EOF
-		if fback.TypeID == cast.FeedBackEOF {
+		if fback.TypeID == cast.BusDataTypeEOF {
 			return
 		}
 		// Ignore non-event messages
-		if fback.TypeID != cast.FeedBackEvent {
+		if fback.TypeID != cast.BusDataTypeEvent {
 			continue
 		}
 		// save manager on registered manager event
@@ -479,12 +479,19 @@ func (h *Httpd) stopBlueprintView(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 	remoteExecutionUUID := path.Base(r.URL.Path)
-	MDirector.ExecInstruction <- &ExecCtrlInstruction{
+
+	select {
+	case MDirector.ExecInstruction <- &ExecCtrlInstruction{
 		Instruction:   ExecStop,
 		ExecutionUUID: &remoteExecutionUUID,
+	}:
+		cast.SBus.SetExecutionStatus(remoteExecutionUUID, false)
+	default:
+		http.Error(w, http.StatusText(http.StatusExpectationFailed), http.StatusExpectationFailed)
+		return
 	}
 	// echo
-	cast.PublishEvent(cast.EventManagerStopping, &remoteExecutionUUID)
+	cast.PushEvent(cast.EventManagerStopping, &remoteExecutionUUID)
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -501,12 +508,19 @@ func (h *Httpd) pauseBlueprintView(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 	remoteExecutionUUID := path.Base(r.URL.Path)
-	MDirector.ExecInstruction <- &ExecCtrlInstruction{
+	select {
+	case MDirector.ExecInstruction <- &ExecCtrlInstruction{
 		Instruction:   ExecPause,
 		ExecutionUUID: &remoteExecutionUUID,
+	}:
+		cast.SBus.SetExecutionStatus(remoteExecutionUUID, false)
+	default:
+		http.Error(w, http.StatusText(http.StatusExpectationFailed), http.StatusExpectationFailed)
+		return
 	}
+
 	// echo
-	cast.PublishEvent(cast.EventManagerPausing, &remoteExecutionUUID)
+	cast.PushEvent(cast.EventManagerPausing, &remoteExecutionUUID)
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -528,7 +542,7 @@ func (h *Httpd) resumeBlueprintView(w http.ResponseWriter, r *http.Request) {
 		ExecutionUUID: &remoteExecutionUUID,
 	}
 	// echo
-	cast.PublishEvent(cast.EventManagerResuming, &remoteExecutionUUID)
+	cast.PushEvent(cast.EventManagerResuming, &remoteExecutionUUID)
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -598,10 +612,10 @@ func (h *Httpd) blueprintView(w http.ResponseWriter, r *http.Request) {
 		// where the program will write the log for this bp execution
 		extra := make(map[string]interface{})
 		extra["join"] = *bp.ExecutionUUID
-		cast.PublishFiltered(clientUUID, extra)
+		cast.PushFilteredBusData(clientUUID, extra)
 	}
 
-	cast.PublishEvent(cast.EventManagerPrepareBPStart, bp.ExecutionUUID)
+	cast.PushEvent(cast.EventManagerPrepareBPStart, bp.ExecutionUUID)
 	irb, err := blueprint.GenerateIRB(bp, &blueprint.IRBGenConfig{})
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -616,10 +630,10 @@ func (h *Httpd) blueprintView(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(w, "E04 "+err.Error(), http.StatusBadRequest)
 		}
-		cast.PublishEvent(cast.EventManagerPrepareBPEndWithErr, bp.ExecutionUUID)
+		cast.PushEvent(cast.EventManagerPrepareBPEndWithErr, bp.ExecutionUUID)
 		return
 	}
-	cast.PublishEvent(cast.EventManagerPrepareBPEnd, bp.ExecutionUUID)
+	cast.PushEvent(cast.EventManagerPrepareBPEnd, bp.ExecutionUUID)
 
 	MDirector.HandleIRB <- irb
 	w.WriteHeader(http.StatusAccepted)

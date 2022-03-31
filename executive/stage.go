@@ -282,6 +282,12 @@ L:
 
 		// Normal flow
 		default:
+			if cast.BusLoad > 70.0 {
+				// reduce run speed on high bus load
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+
 			// After panic, try to recover
 			if s.recoveringStatus {
 				s.recoveringStatus = false

@@ -166,7 +166,7 @@ func (m *Manager) EmancipateStages() {
 func (m *Manager) Run() error {
 	exit := false
 	defer func() {
-		cast.PublishEvent(cast.EventManagerOut, m.ExecutionUUID)
+		cast.PushEvent(cast.EventManagerOut, m.ExecutionUUID)
 		m.internalRegistry.SetManagerState(cast.EventManagerOut)
 		m.ExternalRegistry.SetManagerState(cast.EventManagerOut)
 		m.EmancipateStages()
@@ -188,14 +188,14 @@ func (m *Manager) Run() error {
 
 	m.Logger.LogDebug("[Manager] Starting...")
 
-	cast.PublishEvent(cast.EventManagerStarting, m.ExecutionUUID)
+	cast.PushEvent(cast.EventManagerStarting, m.ExecutionUUID)
 	m.internalRegistry.SetManagerState(cast.EventManagerStarting)
 	m.ExternalRegistry.SetManagerState(cast.EventManagerStarting)
 	if m.IRB.StartAction == nil {
 		return fmt.Errorf("[Manager] First action id not found")
 	}
 	m.RunStages([]*Stage{NewStage(m, storage.NewStore(), m.IRB.StartAction)})
-	cast.PublishEvent(cast.EventManagerStarted, m.ExecutionUUID)
+	cast.PushEvent(cast.EventManagerStarted, m.ExecutionUUID)
 	m.internalRegistry.SetManagerState(cast.EventManagerStarted)
 	m.ExternalRegistry.SetManagerState(cast.EventManagerStarted)
 	m.Logger.LogDebug("[Manager] Ready")
@@ -222,17 +222,17 @@ L:
 				// m.managerStatus = ManagerStatusRunning
 			case ExecStop:
 				// Perform kill?
-				cast.PublishEvent(cast.EventManagerStopping, m.ExecutionUUID)
+				cast.PushEvent(cast.EventManagerStopping, m.ExecutionUUID)
 				m.internalRegistry.SetManagerState(cast.EventManagerStopping)
 				m.ExternalRegistry.SetManagerState(cast.EventManagerStopping)
 				m.ExternalRegistry.publishStatus()
 			case ExecPause:
-				cast.PublishEvent(cast.EventManagerPausing, m.ExecutionUUID)
+				cast.PushEvent(cast.EventManagerPausing, m.ExecutionUUID)
 				m.internalRegistry.SetManagerState(cast.EventManagerPausing)
 				m.ExternalRegistry.SetManagerState(cast.EventManagerPausing)
 				m.ExternalRegistry.publishStatus()
 			case ExecResume:
-				cast.PublishEvent(cast.EventManagerResuming, m.ExecutionUUID)
+				cast.PushEvent(cast.EventManagerResuming, m.ExecutionUUID)
 				m.internalRegistry.SetManagerState(cast.EventManagerResuming)
 				m.ExternalRegistry.SetManagerState(cast.EventManagerResuming)
 				m.ExternalRegistry.publishStatus()
@@ -271,6 +271,7 @@ L:
 					}
 				}
 				if allPaused {
+					cast.PushEvent(cast.EventManagerPaused, m.ExecutionUUID)
 					m.internalRegistry.SetManagerState(cast.EventManagerPaused)
 					m.ExternalRegistry.SetManagerState(cast.EventManagerPaused)
 					m.ExternalRegistry.publishStatus()
@@ -285,6 +286,7 @@ L:
 					}
 				}
 				if allResumed {
+					cast.PushEvent(cast.EventManagerStarted, m.ExecutionUUID)
 					m.internalRegistry.SetManagerState(cast.EventManagerStarted)
 					m.ExternalRegistry.SetManagerState(cast.EventManagerStarted)
 					m.ExternalRegistry.publishStatus()
@@ -314,7 +316,7 @@ L:
 					extra := make(map[string]interface{})
 					extra["action_id"] = sr.LastAction.ActionID
 					extra["action_error"] = sr.Error.Error()
-					cast.PublishEventWithExtra(cast.EventActionUnCaughtKO, m.ExecutionUUID, extra)
+					cast.PushEventWithExtra(cast.EventActionUnCaughtKO, m.ExecutionUUID, extra)
 				}
 				if sr.Panic {
 					m.Logger.LogDebug("[Manager] Panic in stage, exiting...")
@@ -393,7 +395,7 @@ L:
 		m.Logger.LogDebug("Sending EventManagerOut for no UUID")
 	}
 
-	cast.PublishEvent(cast.EventManagerOut, m.ExecutionUUID)
+	cast.PushEvent(cast.EventManagerOut, m.ExecutionUUID)
 	m.internalRegistry.SetManagerState(cast.EventManagerOut)
 	m.ExternalRegistry.SetManagerState(cast.EventManagerOut)
 	m.Logger.LogDebug("[Manager] out")

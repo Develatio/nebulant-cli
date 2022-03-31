@@ -24,10 +24,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"sync"
 	"time"
 
-	"github.com/develatio/nebulant-cli/config"
 	"github.com/gorilla/websocket"
 )
 
@@ -52,7 +52,7 @@ var ER = &ExecutionsRegistry{
 // WSocketLogger is a middleman between the websocket connection and the SBus.
 type WSocketLogger struct {
 	conn  *websocket.Conn
-	fLink *FeedBackLink
+	fLink *BusConsumerLink
 	mu    sync.Mutex
 }
 
@@ -162,53 +162,88 @@ func (c *WSocketLogger) readCastBus() {
 
 	for {
 		select {
-		case fback, ok := <-c.fLink.FeedBackBus:
-			if err := c.lockedSetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
-				log.Printf("WSocket 6 err: %v", err)
+		case fback, ok := <-c.fLink.CommonChan:
+			// No timeout for msg
+			if err := c.lockedSetWriteDeadline(time.Time{}); err != nil {
+				log.Printf("WSocket 6b err: %v", err)
 				return
 			}
 			if !ok {
 				// if there is no more values to receive and channel is closed
 				if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-					log.Printf("WSocket 7 err: %v", err)
+					log.Printf("WSocket 7a err: %v", err)
 				}
 				return
 			}
-			if fback.TypeID == FeedBackEOF {
+			if fback.TypeID == BusDataTypeEOF {
 				// EOF feedback, close logger
 				return
 			}
-			if fback.TypeID == FeedBackFiltered {
-				if executionUUID, exists := fback.Extra["join"]; exists {
-					c.joinExecution(executionUUID.(string))
-				}
+
+			if executionUUID, exists := fback.Extra["join"]; exists {
+				c.joinExecution(executionUUID.(string))
 			}
-			if !config.DEBUG && fback.LogLevel != nil && *fback.LogLevel == DebugLevel {
+
+			if fback.ExecutionUUID == nil {
+				// no remote uuid, skip data
 				continue
+			}
+			if !c.canReadExecution(*fback.ExecutionUUID) {
+				continue
+			}
+			err := c.lockedWriteToWS(fback)
+			if err != nil {
+				nerr, ok := err.(net.Error)
+				if !ok {
+					// no net error
+					continue
+				}
+				if !nerr.Timeout() {
+					// no timeout err
+					continue
+				}
+				// TODO: here the socket may be broken
+				log.Printf("WSocket 8a err: %v", err)
+				return
+			}
+		case fback, ok := <-c.fLink.LogChan:
+			// No timeout for msg
+			if err := c.lockedSetWriteDeadline(time.Time{}); err != nil {
+				log.Printf("WSocket 6b err: %v", err)
+				return
+			}
+			if !ok {
+				// if there is no more values to receive and channel is closed
+				if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
+					log.Printf("WSocket 7b err: %v", err)
+				}
+				return
 			}
 			if fback.ExecutionUUID == nil {
 				// no remote uuid, skip log
 				continue
 			}
-
 			if !c.canReadExecution(*fback.ExecutionUUID) {
-				continue
-			}
-
-			if fback.TypeID == FeedBackLog && (!config.DEBUG && fback.LogLevel != nil && *fback.LogLevel == DebugLevel) {
-				continue
-			}
-
-			if fback.EventID != nil && *fback.EventID == EventRegisteredManager {
 				continue
 			}
 			err := c.lockedWriteToWS(fback)
 			if err != nil {
-				log.Printf("WSocket 8 err: %v", err)
-				continue
+				nerr, ok := err.(net.Error)
+				if !ok {
+					// no net error
+					continue
+				}
+				if !nerr.Timeout() {
+					// no timeout err
+					continue
+				}
+				// TODO: here the socket may be broken
+				log.Printf("WSocket 8b err: %v", err)
+				return
 			}
 
 		case <-ticker.C:
+			// Timeout 10 for Pong
 			if err := c.lockedSetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
 				log.Printf("WSocket 9 err: %v", err)
 				return
@@ -222,9 +257,13 @@ func (c *WSocketLogger) readCastBus() {
 
 // NewWebSocketLogger handles websocket requests from the peer.
 func NewWebSocketLogger(conn *websocket.Conn, clientUUID string) {
-	fLink := &FeedBackLink{
-		FeedBackBus: make(chan *FeedBack, 1000),
-		ClientUUID:  clientUUID,
+	fLink := &BusConsumerLink{
+		Name:            "WebSocket",
+		ClientUUID:      clientUUID,
+		LogChan:         make(chan *BusData, 100),
+		CommonChan:      make(chan *BusData, 100),
+		AllowEventData:  true,
+		AllowStatusData: true,
 	}
 	logger := &WSocketLogger{conn: conn, fLink: fLink}
 	select {

@@ -47,11 +47,11 @@ var prefxmap map[int]string = map[int]string{
 
 // ConsoleLogger struct
 type ConsoleLogger struct {
-	fLink  *FeedBackLink
+	fLink  *BusConsumerLink
 	colors bool
 }
 
-func (c *ConsoleLogger) printMessage(fback *FeedBack) bool {
+func (c *ConsoleLogger) printMessage(fback *BusData) bool {
 	if !config.DEBUG && fback.LogLevel != nil && *fback.LogLevel == DebugLevel {
 		return false
 	}
@@ -75,21 +75,25 @@ func (c *ConsoleLogger) printMessage(fback *FeedBack) bool {
 
 func (c *ConsoleLogger) readCastBus() {
 	defer SBus.castWaiter.Done()
-	for fback := range c.fLink.FeedBackBus {
-		if fback.TypeID == FeedBackEOF {
-			break
+L:
+	for {
+		select {
+		case fback := <-c.fLink.CommonChan:
+			if fback.TypeID == BusDataTypeEOF {
+				break L
+			}
+		case fback := <-c.fLink.LogChan:
+			c.printMessage(fback)
 		}
-		if fback.TypeID != FeedBackLog {
-			continue
-		}
-		c.printMessage(fback)
 	}
 }
 
 // InitConsoleLogger func
 func InitConsoleLogger(colors bool) {
-	fLink := &FeedBackLink{
-		FeedBackBus: make(chan *FeedBack, 100),
+	fLink := &BusConsumerLink{
+		Name:       "Console",
+		LogChan:    make(chan *BusData, 100),
+		CommonChan: make(chan *BusData, 100),
 	}
 	clogger := &ConsoleLogger{fLink: fLink, colors: colors}
 	SBus.connect <- fLink
