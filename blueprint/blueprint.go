@@ -229,15 +229,15 @@ func NewFromBackend(path string) (*Blueprint, error) {
 	defer resp.Body.Close()
 	rawbody, _ := ioutil.ReadAll(resp.Body)
 	body := &wrappedBlueprint{}
-	if err := json.Unmarshal(rawbody, body); err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK {
 		if body.Detail != "" {
 			return nil, fmt.Errorf(strconv.Itoa(resp.StatusCode) + " cannot obtain blueprint from server: " + body.Detail + " " + string(rawbody))
 		}
 		fmt.Println()
 		return nil, fmt.Errorf(strconv.Itoa(resp.StatusCode) + " cannot obtain blueprint from server " + string(rawbody))
+	}
+	if err := json.Unmarshal(rawbody, body); err != nil {
+		return nil, err
 	}
 	bp, err := NewFromBytes(body.Blueprint)
 	if err != nil {
