@@ -204,17 +204,17 @@ func NewIRBFromAny(any string) (*IRBlueprint, error) {
 }
 
 // NewFromBackend func
-func NewFromBackend(uuid string) (*Blueprint, error) {
+func NewFromBackend(path string) (*Blueprint, error) {
 	if config.CREDENTIALS.AuthToken == nil {
 		return nil, fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET env vars")
 	}
 
-	url := url.URL{Scheme: config.BackendProto, Host: config.BackendURLDomain, Path: "/apiv1/blueprint/" + uuid + "/"}
+	url := url.URL{Scheme: config.BackendProto, Host: config.BackendURLDomain, Path: "/apiv1/cli/" + path}
 	rawBody, _ := json.Marshal(map[string]string{
 		"version": config.Version,
 	})
 	reqBody := bytes.NewBuffer(rawBody)
-	req, err := http.NewRequest("POST", url.String(), reqBody)
+	req, err := http.NewRequest("GET", url.String(), reqBody)
 	if err != nil {
 		return nil, err
 	}
