@@ -48,10 +48,10 @@ type meSerializer struct {
 }
 
 type projectSerializer struct {
-	Name          string `json:"name"`
-	UUID          string `json:"uuid"`
-	Description   string `json:"description"`
-	DiagramsCount int    `json:"n_diagrams"`
+	Name            string `json:"name"`
+	UUID            string `json:"uuid"`
+	Description     string `json:"description"`
+	BlueprintsCount int    `json:"n_blueprints"`
 }
 
 type resultsProject struct {
@@ -59,15 +59,15 @@ type resultsProject struct {
 	Results []*projectSerializer `json:"results"`
 }
 
-type diagramSerializer struct {
+type blueprintSerializer struct {
 	Name        string `json:"name"`
 	UUID        string `json:"uuid"`
 	Description string `json:"description"`
 }
 
-type resultsDiagram struct {
-	Count   int                  `json:"count"`
-	Results []*diagramSerializer `json:"results"`
+type resultsBlueprint struct {
+	Count   int                    `json:"count"`
+	Results []*blueprintSerializer `json:"results"`
 }
 
 func httpReq(method string, path string, body interface{}) ([]byte, error) {
@@ -141,14 +141,14 @@ func Browser() error {
 func promptProject(projects []*projectSerializer) error {
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}:",
-		Active:   "\U0001F449 {{ .Name | magenta }} {{if .UUID}} ({{ .DiagramsCount | red }}) {{end}}",
-		Inactive: "   {{ .Name | cyan }} {{if .UUID}} ({{ .DiagramsCount | red }}) {{end}}",
+		Active:   "\U0001F449 {{ .Name | magenta }} {{if .UUID}} ({{ .BlueprintsCount | red }}) {{end}}",
+		Inactive: "   {{ .Name | cyan }} {{if .UUID}} ({{ .BlueprintsCount | red }}) {{end}}",
 		Selected: "{{if .UUID}} \U0001F44D {{ .Name | magenta }} {{end}}",
 		Details: `{{if .UUID}}
 -------------------- Project --------------------
 {{ "Name:" | faint }}	{{ .Name }}
 {{ "Description:" | faint }}	{{ .Description }}
-{{ "Diagrams:" | faint }}	{{ .DiagramsCount }}{{end}}`,
+{{ "Blueprint:" | faint }}	{{ .BlueprintsCount }}{{end}}`,
 	}
 L:
 	for {
@@ -169,17 +169,17 @@ L:
 			break L
 		}
 
-		term.PrintInfo("Looking for diagrams...\n")
-		data, err := httpReq("GET", "project/"+item.UUID+"/diagram/", nil)
+		term.PrintInfo("Looking for blueprints...\n")
+		data, err := httpReq("GET", "project/"+item.UUID+"/blueprint/", nil)
 		if err != nil {
 			return err
 		}
-		rd := &resultsDiagram{}
+		rd := &resultsBlueprint{}
 		if err := json.Unmarshal(data, rd); err != nil {
 			return err
 		}
-		rd.Results = append(rd.Results, &diagramSerializer{Name: "Back"})
-		err = promptDiagram(rd.Results)
+		rd.Results = append(rd.Results, &blueprintSerializer{Name: "Back"})
+		err = promptBlueprint(rd.Results)
 		if err != nil {
 			return err
 		}
@@ -187,7 +187,7 @@ L:
 	return nil
 }
 
-func promptDiagram(projects []*diagramSerializer) error {
+func promptBlueprint(projects []*blueprintSerializer) error {
 	defer func() {
 		if r := recover(); r != nil {
 			cast.LogErr("Unrecoverable error found. Feel free to send us feedback", nil)
@@ -216,14 +216,14 @@ func promptDiagram(projects []*diagramSerializer) error {
 		Inactive: "   {{ .Name | cyan }}",
 		Selected: "{{if .UUID}} \U0001F680 {{ .Name | red }} {{end}}",
 		Details: `{{if .UUID}}
--------------------- Diagram --------------------
+-------------------- Blueprint --------------------
 {{ "Name:" | faint }}	{{ .Name }}
 {{ "Description:" | faint }}	{{ .Description }}{{end}}`,
 	}
 L:
 	for {
 		prompt := promptui.Select{
-			Label:     "Select Diagram",
+			Label:     "Select Blueprint",
 			Items:     projects,
 			Templates: templates,
 			Stdout:    term.NoBellStdout,
