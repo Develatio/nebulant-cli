@@ -762,6 +762,7 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.WriteHeader(http.StatusAccepted)
 	err = json.NewEncoder(w).Encode(searchres)
 	if err != nil {
 		w.WriteHeader(http.StatusUnprocessableEntity)
@@ -777,5 +778,4 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	w.WriteHeader(http.StatusAccepted)
 }

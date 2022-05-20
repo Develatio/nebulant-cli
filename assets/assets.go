@@ -678,31 +678,34 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 
 		count++
 		searchres.Results = append(searchres.Results, vof.Interface())
-
 		if sr.Limit > 0 && len(sr.Sort) <= 0 && sr.Offset <= 0 && count == sr.Limit {
+			cast.LogDebug("Breaking search by limit", nil)
 			break
 		}
+	}
+	cast.LogDebug("Found items "+fmt.Sprintf("%v", len(searchres.Results)), nil)
 
-		if len(sr.Sort) > 1 {
-			if sr.Sort[0] == []byte("-")[0] {
-				sortResults(searchres.Results, sr.Sort[1:], true)
-			} else {
-				sortResults(searchres.Results, sr.Sort, false)
-			}
-		}
-
-		if sr.Offset > 0 && sr.Limit > 0 && len(searchres.Results) > sr.Offset-1+sr.Limit {
-			searchres.Results = searchres.Results[:sr.Offset-1+sr.Limit]
+	if len(sr.Sort) > 1 {
+		if sr.Sort[0] == []byte("-")[0] {
+			cast.LogDebug("Sorting desc "+sr.Sort, nil)
+			sortResults(searchres.Results, sr.Sort[1:], true)
+		} else {
+			cast.LogDebug("Sorting asc "+sr.Sort, nil)
+			sortResults(searchres.Results, sr.Sort, false)
 		}
 	}
 
 	if sr.Offset > 0 && len(searchres.Results) > sr.Offset-1+sr.Limit {
 		if sr.Limit > 0 {
-			searchres.Results = searchres.Results[sr.Offset-1 : sr.Offset+sr.Limit]
+			cast.LogDebug(fmt.Sprintf("Select by offset %v + limit %v", sr.Offset, sr.Limit), nil)
+			searchres.Results = searchres.Results[sr.Offset-1 : sr.Offset-1+sr.Limit]
 		} else {
+			cast.LogDebug("select by offset", nil)
 			searchres.Results = searchres.Results[sr.Offset-1:]
 		}
 	}
+
+	cast.LogDebug("Return items "+fmt.Sprintf("%v", len(searchres.Results)), nil)
 
 	searchres.Count = count
 	return searchres, nil
@@ -712,26 +715,40 @@ func sortResults(results []interface{}, sortterm string, inverse bool) {
 	sort.SliceStable(results, func(i, j int) bool {
 		enci, err := json.Marshal(results[i])
 		if err != nil {
-			return false
+			panic(err)
 		}
 		ence, err := json.Marshal(results[j])
 		if err != nil {
-			return false
+			panic(err)
 		}
 		vali, err := jsonslice.Get(enci, strings.TrimSpace(sortterm))
 		if err != nil {
-			return false
+			panic(err)
 		}
+		val := string(vali)
+		if strings.HasPrefix(val, "\"") && strings.HasSuffix(val, "\"") {
+			val = strings.TrimSuffix(val, "\"")
+			val = strings.TrimPrefix(val, "\"")
+			vali = []byte(val)
+		}
+
 		vale, err := jsonslice.Get(ence, strings.TrimSpace(sortterm))
 		if err != nil {
-			return false
+			panic(err)
 		}
+		val = string(vale)
+		if strings.HasPrefix(val, "\"") && strings.HasSuffix(val, "\"") {
+			val = strings.TrimSuffix(val, "\"")
+			val = strings.TrimPrefix(val, "\"")
+			vale = []byte(val)
+		}
+
 		if inverse {
-			// TODO: handle ints
-			return string(vali) < string(vale)
+			// TODO: handle ints?
+			return string(vali) > string(vale)
 		}
-		// TODO: handle ints
-		return string(vali) > string(vale)
+		// TODO: handle ints?
+		return string(vali) < string(vale)
 	})
 }
 
