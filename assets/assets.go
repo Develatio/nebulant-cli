@@ -695,14 +695,20 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 		}
 	}
 
-	if sr.Offset > 0 && len(searchres.Results) > sr.Offset-1+sr.Limit {
+	if len(searchres.Results) > sr.Offset {
 		if sr.Limit > 0 {
 			cast.LogDebug(fmt.Sprintf("Select by offset %v + limit %v", sr.Offset, sr.Limit), nil)
-			searchres.Results = searchres.Results[sr.Offset-1 : sr.Offset-1+sr.Limit]
+			if sr.Offset+sr.Limit > len(searchres.Results) {
+				searchres.Results = searchres.Results[sr.Offset:]
+			} else {
+				searchres.Results = searchres.Results[sr.Offset : sr.Offset+sr.Limit]
+			}
 		} else {
 			cast.LogDebug("select by offset", nil)
-			searchres.Results = searchres.Results[sr.Offset-1:]
+			searchres.Results = searchres.Results[sr.Offset:]
 		}
+	} else {
+		searchres.Results = nil
 	}
 
 	cast.LogDebug("Return items "+fmt.Sprintf("%v", len(searchres.Results)), nil)
