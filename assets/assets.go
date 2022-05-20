@@ -29,11 +29,13 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
+	"github.com/bhmj/jsonslice"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 )
@@ -676,14 +678,61 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 
 		count++
 		searchres.Results = append(searchres.Results, vof.Interface())
-		// WIP limit implementation
-		// TODO: sort and pagination
-		if sr.Limit > 0 && count >= sr.Limit {
+
+		if sr.Limit > 0 && len(sr.Sort) <= 0 && sr.Offset <= 0 && count == sr.Limit {
 			break
 		}
+
+		if len(sr.Sort) > 1 {
+			if sr.Sort[0] == []byte("-")[0] {
+				sortResults(searchres.Results, sr.Sort[1:], true)
+			} else {
+				sortResults(searchres.Results, sr.Sort, false)
+			}
+		}
+
+		if sr.Offset > 0 && sr.Limit > 0 && len(searchres.Results) > sr.Offset-1+sr.Limit {
+			searchres.Results = searchres.Results[:sr.Offset-1+sr.Limit]
+		}
 	}
+
+	if sr.Offset > 0 && len(searchres.Results) > sr.Offset-1+sr.Limit {
+		if sr.Limit > 0 {
+			searchres.Results = searchres.Results[sr.Offset-1 : sr.Offset+sr.Limit]
+		} else {
+			searchres.Results = searchres.Results[sr.Offset-1:]
+		}
+	}
+
 	searchres.Count = count
 	return searchres, nil
+}
+
+func sortResults(results []interface{}, sortterm string, inverse bool) {
+	sort.SliceStable(results, func(i, j int) bool {
+		enci, err := json.Marshal(results[i])
+		if err != nil {
+			return false
+		}
+		ence, err := json.Marshal(results[j])
+		if err != nil {
+			return false
+		}
+		vali, err := jsonslice.Get(enci, strings.TrimSpace(sortterm))
+		if err != nil {
+			return false
+		}
+		vale, err := jsonslice.Get(ence, strings.TrimSpace(sortterm))
+		if err != nil {
+			return false
+		}
+		if inverse {
+			// TODO: handle ints
+			return string(vali) < string(vale)
+		}
+		// TODO: handle ints
+		return string(vali) > string(vale)
+	})
 }
 
 // getStrings func

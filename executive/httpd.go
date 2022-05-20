@@ -701,7 +701,10 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: implement sort and pagination
 	rlimit := q.Get("limit")
+	roffset := q.Get("offset")
+	rsort := q.Get("sort")
 	var limit int64 = 0
+	var offset int64 = 0
 	if len(rlimit) > 0 {
 		var err error
 		limit, err = strconv.ParseInt(rlimit, 10, 64)
@@ -720,7 +723,30 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	searchres, err := assets.Search(&assets.SearchRequest{SearchTerm: searchq, Limit: int(limit)}, assetdef)
+	if len(roffset) > 0 {
+		var err error
+		offset, err = strconv.ParseInt(roffset, 10, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			resp := &GenericResponse{
+				Code:             "E04b",
+				Fail:             true,
+				Errors:           []string{http.StatusText(http.StatusBadRequest), err.Error()},
+				ValidationErrors: nil,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			if err != nil {
+				http.Error(w, "E04b "+err.Error(), http.StatusBadRequest)
+			}
+			return
+		}
+	}
+	searchres, err := assets.Search(&assets.SearchRequest{
+		SearchTerm: searchq,
+		Limit:      int(limit),
+		Offset:     int(offset),
+		Sort:       rsort,
+	}, assetdef)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		resp := &GenericResponse{

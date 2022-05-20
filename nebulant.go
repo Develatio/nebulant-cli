@@ -91,7 +91,7 @@ func main() {
 	var ipv6Flag = flag.Bool("6", false, "Force ipv6")
 	var colorFlag = flag.Bool("c", false, "Disable colors.")
 	var upgradeAssets = flag.Bool("u", false, "Upgrade assets from remote location and exit. Build search index as needed.")
-	var lookupAsset = flag.String("l", "", "Test asset search and exit. Use assetid:searchterm syntax. Ej. nebulant -l \"aws_image:linux x86\"")
+	var lookupAsset = flag.String("l", "", "Test asset search and exit. Use assetid:searchterm:offset:limit:sort syntax. Ej. nebulant -l \"aws_image:linux x86:10:5:-$.Name\"")
 
 	flag.Parse()
 	args := flag.Args()
@@ -164,14 +164,34 @@ func main() {
 			os.Exit(1)
 		}
 		assetid := cut[0]
-		term := strings.Join(cut[1:], ":")
+		term := cut[1]
 		assetdef, ok := assets.AssetsDefinition[assetid]
 		if !ok {
 			util.PrintUsage(fmt.Errorf("unknown asset id"))
 			os.Exit(1)
 		}
 		cast.LogInfo("Looking for "+term+" in "+assetid, nil)
-		searchres, err := assets.Search(&assets.SearchRequest{SearchTerm: term}, assetdef)
+		srq := &assets.SearchRequest{SearchTerm: term}
+		if len(cut) > 2 {
+			srq.Offset, err = strconv.Atoi(cut[2])
+			if err != nil {
+				util.PrintUsage(fmt.Errorf("invalid search pagination offset"))
+				os.Exit(1)
+			}
+		}
+		if len(cut) > 3 {
+			srq.Limit, err = strconv.Atoi(cut[3])
+			if err != nil {
+				util.PrintUsage(fmt.Errorf("invalid search pagination limit"))
+				os.Exit(1)
+			}
+		}
+		if len(cut) > 4 {
+			srq.Sort = cut[4]
+		}
+
+		cast.LogDebug("lookup "+fmt.Sprintf("%v", srq), nil)
+		searchres, err := assets.Search(srq, assetdef)
 		if err != nil {
 			util.PrintUsage(err)
 			os.Exit(1)
