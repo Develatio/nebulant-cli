@@ -389,7 +389,9 @@ func (h *Httpd) autocompleteView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fLink := &cast.BusConsumerLink{
-		LogChan: make(chan *cast.BusData, 100),
+		LogChan:        make(chan *cast.BusData, 100),
+		CommonChan:     make(chan *cast.BusData, 100),
+		AllowEventData: true,
 	}
 	cast.SBusConnect(fLink)
 	// MDirector.RegisterManager <- manager
@@ -398,7 +400,7 @@ func (h *Httpd) autocompleteView(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var manager *Manager
 
-	for fback := range fLink.LogChan {
+	for fback := range fLink.CommonChan {
 		// Ignore feedback without exec id
 		if fback.ExecutionUUID == nil {
 			continue
