@@ -136,7 +136,10 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 				if err != nil {
 					return nil, err
 				}
-				ff.Write(fcontent)
+				_, err = ff.Write(fcontent)
+				if err != nil {
+					return nil, err
+				}
 			case PartTypeText: // type text, write as part and override content_type
 				h := make(textproto.MIMEHeader)
 				n := strings.NewReplacer("\\", "\\\\", `"`, "\\\"").Replace(*part.Name)
@@ -146,7 +149,10 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 				if err != nil {
 					return nil, err
 				}
-				ff.Write([]byte(*part.Value))
+				_, err = ff.Write([]byte(*part.Value))
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 		// request with formatted body parts
