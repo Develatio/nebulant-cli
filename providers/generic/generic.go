@@ -31,7 +31,6 @@ func ActionValidator(action *blueprint.Action) error {
 	}
 	al, exists := actors.ActionFuncMap[action.ActionName]
 	if !exists {
-		fmt.Println(actors.ActionFuncMap)
 		return fmt.Errorf("generic: invalid action name " + action.ActionName)
 	}
 	if al.N == actors.NextOK && len(action.NextAction.NextKo) > 0 {

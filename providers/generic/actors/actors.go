@@ -91,6 +91,7 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"panic":            {F: Panic, N: NextOKKO},
 	"send_mail":        {F: SendMail, N: NextOKKO},
 	"send_email":       {F: SendMail, N: NextOKKO},
+	"http_request":     {F: HttpRequest, N: NextOKKO},
 	// handled by core stage
 	"join_threads": {F: NOOP, N: NextOK},
 }
