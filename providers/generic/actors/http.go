@@ -250,6 +250,7 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		if err != nil {
 			return nil, err
 		}
+		ctx.Logger.LogDebug("Use request header, " + *hh.Key + ": " + *hh.Value)
 		req.Header.Set(*hh.Key, *hh.Value)
 	}
 
