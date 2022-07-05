@@ -62,7 +62,7 @@ type httpBodyMultiPart struct {
 	Name        *string  `json:"name" validate:"required"`
 	Value       *string  `json:"value" validate:"required"`
 	PType       PartType `json:"type" validate:"required"`
-	ContentType *string  `json:"content_type" validate:"required"`
+	ContentType *string  `json:"content_type"`
 }
 
 type httpBodyUrlencoded struct {
@@ -77,11 +77,26 @@ type httpHeader struct {
 
 // issue #11
 type httpRequestParameters struct {
-	Method   *string         `json:"http_verb" validate:"required"`
-	Url      *string         `json:"endpoint" validate:"required"`
-	Headers  []*httpHeader   `json:"headers"`
-	BodyType BodyType        `json:"body_type" validate:"required"`
-	Body     json.RawMessage `json:"body"`
+	Method   *string       `json:"http_verb" validate:"required"`
+	Url      *string       `json:"endpoint" validate:"required"`
+	Headers  []*httpHeader `json:"headers"`
+	BodyType BodyType      `json:"body_type" validate:"required"`
+}
+
+type httpRequestParametersMultiPartBody struct {
+	MultipartBody []*httpBodyMultiPart `json:"body" validate:"required"`
+}
+
+type httpRequestParametersUrlEncodedBody struct {
+	UrlEncodedBody []*httpBodyUrlencoded `json:"body" validate:"required"`
+}
+
+type httpRequestParametersRawBody struct {
+	RawBody *string `json:"body" validate:"required"`
+}
+
+type httpRequestParametersBinaryBody struct {
+	BinaryBody *string `json:"body" validate:"required"`
 }
 
 type httpRequestOutput struct {
@@ -121,12 +136,13 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		//		// "type:file" -> content_type is ignored. The path of file is in the value attr
 		// content_type: "",
 		// }
-		var bdypts []*httpBodyMultiPart
-		if err := util.UnmarshalValidJSON(p.Body, &bdypts); err != nil {
+		param := &httpRequestParametersMultiPartBody{}
+		if err := util.UnmarshalValidJSON(ctx.Action.Parameters, param); err != nil {
 			return nil, err
 		}
+
 		// loop for body parts
-		for _, part := range bdypts {
+		for _, part := range param.MultipartBody {
 			switch part.PType {
 			case PartTypeFile: // type file: read file and write content
 				file, err := os.Open(*part.Value)
@@ -150,11 +166,16 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 				if err != nil {
 					return nil, err
 				}
+				ctx.Logger.LogDebug("Append file part: " + finf.Name())
 			case PartTypeText: // type text, write as part and override content_type
 				h := make(textproto.MIMEHeader)
 				n := strings.NewReplacer("\\", "\\\\", `"`, "\\\"").Replace(*part.Name)
 				h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"`, n))
-				h.Set("Content-Type", *part.ContentType)
+				if part.ContentType != nil {
+					h.Set("Content-Type", *part.ContentType)
+				} else {
+					h.Set("Content-Type", "text/plain")
+				}
 				ff, err := w.CreatePart(h)
 				if err != nil {
 					return nil, err
@@ -163,9 +184,12 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 				if err != nil {
 					return nil, err
 				}
+				ctx.Logger.LogDebug("Append text content: " + *part.Value)
 			}
 		}
 		// request with formatted body parts
+		// hard debug :P
+		// fmt.Println(body)
 		req, err = http.NewRequest(*p.Method, *p.Url, body)
 		if err != nil {
 			return nil, err
@@ -180,14 +204,15 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 	case BodyTypeXWWWFormUrlencoded:
 		// body part definitions
 		// body is {name: "campo1", value: "valor1"}
-		var bdyitems []*httpBodyUrlencoded
-		if err := util.UnmarshalValidJSON(p.Body, &bdyitems); err != nil {
+		param := &httpRequestParametersUrlEncodedBody{}
+		if err := util.UnmarshalValidJSON(ctx.Action.Parameters, param); err != nil {
 			return nil, err
 		}
 		// append key:value
 		fdata := url.Values{}
-		for _, kv := range bdyitems {
+		for _, kv := range param.UrlEncodedBody {
 			fdata.Add(*kv.Name, *kv.Value)
+			ctx.Logger.LogDebug("Append urlenc key: " + *kv.Name)
 		}
 		// url-encoded reader
 		body := strings.NewReader(fdata.Encode())
@@ -198,11 +223,11 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	case BodyTypeRaw:
-		var bdy *string
-		if err := util.UnmarshalValidJSON(p.Body, &bdy); err != nil {
+		param := &httpRequestParametersRawBody{}
+		if err := util.UnmarshalValidJSON(ctx.Action.Parameters, param); err != nil {
 			return nil, err
 		}
-		body := strings.NewReader(*bdy)
+		body := strings.NewReader(*param.RawBody)
 		// the content type should be setted by the user
 		// in httpRequestParameters.Headers
 		req, err = http.NewRequest(*p.Method, *p.Url, body)
@@ -210,12 +235,12 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 			return nil, err
 		}
 	case BodyTypeBinary:
-		var path *string
+		param := &httpRequestParametersBinaryBody{}
 		// the body contains the path of a file
-		if err := util.UnmarshalValidJSON(p.Body, &path); err != nil {
+		if err := util.UnmarshalValidJSON(ctx.Action.Parameters, param); err != nil {
 			return nil, err
 		}
-		file, err := os.Open(*path)
+		file, err := os.Open(*param.BinaryBody)
 		if err != nil {
 			return nil, err
 		}
