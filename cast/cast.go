@@ -51,7 +51,13 @@ const SBusBufferSize = 100000
 var SBus *SystemBus
 
 // Load of the system bus channel
-var BusLoad float64 = 0.0
+// var BusLoad float64 = 0.0
+
+var BInfo *BusInfo
+
+func init() {
+	BInfo = &BusInfo{Load: 0.0}
+}
 
 // InitSystemBus func
 func InitSystemBus() {
@@ -233,7 +239,7 @@ func (s *SystemBus) Start() {
 			e := len(SBus.busBuffer)
 			if e > 0 {
 				load := (float64(e) / float64(SBusBufferSize)) * 100.0
-				BusLoad = load
+				BInfo.SetLoad(load)
 			}
 
 			// Discard logs as needed
@@ -383,7 +389,7 @@ L:
 		default:
 			// this happends when s.busBuffer buffer is full :(
 			// this is really bad :_(
-			log.Printf("Problem pushing data to SBus buffer. Maybe Flood ocurr. Bus at %v%% of load. Retrying...\n", BusLoad)
+			log.Printf("Problem pushing data to SBus buffer. Maybe Flood ocurr. Bus at %v%% of load. Retrying...\n", BInfo.GetLoad())
 			time.Sleep(5000 * time.Millisecond)
 		}
 	}
@@ -552,3 +558,21 @@ func (l *DummyLogger) LogWarn(s string)     {}
 func (l *DummyLogger) LogInfo(s string)     {}
 func (l *DummyLogger) ByteLogInfo(b []byte) {}
 func (l *DummyLogger) LogDebug(s string)    {}
+
+// BusInfo struct
+type BusInfo struct {
+	mu   sync.Mutex
+	Load float64
+}
+
+func (b *BusInfo) SetLoad(l float64) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.Load = l
+}
+
+func (b *BusInfo) GetLoad() float64 {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.Load
+}

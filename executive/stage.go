@@ -283,10 +283,10 @@ L:
 
 		// Normal flow
 		default:
-			if cast.BusLoad > 10.0 {
+			if cast.BInfo.GetLoad() > 10.0 {
 				waitcount++
 				// reduce run speed on high bus load
-				var fa time.Duration = time.Duration(cast.BusLoad * 10.0)
+				var fa time.Duration = time.Duration(cast.BInfo.GetLoad() * 10.0)
 				// for debug:
 				// fmt.Println("Bus load up 10:", cast.BusLoad, "Sleeping", fa)
 				time.Sleep(fa * time.Millisecond)
