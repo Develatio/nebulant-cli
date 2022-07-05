@@ -25,8 +25,10 @@ package actors
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -34,6 +36,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -243,12 +246,52 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		req.Header.Set(*hh.Key, *hh.Value)
 	}
 
-	client := &http.Client{}
+	tr := &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    30 * time.Second,
+		DisableCompression: false,
+	}
+	client := &http.Client{Transport: tr}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	// debug status
+	ctx.Logger.LogDebug("Request response status: " + resp.Status)
+
+	// debug headers
+	sw := new(strings.Builder)
+	err = resp.Header.Write(sw)
+	if err != nil {
+		return nil, err
+	}
+	ctx.Logger.LogDebug("Headers: " + sw.String())
+
+	// debug body
+	if resp.ContentLength > 0 {
+		var rawbody io.ReadCloser
+		switch resp.Header.Get("Content-Encoding") {
+		case "gzip":
+			rawbody, err = gzip.NewReader(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			defer rawbody.Close()
+		default:
+			rawbody = resp.Body
+		}
+
+		sw := new(strings.Builder)
+		_, err = io.Copy(sw, rawbody)
+		if err != nil {
+			return nil, err
+		}
+		ctx.Logger.LogDebug("Body: " + sw.String())
+	} else {
+		ctx.Logger.LogDebug("Empty body")
+	}
 
 	aout := base.NewActionOutput(ctx.Action, resp, nil)
 	return aout, err
