@@ -71,8 +71,9 @@ type httpBodyUrlencoded struct {
 }
 
 type httpHeader struct {
-	Key   *string `json:"name" validate:"required"`
-	Value *string `json:"value" validate:"required"`
+	Enabled bool    `json:"enabled"`
+	Key     *string `json:"name" validate:"required"`
+	Value   *string `json:"value" validate:"required"`
 }
 
 // issue #11
@@ -125,6 +126,7 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 	case BodyTypeFormData:
 		body := new(bytes.Buffer)
 		w := multipart.NewWriter(body)
+		// already called below. Defer for security.
 		defer w.Close()
 		// body part definitions
 		// body is:
@@ -154,15 +156,11 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 				if err != nil {
 					return nil, err
 				}
-				fcontent, err := ioutil.ReadAll(file)
-				if err != nil {
-					return nil, err
-				}
 				ff, err := w.CreateFormFile(*part.Name, finf.Name())
 				if err != nil {
 					return nil, err
 				}
-				_, err = ff.Write(fcontent)
+				io.Copy(ff, file)
 				if err != nil {
 					return nil, err
 				}
@@ -187,14 +185,16 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 				ctx.Logger.LogDebug("Append text content: " + *part.Value)
 			}
 		}
+		// extremly important. w.Close() will write the
+		// last part of the body boundary
+		w.Close()
 		// request with formatted body parts
-		// hard debug :P
-		// fmt.Println(body)
 		req, err = http.NewRequest(*p.Method, *p.Url, body)
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("Content-Type", "multipart/form-data")
+		// there is the boundary
+		req.Header.Set("Content-Type", w.FormDataContentType())
 	case BodyTypeNone:
 		// no body with type none
 		req, err = http.NewRequest(*p.Method, *p.Url, http.NoBody)
@@ -267,6 +267,9 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	// set headers
 	for _, hh := range p.Headers {
+		if !hh.Enabled {
+			continue
+		}
 		if req.Header.Get(*hh.Key) != "" {
 			// already seted header
 			continue
@@ -322,7 +325,7 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 
 		sw := new(strings.Builder)
-		_, err = io.Copy(sw, rawbody)
+		_, err = io.Copy(sw, rawbody) //#nosec G110 -- The user is free to get decompression bomb
 		if err != nil {
 			return nil, err
 		}
