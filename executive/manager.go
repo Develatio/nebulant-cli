@@ -76,6 +76,8 @@ type stats struct {
 }
 
 func (m *Manager) reset() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.ExecutionUUID = nil
 	m.StageReport = make(chan *stageReport, 1000)
 	m.execInstruction = make(chan *ExecCtrlInstruction, 10)
@@ -101,10 +103,10 @@ func (m *Manager) GetLogger() base.ILogger {
 
 // PrepareIRB func
 func (m *Manager) PrepareIRB(irb *blueprint.IRBlueprint) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 	// Reset all and prepare for new blueprint
 	m.reset()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.IRB = irb
 	m.ExecutionUUID = irb.ExecutionUUID
 	m.internalRegistry.ExecutionUUID = irb.ExecutionUUID
@@ -386,6 +388,9 @@ L:
 			}
 		}
 	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	m.Logger.LogInfo("[Manager] out")
 	elapsedTime := time.Since(startTime).String()
