@@ -84,6 +84,13 @@ type httpRequestParameters struct {
 	Body     json.RawMessage `json:"body"`
 }
 
+type httpRequestOutput struct {
+	Status     string `json:"status"`
+	StatusCode int    `json:"status_code"`
+	Headers    string `json:"headers"`
+	Body       string `json:"body"`
+}
+
 // RunRemoteScript func
 func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
@@ -258,8 +265,12 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 	defer resp.Body.Close()
 
+	result := httpRequestOutput{}
+
 	// debug status
 	ctx.Logger.LogDebug("Request response status: " + resp.Status)
+	result.Status = resp.Status
+	result.StatusCode = resp.StatusCode
 
 	// debug headers
 	sw := new(strings.Builder)
@@ -268,6 +279,7 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 	ctx.Logger.LogDebug("Headers: " + sw.String())
+	result.Headers = sw.String()
 
 	// debug body
 	if resp.ContentLength > 0 {
@@ -289,10 +301,12 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 			return nil, err
 		}
 		ctx.Logger.LogDebug("Body: " + sw.String())
+		result.Body = sw.String()
 	} else {
 		ctx.Logger.LogDebug("Empty body")
+		result.Body = ""
 	}
 
-	aout := base.NewActionOutput(ctx.Action, resp, nil)
+	aout := base.NewActionOutput(ctx.Action, result, nil)
 	return aout, err
 }
