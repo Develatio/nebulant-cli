@@ -160,7 +160,7 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 				if err != nil {
 					return nil, err
 				}
-				io.Copy(ff, file)
+				_, err = io.Copy(ff, file)
 				if err != nil {
 					return nil, err
 				}
@@ -187,7 +187,10 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 		// extremly important. w.Close() will write the
 		// last part of the body boundary
-		w.Close()
+		err := w.Close()
+		if err != nil {
+			return nil, err
+		}
 		// request with formatted body parts
 		req, err = http.NewRequest(*p.Method, *p.Url, body)
 		if err != nil {
