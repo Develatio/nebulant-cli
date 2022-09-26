@@ -341,7 +341,13 @@ func (h *Httpd) Serve(addr *string) error {
 	cast.LogInfo("The server mode is designed to be used with the Builder: "+config.FrontUrl, nil)
 	cast.LogInfo("Listening on "+*addr, nil)
 	http.HandleFunc("/", h.route)
-	err := http.ListenAndServe(*addr, nil)
+
+	// prevent slowloris DDoS attack (G114)
+	srv := &http.Server{
+		Addr:              *addr,
+		ReadHeaderTimeout: 3 * time.Second,
+	}
+	err := srv.ListenAndServe()
 	// https:
 	// err := http.ListenAndServeTLS(*addr, "localhost.crt", "localhost.key", nil)
 	if err != nil {
