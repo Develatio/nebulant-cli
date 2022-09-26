@@ -84,7 +84,6 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"condition":        {F: ConditionParse, N: NextOKKO},
 	"start":            {F: Start, N: NextOKKO},
 	"stop":             {F: Stop, N: NextOKKO},
-	"end":              {F: Stop, N: NextOKKO},
 	"sleep":            {F: Sleep, N: NextOKKO},
 	"ok/ko":            {F: OKKO, N: NextOKKO},
 	"log":              {F: Log, N: NextOKKO},
