@@ -122,6 +122,7 @@ func RemoteCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 
 func ScpCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
+	var i int
 	params := new(scpCopyParameters)
 	err = util.UnmarshalValidJSON(ctx.Action.Parameters, params)
 	if err != nil {
@@ -129,7 +130,20 @@ func ScpCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	if (params.Source != nil && params.Target != nil) || (params.Source == nil && params.Target == nil) {
-		return nil, fmt.Errorf("please set source OR target")
+		return nil, fmt.Errorf("please set source OR target machine")
+	}
+
+	for i = 0; i < len(params.Paths); i++ {
+		if params.Paths[i].Src == nil || len(*params.Paths[i].Src) <= 0 {
+			return nil, fmt.Errorf("cannot use empty paths for remote copy")
+		}
+		if params.Paths[i].Dst == nil || len(*params.Paths[i].Dst) <= 0 {
+			return nil, fmt.Errorf("cannot use empty paths for remote copy")
+		}
+	}
+
+	if i <= 0 {
+		return nil, fmt.Errorf("please set at least one path for remote copy")
 	}
 
 	if ctx.Rehearsal {
