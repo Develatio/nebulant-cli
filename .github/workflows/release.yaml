@@ -184,6 +184,36 @@ jobs:
           asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-freebsd-386
           asset_content_type: application/x-executable
 
+      - name: Upload freebsd-amd64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-freebsd-amd64
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-freebsd-amd64
+          asset_content_type: application/x-executable
+
+      - name: Upload freebsd-arm64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-freebsd-arm64
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-freebsd-arm64
+          asset_content_type: application/x-executable
+
+      - name: Upload freebsd-arm artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-freebsd-arm
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-freebsd-arm
+          asset_content_type: application/x-executable
+
       - name: Upload openbsd-386 artifact
         uses: actions/upload-release-asset@v1
         env:
@@ -194,6 +224,46 @@ jobs:
           asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-openbsd-386
           asset_content_type: application/x-executable
 
+      - name: Upload openbsd-amd64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-openbsd-amd64
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-openbsd-amd64
+          asset_content_type: application/x-executable
+
+      - name: Upload openbsd-arm64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-openbsd-arm64
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-openbsd-arm64
+          asset_content_type: application/x-executable
+
+      - name: Upload openbsd-arm artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-openbsd-arm
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-openbsd-arm
+          asset_content_type: application/x-executable
+
+      - name: Upload windows-386.exe artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-windows-386.exe
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-windows-386.exe
+          asset_content_type: application/x-dosexec
+
       - name: Upload windows-amd64.exe artifact
         uses: actions/upload-release-asset@v1
         env:
@@ -202,6 +272,16 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-windows-amd64.exe
           asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-windows-amd64.exe
+          asset_content_type: application/x-dosexec
+
+      - name: Upload windows-arm64.exe artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-windows-arm64.exe
+          asset_name: nebulant-${{ steps.version.outputs.version }}-${{ steps.versiondate.outputs.versiondate }}-windows-arm64.exe
           asset_content_type: application/x-dosexec
 
       - name: Upload windows-arm.exe artifact
