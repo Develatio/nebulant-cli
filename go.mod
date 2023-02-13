@@ -1,6 +1,6 @@
 module github.com/develatio/nebulant-cli
 
-go 1.20
+go 1.19
 
 replace github.com/develatio/nebulant-cli => ./
 
