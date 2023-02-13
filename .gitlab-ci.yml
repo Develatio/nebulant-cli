@@ -3,7 +3,7 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Go.gitlab-ci.yml
 
-image: golang:1.17.8 # cannot use 1.18 until https://github.com/golang/go/issues/37617
+image: golang:1.20
 
 variables:
   # Please edit to your GitLab project
