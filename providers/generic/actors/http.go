@@ -341,7 +341,6 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		sw := new(strings.Builder)
 		_, err = io.Copy(sw, rawbody) //#nosec G110 -- The user is free to get decompression bomb
 		if err != nil {
-			ctx.Logger.LogDebug("vale vale, pero tranquilito eh")
 			return nil, err
 		}
 		ctx.Logger.LogDebug("Body: " + sw.String())
