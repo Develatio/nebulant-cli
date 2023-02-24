@@ -26,6 +26,7 @@ package actors
 import (
 	"bytes"
 	"compress/gzip"
+	"compress/zlib"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -37,6 +38,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/andybalholm/brotli"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -317,12 +320,20 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 	if resp.ContentLength > 0 {
 		var rawbody io.ReadCloser
 		switch resp.Header.Get("Content-Encoding") {
-		case "gzip":
+		case "gzip", "x-gzip": // LZ77 CRC 32bits, unix like gzip, x-gzip as http1.1 alias
 			rawbody, err = gzip.NewReader(resp.Body)
 			if err != nil {
 				return nil, err
 			}
 			defer rawbody.Close()
+		case "deflate": // zlib rfc 1950 + deflate rfc 1951
+			rawbody, err = zlib.NewReader(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			defer rawbody.Close()
+		case "br": // brotli
+			rawbody = io.NopCloser(brotli.NewReader(resp.Body))
 		default:
 			rawbody = resp.Body
 		}
@@ -330,6 +341,7 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		sw := new(strings.Builder)
 		_, err = io.Copy(sw, rawbody) //#nosec G110 -- The user is free to get decompression bomb
 		if err != nil {
+			ctx.Logger.LogDebug("vale vale, pero tranquilito eh")
 			return nil, err
 		}
 		ctx.Logger.LogDebug("Body: " + sw.String())

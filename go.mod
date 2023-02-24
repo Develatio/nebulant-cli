@@ -5,6 +5,7 @@ go 1.19
 replace github.com/develatio/nebulant-cli => ./
 
 require (
+	github.com/andybalholm/brotli v1.0.5
 	github.com/aws/aws-sdk-go v1.44.199
 	github.com/bhmj/jsonslice v1.1.2
 	github.com/chzyer/readline v1.5.1
