@@ -371,7 +371,10 @@ func (s *Store) Interpolate(sourcetext *string) error {
 				val := string(enc)
 				if strings.HasPrefix(val, "\"") && strings.HasSuffix(val, "\"") {
 					var str string
-					json.Unmarshal(enc, &str)
+					err = json.Unmarshal(enc, &str)
+					if err != nil {
+						return fmt.Errorf(err.Error() + ": `" + string(enc) + "`")
+					}
 					jpathTargetValue = []byte(str)
 				} else if len(enc) <= 0 {
 					// err?
