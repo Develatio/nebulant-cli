@@ -146,21 +146,26 @@ func (c *Condition) evaluate() (bool, error) {
 	// String
 	// Invalid int, float and bool
 	c.ctx.Logger.LogDebug("evaluate as string")
-	if strings.HasPrefix(rawA, "\"") && strings.HasSuffix(rawA, "\"") {
-		rawA = strings.TrimSuffix(rawA, "\"")
-		rawA = strings.TrimPrefix(rawA, "\"")
+	if len(rawA) > 1 {
+		if strings.HasPrefix(rawA, "\"") && strings.HasSuffix(rawA, "\"") {
+			rawA = strings.TrimSuffix(rawA, "\"")
+			rawA = strings.TrimPrefix(rawA, "\"")
+		}
+		if strings.HasPrefix(rawA, "'") && strings.HasSuffix(rawA, "'") {
+			rawA = strings.TrimSuffix(rawA, "'")
+			rawA = strings.TrimPrefix(rawA, "'")
+		}
 	}
-	if strings.HasPrefix(rawA, "'") && strings.HasSuffix(rawA, "'") {
-		rawA = strings.TrimSuffix(rawA, "'")
-		rawA = strings.TrimPrefix(rawA, "'")
-	}
-	if strings.HasPrefix(rawB, "\"") && strings.HasSuffix(rawB, "\"") {
-		rawB = strings.TrimSuffix(rawB, "\"")
-		rawB = strings.TrimPrefix(rawB, "\"")
-	}
-	if strings.HasPrefix(rawB, "'") && strings.HasSuffix(rawB, "'") {
-		rawB = strings.TrimSuffix(rawB, "'")
-		rawB = strings.TrimPrefix(rawB, "'")
+
+	if len(rawB) > 1 {
+		if strings.HasPrefix(rawB, "\"") && strings.HasSuffix(rawB, "\"") {
+			rawB = strings.TrimSuffix(rawB, "\"")
+			rawB = strings.TrimPrefix(rawB, "\"")
+		}
+		if strings.HasPrefix(rawB, "'") && strings.HasSuffix(rawB, "'") {
+			rawB = strings.TrimSuffix(rawB, "'")
+			rawB = strings.TrimPrefix(rawB, "'")
+		}
 	}
 
 	switch c.Operator {
@@ -179,6 +184,7 @@ func (c *Condition) evaluate() (bool, error) {
 	case ">=":
 		return utf8.RuneCountInString(rawA) >= utf8.RuneCountInString(rawB), nil
 	case "contains":
+		c.ctx.Logger.LogDebug("test if '" + rawB + "' is into '" + rawA + "'")
 		return strings.Contains(rawA, rawB), nil
 	case "beginsWith":
 		return strings.HasPrefix(rawA, rawB), nil
