@@ -393,13 +393,13 @@ func TestMagicReferences(t *testing.T) {
 		Value:   "varvalue",
 		ValueID: "id",
 	}, "generic")
-	text = "{{ SINGLE_VAR_NAME3.id }}"
+	text = "{{ SINGLE_VAR_NAME3.__id }}"
 	err = store.Interpolate(&text)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 	if text != "id" {
-		t.Errorf("text interpolation failed for .id")
+		t.Errorf("text interpolation failed for .__id")
 	}
 
 	/////
