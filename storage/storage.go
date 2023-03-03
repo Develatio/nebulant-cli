@@ -347,7 +347,7 @@ func (s *Store) Interpolate(sourcetext *string) error {
 				jpathTargetValue = []byte(fmt.Sprintf("%v", record.PlainValue))
 			} else if strings.ToLower(jpath) == "$.__json" {
 				jpathTargetValue = record.JSONValue
-			} else if strings.ToLower(jpath) == "$.id" {
+			} else if strings.ToLower(jpath) == "$.__id" {
 				if len(record.ValueID) <= 0 {
 					return fmt.Errorf("var reference " + refname + " has no ID (ES2)")
 				}
