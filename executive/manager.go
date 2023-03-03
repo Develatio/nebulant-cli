@@ -91,11 +91,6 @@ func (m *Manager) reset() {
 	m.ExternalRegistry.Logger = m.Logger
 }
 
-// GetExecutionUUID func
-func (m *Manager) GetExecutionUUID() *string {
-	return m.ExecutionUUID
-}
-
 // GetLogger func
 func (m *Manager) GetLogger() base.ILogger {
 	return m.Logger

@@ -23,6 +23,5 @@ type IManager interface {
 	PrepareIRB(irb *blueprint.IRBlueprint)
 	GetStore() IStore
 	InitNewStageFromActionID(action *blueprint.Action) (IStage, error)
-	GetExecutionUUID() *string
 	Run() error
 }
