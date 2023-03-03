@@ -180,6 +180,11 @@ func (c *WSocketLogger) readCastBus() {
 				return
 			}
 
+			if fback.EventID != nil && *fback.EventID == EventRegisteredManager {
+				// this event is for httpd, ignore
+				continue
+			}
+
 			if executionUUID, exists := fback.Extra["join"]; exists {
 				c.joinExecution(executionUUID.(string))
 			}

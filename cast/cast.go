@@ -147,6 +147,8 @@ type BusData struct {
 	// State id
 	LastKnownEventID *int `json:"last_known_event_id,omitempty"`
 	// Extra data
+	// Be carefully on putting pointers here or
+	// race condition may occur
 	Extra map[string]interface{} `json:"extra,omitempty"`
 	// Manager *executive.Manager
 	ExecutionUUID *string `json:"execution_uuid"`
@@ -332,15 +334,24 @@ func Log(level int, b []byte, ei *string, ai *string, ti *string, raw bool) {
 		return
 	}
 	bdata := &BusData{
-		TypeID:        BusDataTypeLog,
-		B:             b,
-		LogLevel:      &level,
-		ExecutionUUID: ei,
-		ActionID:      ai,
-		ThreadID:      ti,
-		Raw:           raw,
-		Timestamp:     time.Now().UTC().UnixMicro(),
+		TypeID:   BusDataTypeLog,
+		B:        b,
+		LogLevel: &level,
+		Raw:      raw,
 	}
+	if ei != nil {
+		eei := *ei
+		bdata.ExecutionUUID = &eei
+	}
+	if ai != nil {
+		aai := *ai
+		bdata.ActionID = &aai
+	}
+	if ti != nil {
+		tti := *ti
+		bdata.ThreadID = &tti
+	}
+	bdata.Timestamp = time.Now().UTC().UnixMicro()
 	PushBusData(bdata)
 }
 
@@ -411,33 +422,39 @@ func PushEvent(eid int, re *string) {
 }
 
 // PushEvent func
-func PushEventWithExtra(eid int, euuid *string, extra map[string]interface{}) {
+func PushEventWithExtra(eid int, ei *string, extra map[string]interface{}) {
 	bdata := &BusData{
-		TypeID:        BusDataTypeEvent,
-		EventID:       &eid,
-		ExecutionUUID: euuid,
-		Extra:         extra,
-		Timestamp:     time.Now().UTC().UnixMicro(),
+		TypeID:  BusDataTypeEvent,
+		EventID: &eid,
+		Extra:   extra,
+	}
+	if ei != nil {
+		eei := *ei
+		bdata.ExecutionUUID = &eei
 	}
 	_, ok := extra["action_id"]
 	if ok {
 		actionid := extra["action_id"].(string)
 		bdata.ActionID = &actionid
 	}
+	bdata.Timestamp = time.Now().UTC().UnixMicro()
 	PushBusData(bdata)
 }
 
 // PushState func
-func PushState(runningIDs []string, state int, re *string) {
+func PushState(runningIDs []string, state int, ei *string) {
 	var s = state
 	bdata := &BusData{
 		TypeID:           BusDataTypeStatus,
 		LastKnownEventID: &s,
-		ExecutionUUID:    re,
-		Timestamp:        time.Now().UTC().UnixMicro(),
+	}
+	if ei != nil {
+		eei := *ei
+		bdata.ExecutionUUID = &eei
 	}
 	bdata.Extra = make(map[string]interface{})
 	bdata.Extra["uuids_in_progress"] = runningIDs
+	bdata.Timestamp = time.Now().UTC().UnixMicro()
 	PushBusData(bdata)
 }
 
