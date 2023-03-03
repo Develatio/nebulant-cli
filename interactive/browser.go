@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime/debug"
+	"strconv"
 
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
@@ -99,6 +100,10 @@ func httpReq(method string, path string, body interface{}) ([]byte, error) {
 	rawbody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
+	}
+	if resp.StatusCode > 399 {
+		fmt.Println()
+		return nil, fmt.Errorf(strconv.Itoa(resp.StatusCode) + " server error: " + string(rawbody))
 	}
 	return rawbody, nil
 }
