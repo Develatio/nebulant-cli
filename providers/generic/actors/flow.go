@@ -33,7 +33,7 @@ type defineVarsParameters struct {
 	Files []string          `json:"files"`
 }
 
-type sleepParameters struct {
+type SleepParameters struct {
 	Seconds int64 `json:"seconds" validate:"required"`
 }
 
@@ -279,7 +279,7 @@ func ConditionParse(ctx *ActionContext) (*base.ActionOutput, error) {
 
 // Sleep func
 func Sleep(ctx *ActionContext) (*base.ActionOutput, error) {
-	params := new(sleepParameters)
+	params := new(SleepParameters)
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
 		return nil, err
 	}

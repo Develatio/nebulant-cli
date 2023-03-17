@@ -85,3 +85,8 @@ func (p *Provider) HandleAction(action *blueprint.Action) (*base.ActionOutput, e
 	}
 	return nil, fmt.Errorf("GENERIC: Unknown action: " + action.ActionName)
 }
+
+func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Action, error) {
+	p.Logger.LogDebug("GENERIC: Err received")
+	return nil, nil
+}

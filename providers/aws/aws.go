@@ -17,14 +17,20 @@
 package aws
 
 import (
+	"encoding/json"
 	"fmt"
+	"math"
+	"math/rand"
 	"sync"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/providers/aws/actors"
+	generic_actors "github.com/develatio/nebulant-cli/providers/generic/actors"
 )
 
 func ActionValidator(action *blueprint.Action) error {
@@ -93,6 +99,70 @@ func (p *Provider) HandleAction(action *blueprint.Action) (*base.ActionOutput, e
 		return al.F(actors.NewActionContext(sess, action, p.store, p.Logger))
 	}
 	return nil, fmt.Errorf("AWS: Unknown action: " + action.ActionName)
+}
+
+func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Action, error) {
+	if aerr, ok := aout.Records[0].Error.(awserr.Error); ok {
+		// TODO: skip retry on obvious user err like *.Malformed?
+		if reqErr, ok := aout.Records[0].Error.(awserr.Error).(awserr.RequestFailure); ok {
+			p.Logger.LogDebug(fmt.Sprintf("AWS: Retry Hook. AWS Service errCode:%v - StatusCode:%v - RequestID:%v", aerr.Code(), reqErr.StatusCode(), reqErr.RequestID()))
+		}
+	}
+	retries_count := 0
+	retries_count_id := fmt.Sprintf("retries_count_%v", aout.Action.ActionID)
+	retries_count_interface := p.store.GetPrivateVar(retries_count_id)
+	if retries_count_interface != nil {
+		retries_count = retries_count_interface.(int)
+	}
+	if retries_count < *aout.Action.MaxRetries {
+		if retries_count > *aout.Action.MaxRetries || (retries_count > 0 && aout.Action.NextAction.NextKoLoop) {
+			p.Logger.LogDebug("Ending retry process...")
+			// retry process end, reset retry status
+			p.store.SetPrivateVar(retries_count_id, 0)
+			// returning nil, nil to stop hook callback
+			return nil, nil
+		}
+		retries_count++
+		p.store.SetPrivateVar(retries_count_id, retries_count)
+		seconds := int64(10.0 * math.Pow(float64(retries_count), (1.0/4.0)))
+		sleep_parameters := generic_actors.SleepParameters{
+			Seconds: seconds,
+		}
+
+		if aout.Action.NextAction.NextKoLoop {
+			p.Logger.LogWarn(fmt.Sprintf("Action Error. Retrying after %vs. There is a loop over KO, limiting the retries to only one...", seconds))
+		} else {
+			p.Logger.LogWarn(fmt.Sprintf("Action Error. Retrying after %vs (Retry %d/%d)...", seconds, retries_count, *aout.Action.MaxRetries))
+		}
+
+		// TODO: move the hot-sleep-action-creation
+		// to something like providers.generic.NewSleepAction()?
+		// NOTE to my future self: hahaha you know this is going to
+		// stay here forever hahahaha, laugh with me..., I mean with
+		// you..., I mean with both..., sh*t I'm going crazy.
+		param, err := json.Marshal(sleep_parameters)
+		if err != nil {
+			return nil, err
+		}
+		rand.Seed(time.Now().UnixNano())
+		randIntString := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
+		actions := []*blueprint.Action{
+			{
+				ActionID: "internal-aws-retry-control-" + randIntString,
+				SafeID:   &randIntString,
+				Provider: "generic",
+				NextAction: blueprint.NextAction{
+					NextOk: []*blueprint.Action{aout.Action},
+				},
+				ActionName: "sleep",
+				Parameters: param,
+			},
+		}
+		// retry
+		return actions, nil
+	}
+	// do not retry
+	return nil, nil
 }
 
 func (p *Provider) touchSession() error {

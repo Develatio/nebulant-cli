@@ -73,6 +73,8 @@ type Action struct {
 	Output         *string `json:"output"`
 	SaveRawResults bool    `json:"save_raw_results"`
 	DebugNetwork   bool    `json:"debug_network"`
+	// Not documented
+	MaxRetries *int `json:"max_retries"`
 }
 
 type ConditionalNextActions struct {
@@ -91,6 +93,10 @@ type NextAction struct {
 	NextOkFalse []*Action
 	//
 	NextKo []*Action
+	// filled internally
+	// detect loops through ok and ko
+	NextOkLoop bool
+	NextKoLoop bool
 	// Parsed in precompiling.
 	Ok json.RawMessage `json:"ok"`
 	Ko json.RawMessage `json:"ko"`
@@ -341,6 +347,15 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 			irb.Actions[bp.Actions[i].ActionID].JoinThreadsPoint = true
 			irb.JoinThreadPoints[bp.Actions[i].ActionID] = irb.Actions[bp.Actions[i].ActionID]
 		}
+
+		// Set action defaults
+		if bp.Actions[i].MaxRetries == nil {
+			bp.Actions[i].MaxRetries = new(int)
+			*bp.Actions[i].MaxRetries = 5
+		}
+		if *bp.Actions[i].MaxRetries < 0 {
+			*bp.Actions[i].MaxRetries = 5
+		}
 	}
 
 	if irb.StartAction == nil {
@@ -406,6 +421,26 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	for _, action := range irb.JoinThreadPoints {
 		knowParents := buildParentPaths(action)
 		action.KnowParentIDs = knowParents
+	}
+
+	// detect loops
+	for _, action := range irb.Actions {
+	L1ok:
+		for _, ca := range action.NextAction.NextOk {
+			knowParents := buildParentPaths(ca)
+			if _, exists := knowParents[action.ActionID]; exists {
+				action.NextAction.NextOkLoop = true
+				break L1ok
+			}
+		}
+	L2ko:
+		for _, ca := range action.NextAction.NextKo {
+			knowParents := buildParentPaths(ca)
+			if _, exists := knowParents[action.ActionID]; exists {
+				action.NextAction.NextKoLoop = true
+				break L2ko
+			}
+		}
 	}
 
 	if len(errors) > 0 {

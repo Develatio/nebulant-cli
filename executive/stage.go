@@ -387,17 +387,17 @@ func (s *Stage) PostAction(actionOutput *base.ActionOutput, actionErr error) boo
 		}
 	}
 	if actionErr != nil { // Action error
-		aerr := actionOutput
+		// aerr := actionOutput
 		if actionOutput == nil {
-			aerr = base.NewActionOutput(s.CurrentAction, nil, nil)
-			aerr.Records[0].Fail = true
-			aerr.Records[0].Error = actionErr
-			aerr.Records[0].Value = actionErr.Error()
+			actionOutput = base.NewActionOutput(s.CurrentAction, nil, nil)
+			actionOutput.Records[0].Fail = true
+			actionOutput.Records[0].Error = actionErr
+			actionOutput.Records[0].Value = actionErr.Error()
 		}
-		for idx := 0; idx < len(aerr.Records); idx++ {
-			aerr.Records[idx].Fail = true
-			aerr.Records[idx].Error = actionErr
-			err := s.store.Insert(aerr.Records[idx], s.CurrentAction.Provider)
+		for idx := 0; idx < len(actionOutput.Records); idx++ {
+			actionOutput.Records[idx].Fail = true
+			actionOutput.Records[idx].Error = actionErr
+			err := s.store.Insert(actionOutput.Records[idx], s.CurrentAction.Provider)
 			if err != nil {
 				log.Panic(err.Error())
 			}
@@ -411,7 +411,18 @@ func (s *Stage) PostAction(actionOutput *base.ActionOutput, actionErr error) boo
 	var actions []*blueprint.Action
 	if actionErr != nil { // Action error
 		s.logger.LogDebug(s.lpfx() + "Stage: Action finish KO")
-		actions = s.LastAction.NextAction.NextKo
+		provider, err := s.store.GetProvider(s.LastAction.Provider)
+		if err != nil {
+			// Missing provider.
+			log.Panic(err.Error())
+		}
+		actions, err = provider.OnActionErrorHook(actionOutput)
+		if err != nil {
+			log.Panic(err.Error())
+		}
+		if actions == nil {
+			actions = s.LastAction.NextAction.NextKo
+		}
 	} else if s.LastAction.NextAction.ConditionalNext {
 		s.logger.LogDebug(s.lpfx() + "Stage: Action finish OK")
 		if actionOutput.Records[0].Value.(bool) {

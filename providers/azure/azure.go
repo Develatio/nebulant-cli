@@ -48,3 +48,8 @@ func (p *Provider) HandleAction(action *blueprint.Action) (*base.ActionOutput, e
 	p.Logger.LogDebug("AZURE: Received action " + action.ActionName)
 	return nil, nil
 }
+
+func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Action, error) {
+	p.Logger.LogDebug("AWS: Err received")
+	return nil, nil
+}
