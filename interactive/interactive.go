@@ -72,7 +72,7 @@ L:
 			os.Exit(0)
 		case "serve":
 			term.PrintInfo("Starting server mode...\n")
-			term.PrintInfo("You can also start server mode using -d argument\n")
+			term.PrintInfo("You can also start server mode using -s argument\n")
 			err := executive.InitDirector(true, true) // Server mode
 			if err != nil {
 				term.PrintErr(err.Error() + "\n")
