@@ -41,6 +41,11 @@ func (p *testProvider) HandleAction(action *blueprint.Action) (*base.ActionOutpu
 	return nil, nil
 }
 
+// OnActionErrorHook func
+func (p *testProvider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Action, error) {
+	return nil, nil
+}
+
 type fakeLogger struct{}
 
 func (l *fakeLogger) LogCritical(s string)    {}
