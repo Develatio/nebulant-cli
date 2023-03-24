@@ -18,10 +18,12 @@ package generic
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
+	hook_providers "github.com/develatio/nebulant-cli/hook/providers"
 	"github.com/develatio/nebulant-cli/providers/generic/actors"
 )
 
@@ -87,6 +89,23 @@ func (p *Provider) HandleAction(action *blueprint.Action) (*base.ActionOutput, e
 }
 
 func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Action, error) {
-	p.Logger.LogDebug("GENERIC: Err received")
+	al, exists := actors.ActionFuncMap[aout.Action.ActionName]
+	if !exists {
+		return nil, nil
+	}
+
+	// skip not retriable action
+	if !al.R {
+		return nil, nil
+	}
+
+	// retry on net err, skip others
+	if _, ok := aout.Records[0].Error.(net.Error); ok {
+		phcontext := &hook_providers.ProviderHookContext{
+			Logger: p.Logger,
+			Store:  p.store,
+		}
+		return hook_providers.DefaultOnActionErrorHook(phcontext, aout)
+	}
 	return nil, nil
 }

@@ -19,6 +19,7 @@ package azure
 import (
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
+	hook_providers "github.com/develatio/nebulant-cli/hook/providers"
 )
 
 func ActionValidator(action *blueprint.Action) error {
@@ -50,6 +51,9 @@ func (p *Provider) HandleAction(action *blueprint.Action) (*base.ActionOutput, e
 }
 
 func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Action, error) {
-	p.Logger.LogDebug("AWS: Err received")
-	return nil, nil
+	phcontext := &hook_providers.ProviderHookContext{
+		Logger: p.Logger,
+		Store:  p.store,
+	}
+	return hook_providers.DefaultOnActionErrorHook(phcontext, aout)
 }

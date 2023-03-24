@@ -347,15 +347,6 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 			irb.Actions[bp.Actions[i].ActionID].JoinThreadsPoint = true
 			irb.JoinThreadPoints[bp.Actions[i].ActionID] = irb.Actions[bp.Actions[i].ActionID]
 		}
-
-		// Set action defaults
-		if bp.Actions[i].MaxRetries == nil {
-			bp.Actions[i].MaxRetries = new(int)
-			*bp.Actions[i].MaxRetries = 5
-		}
-		if *bp.Actions[i].MaxRetries < 0 {
-			*bp.Actions[i].MaxRetries = 5
-		}
 	}
 
 	if irb.StartAction == nil {

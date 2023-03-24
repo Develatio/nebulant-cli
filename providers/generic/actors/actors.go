@@ -72,26 +72,28 @@ const (
 type ActionLayout struct {
 	F ActionFunc
 	N NextType
+	// Retriable or not
+	R bool
 }
 
 // ActionFuncMap map
 var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
-	"run_script":       {F: RunScript, N: NextOKKO},
-	"define_envs":      {F: DefineEnvs, N: NextOKKO},
-	"define_variables": {F: DefineVars, N: NextOKKO},
-	"upload_files":     {F: RemoteCopy, N: NextOKKO},
-	"download_files":   {F: RemoteCopy, N: NextOKKO},
-	"condition":        {F: ConditionParse, N: NextOKKO},
-	"start":            {F: Start, N: NextOKKO},
-	"stop":             {F: Stop, N: NextOKKO},
-	"sleep":            {F: Sleep, N: NextOKKO},
-	"ok/ko":            {F: OKKO, N: NextOKKO},
-	"log":              {F: Log, N: NextOKKO},
-	"noop":             {F: NOOP, N: NextOK},
-	"panic":            {F: Panic, N: NextOKKO},
-	"send_mail":        {F: SendMail, N: NextOKKO},
-	"send_email":       {F: SendMail, N: NextOKKO},
-	"http_request":     {F: HttpRequest, N: NextOKKO},
+	"run_script":       {F: RunScript, N: NextOKKO, R: false},
+	"define_envs":      {F: DefineEnvs, N: NextOKKO, R: false},
+	"define_variables": {F: DefineVars, N: NextOKKO, R: false},
+	"upload_files":     {F: RemoteCopy, N: NextOKKO, R: false},
+	"download_files":   {F: RemoteCopy, N: NextOKKO, R: false},
+	"condition":        {F: ConditionParse, N: NextOKKO, R: false},
+	"start":            {F: Start, N: NextOKKO, R: false},
+	"stop":             {F: Stop, N: NextOKKO, R: false},
+	"sleep":            {F: Sleep, N: NextOKKO, R: false},
+	"ok/ko":            {F: OKKO, N: NextOKKO, R: false},
+	"log":              {F: Log, N: NextOKKO, R: false},
+	"noop":             {F: NOOP, N: NextOK, R: false},
+	"panic":            {F: Panic, N: NextOKKO, R: false},
+	"send_mail":        {F: SendMail, N: NextOKKO, R: true},
+	"send_email":       {F: SendMail, N: NextOKKO, R: true},
+	"http_request":     {F: HttpRequest, N: NextOKKO, R: true},
 	// handled by core stage
-	"join_threads": {F: NOOP, N: NextOK},
+	"join_threads": {F: NOOP, N: NextOK, R: false},
 }
