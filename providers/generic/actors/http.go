@@ -289,9 +289,10 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    30 * time.Second,
-		DisableCompression: false,
+		MaxIdleConns:          10,
+		IdleConnTimeout:       30 * time.Second,
+		DisableCompression:    false,
+		ResponseHeaderTimeout: 30 * time.Second,
 	}
 	client := &http.Client{Transport: tr}
 	resp, err := client.Do(req)
