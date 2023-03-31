@@ -84,15 +84,22 @@ func (c *ConsoleLogger) printMessage(fback *BusData) bool {
 
 func (c *ConsoleLogger) readCastBus() {
 	defer SBus.castWaiter.Done()
+	power := true
 L:
 	for {
 		select {
 		case fback := <-c.fLink.CommonChan:
 			if fback.TypeID == BusDataTypeEOF {
-				break L
+				// entering shutdown mode
+				power = false
 			}
 		case fback := <-c.fLink.LogChan:
 			c.printMessage(fback)
+		default:
+			// perform exit
+			if !power {
+				break L
+			}
 		}
 	}
 }

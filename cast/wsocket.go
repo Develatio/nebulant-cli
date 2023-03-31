@@ -159,6 +159,7 @@ func (c *WSocketLogger) readCastBus() {
 		c.conn.Close() //#nosec G104 -- Unhandle is OK here
 		SBus.castWaiter.Done()
 	}()
+	power := true
 
 	for {
 		select {
@@ -177,7 +178,8 @@ func (c *WSocketLogger) readCastBus() {
 			}
 			if fback.TypeID == BusDataTypeEOF {
 				// EOF feedback, close logger
-				return
+				// entering shutdown mode
+				power = false
 			}
 
 			if fback.EventID != nil && *fback.EventID == EventRegisteredManager {
@@ -254,6 +256,10 @@ func (c *WSocketLogger) readCastBus() {
 				return
 			}
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		default:
+			if !power {
 				return
 			}
 		}
