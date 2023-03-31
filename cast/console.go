@@ -17,6 +17,7 @@
 package cast
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 
@@ -26,6 +27,7 @@ import (
 
 var failprefx string = "[!] "
 var okprefx string = "(·) "
+var counter int = 0
 
 var colormap map[int]string = map[int]string{
 	CriticalLevel: term.Red,
@@ -74,7 +76,14 @@ func (c *ConsoleLogger) printMessage(fback *BusData) bool {
 		}
 	} else {
 		if fback.M != nil {
-			log.Println(color + prefx + term.Reset + *fback.M + term.Reset)
+			// log will use term.Output
+			// because log.SetOutput(Stdout)
+			if config.DEBUG {
+				counter++
+				log.Println(color + prefx + term.Reset + fmt.Sprintf("[%v] %v", counter, *fback.M) + term.Reset)
+			} else {
+				log.Println(color + prefx + term.Reset + *fback.M + term.Reset)
+			}
 		} else {
 			log.Println(color + prefx + term.Reset + "" + term.Reset)
 		}

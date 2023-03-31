@@ -38,6 +38,7 @@ import (
 	"github.com/bhmj/jsonslice"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/term"
 )
 
 const INDEX_TOKEN_SIZE = 3
@@ -69,6 +70,7 @@ type matchInfo struct {
 }
 
 type AssetDefinition struct {
+	Name         string
 	FreshItem    func() interface{}
 	LookPath     []string
 	IndexPath    string
@@ -147,7 +149,10 @@ func writeIndexFile(fpath string, list *index) (int, error) {
 	nn = n + nn
 	partcount := 0
 	partlen := len(list.Parts)
+	sb := term.OpenStatusBar()
+	bar := sb.GetProgressBar(int64(partlen), " Writing index file", false)
 	for tkn, positions := range list.Parts {
+		bar.Add(1)
 		partcount++
 		partsep := ""
 		if partcount < partlen {
@@ -288,7 +293,7 @@ func splitstring(aa string, size int) ([]string, error) {
 func logStats(prefix string) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	cast.LogInfo(fmt.Sprintf("%s: Alloc: %v MiB\tHeapInuse: %v MiB\tFrees: %v MiB\tSys: %v MiB\tNumGC: %v", prefix, m.Alloc/1024/1024, m.HeapInuse/1024/1024, m.Frees/1024/1024, m.Sys/1024/1024, m.NumGC), nil)
+	cast.LogDebug(fmt.Sprintf("%s: Alloc: %v MiB\tHeapInuse: %v MiB\tFrees: %v MiB\tSys: %v MiB\tNumGC: %v", prefix, m.Alloc/1024/1024, m.HeapInuse/1024/1024, m.Frees/1024/1024, m.Sys/1024/1024, m.NumGC), nil)
 }
 
 func DownloadAsset(url string, assetdef *AssetDefinition) error {
@@ -319,7 +324,10 @@ func DownloadAsset(url string, assetdef *AssetDefinition) error {
 	}
 	defer file.Close()
 
-	_, err = io.Copy(file, resp.Body)
+	sb := term.OpenStatusBar()
+	bar := sb.GetProgressBar(resp.ContentLength, " Downloading asset descriptor", true)
+
+	_, err = io.Copy(io.MultiWriter(file, bar), resp.Body)
 	if err != nil {
 		return err
 	}
@@ -328,6 +336,8 @@ func DownloadAsset(url string, assetdef *AssetDefinition) error {
 }
 
 func MakeIndex(assetdef *AssetDefinition) (int, error) {
+	tb := term.OpenTitleBar()
+	tb.Print(" Building Asset index " + assetdef.Name)
 	n, err := MakeMainIndex(assetdef)
 	if err != nil {
 		return n, err
@@ -359,6 +369,15 @@ func MakeMainIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
 	defer input.Close()
+
+	fi, err := input.Stat()
+	if err != nil {
+		return 0, fmt.Errorf("MainIndex:" + err.Error())
+	}
+
+	sb := term.OpenStatusBar()
+	bar := sb.GetProgressBar(fi.Size(), " Reading asset items", false)
+
 	dec := json.NewDecoder(input)
 
 	// read {
@@ -375,12 +394,17 @@ func MakeMainIndex(assetdef *AssetDefinition) (int, error) {
 	}
 
 	start := time.Now()
+	readed := dec.InputOffset()
+	bar.Add64(readed)
 	// loop arr values
 	for dec.More() {
 		m := assetdef.FreshItem()
 
 		// store file position of current item
 		byteinit := dec.InputOffset()
+		delta := byteinit - readed
+		readed = byteinit
+		bar.Add64(delta)
 
 		err := dec.Decode(m)
 		if err != nil {
@@ -434,6 +458,13 @@ func MakeSubIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("SubIndex:" + err.Error())
 	}
 	defer input.Close()
+	fi, err := input.Stat()
+	if err != nil {
+		return 0, fmt.Errorf("MainIndex:" + err.Error())
+	}
+
+	sb := term.OpenStatusBar()
+	bar := sb.GetProgressBar(fi.Size(), " Optimizing index", false)
 	dec := json.NewDecoder(input)
 
 	// read {
@@ -450,11 +481,16 @@ func MakeSubIndex(assetdef *AssetDefinition) (int, error) {
 	}
 
 	start := time.Now()
+	readed := dec.InputOffset()
+	bar.Add64(readed)
 	// while the array contains values
 	for dec.More() {
 		var m tinyIndexItem
 		// store current item file position
 		byteinit := dec.InputOffset()
+		delta := byteinit - readed
+		readed = byteinit
+		bar.Add64(delta)
 
 		err := dec.Decode(&m)
 		if err != nil {
@@ -846,14 +882,18 @@ func updateDescriptor(descpath string) error {
 	}
 	defer file.Close()
 
-	_, err = io.Copy(file, resp.Body)
+	sb := term.OpenStatusBar()
+	bar := sb.GetProgressBar(resp.ContentLength, " Downloading asset descriptor", true)
+
+	_, err = io.Copy(io.MultiWriter(file, bar), resp.Body)
+
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func UpgradeAssets() error {
+func UpgradeAssets(force bool) error {
 	var descriptor []*AssetRemoteDescription
 	descpath := filepath.Join(config.AppHomePath(), "assets", "descriptor.json")
 
@@ -865,7 +905,12 @@ func UpgradeAssets() error {
 	if err != nil {
 		return err
 	}
+
+	tb := term.OpenTitleBar()
 	defer descfile.Close()
+	defer term.CloseStatusBar()
+	defer term.CloseTitleBar()
+
 	byteValue, _ := ioutil.ReadAll(descfile)
 	if err := json.Unmarshal(byteValue, &descriptor); err != nil {
 		return err
@@ -890,7 +935,7 @@ func UpgradeAssets() error {
 				}
 
 				filemd5 := fmt.Sprintf("%x", h.Sum(nil))
-				if filemd5 != desc.Hash {
+				if force || filemd5 != desc.Hash {
 					err = DownloadAsset(desc.URL, def)
 					if err != nil {
 						cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
@@ -923,12 +968,14 @@ func UpgradeAssets() error {
 				cast.LogInfo("Index of "+desc.ID+" up to date", nil)
 			} else if errors.Is(err, os.ErrNotExist) {
 				cast.LogInfo("Building "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
+				tb.Print("Building " + desc.ID + " index in bg... (from " + desc.URL + ")")
 				_, err := MakeIndex(def)
 				if err != nil {
 					cast.LogErr("Cannot build index of "+desc.ID+" due to "+err.Error(), nil)
 					continue
 				}
 				cast.LogInfo("Building index of "+desc.ID+"...DONE", nil)
+				tb.Print("Building index of " + desc.ID + "...DONE")
 			} else {
 				cast.LogErr("Cannot determine index status "+err.Error(), nil)
 			}
@@ -939,5 +986,6 @@ func UpgradeAssets() error {
 	}
 
 	cast.LogInfo("All assets up to date", nil)
+	tb.Print("All assets up to date")
 	return nil
 }

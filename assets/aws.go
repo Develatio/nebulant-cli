@@ -30,6 +30,7 @@ type CustomInstanceTypeInfo struct {
 
 func init() {
 	AssetsDefinition["aws_instance_types"] = &AssetDefinition{
+		Name:         "AWS Instance types",
 		IndexPath:    filepath.Join(config.AppHomePath(), "assets", "aws_instance_types.idx"),
 		SubIndexPath: filepath.Join(config.AppHomePath(), "assets", "aws_instance_types.subidx"),
 		FilePath:     filepath.Join(config.AppHomePath(), "assets", "aws_instance_types.asset"),
@@ -40,6 +41,7 @@ func init() {
 		},
 	}
 	AssetsDefinition["aws_images"] = &AssetDefinition{
+		Name:         "AWS Images",
 		IndexPath:    filepath.Join(config.AppHomePath(), "assets", "aws_images.idx"),
 		SubIndexPath: filepath.Join(config.AppHomePath(), "assets", "aws_images.subidx"),
 		FilePath:     filepath.Join(config.AppHomePath(), "assets", "aws_images.asset"),

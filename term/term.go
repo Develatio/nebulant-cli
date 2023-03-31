@@ -38,6 +38,14 @@ var Gray string = "\033[97m"
 
 var Bold string = "\033[1m"
 
+var CursorUp string = "\033[1F"
+
+var EraseLine string = "\033[K"
+
+var mls *MultilineStdout = nil
+var titleBarLine *oneLineWriteCloser = nil
+var statusBarLine *oneLineWriteCloser = nil
+
 // https://github.com/manifoldco/promptui/issues/49
 type noBellStdout struct{}
 
@@ -53,6 +61,51 @@ func (n *noBellStdout) Close() error {
 }
 
 var NoBellStdout = &noBellStdout{}
+
+func OpenTitleBar() *oneLineWriteCloser {
+	if titleBarLine != nil {
+		return titleBarLine
+	}
+	if mls == nil {
+		mls = &MultilineStdout{
+			// WARN: this sould be called AFTER InitTerm
+			MainStdout: Stdout,
+		}
+		log.SetOutput(mls)
+	}
+	titleBarLine = mls.AppendLine()
+	return titleBarLine
+}
+
+func CloseTitleBar() {
+	if titleBarLine != nil {
+		titleBarLine.Close()
+		titleBarLine = nil
+	}
+}
+
+func OpenStatusBar() *oneLineWriteCloser {
+	OpenTitleBar()
+	if statusBarLine != nil {
+		return statusBarLine
+	}
+	if mls == nil {
+		mls = &MultilineStdout{
+			// WARN: this sould be called AFTER InitTerm
+			MainStdout: Stdout,
+		}
+		log.SetOutput(mls)
+	}
+	statusBarLine = mls.AppendLine()
+	return statusBarLine
+}
+
+func CloseStatusBar() {
+	if statusBarLine != nil {
+		statusBarLine.Close()
+		statusBarLine = nil
+	}
+}
 
 // PrintInfo func
 func PrintInfo(s string) {
@@ -78,6 +131,7 @@ func Print(a ...interface{}) (n int, err error) {
 }
 
 func InitTerm(colors bool) {
+	fmt.Println("term initialized")
 	if !colors {
 		Stdout = os.Stdout
 		Stderr = os.Stderr

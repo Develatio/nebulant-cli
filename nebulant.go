@@ -91,6 +91,7 @@ func main() {
 	var ipv6Flag = flag.Bool("6", false, "Force ipv6")
 	var colorFlag = flag.Bool("c", false, "Disable colors.")
 	var upgradeAssets = flag.Bool("u", false, "Upgrade assets from remote location and exit. Build search index as needed.")
+	var forceUpgradeAssets = flag.Bool("uu", false, "Force upgrade assets.")
 	var lookupAsset = flag.String("l", "", "Test asset search and exit. Use assetid:searchterm:offset:limit:sort syntax. Ej. nebulant -l \"aws_image:linux x86:10:5:-$.Name\"")
 
 	flag.Parse()
@@ -108,7 +109,7 @@ func main() {
 		util.PrintUsage(err)
 		os.Exit(1)
 	}
-	if *upgradeAssets && *serverModeFlag {
+	if (*upgradeAssets || *forceUpgradeAssets) && *serverModeFlag {
 		util.PrintUsage(fmt.Errorf("server mode and force asset upgrading are incompatible flags. Set only one of both"))
 		os.Exit(1)
 	}
@@ -148,8 +149,8 @@ func main() {
 	// Init console logger
 	cast.InitConsoleLogger(!*colorFlag)
 
-	if *upgradeAssets {
-		err := assets.UpgradeAssets()
+	if *upgradeAssets || *forceUpgradeAssets {
+		err := assets.UpgradeAssets(*forceUpgradeAssets)
 		if err != nil {
 			util.PrintUsage(err)
 			os.Exit(1)
