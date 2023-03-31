@@ -40,6 +40,7 @@ import (
 	"time"
 
 	"github.com/andybalholm/brotli"
+	"golang.org/x/net/html/charset"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -341,8 +342,21 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		rawbody = resp.Body
 	}
 
+	// Charset decode
+	// contentType can be empty string
+	contentType := resp.Header.Get("Content-Type")
+	// NewReader returns an io.Reader that converts the content of rawbody to UTF-8.
+	// https://pkg.go.dev/golang.org/x/net/html/charset#NewReader
+	// charset.NewReader will scan body if contentType is bad/empty string
+	// https://cs.opensource.google/go/x/net/+/refs/tags/v0.8.0:html/charset/charset.go;l=71
+	// also track this TODO comment and the default behavior
+	// https://cs.opensource.google/go/x/net/+/refs/tags/v0.8.0:html/charset/charset.go;l=102
+	dcr, err := charset.NewReader(rawbody, contentType)
+	if err != nil {
+		return nil, err
+	}
 	swb := new(strings.Builder)
-	_, err = io.Copy(swb, rawbody) //#nosec G110 -- The user is free to get decompression bomb
+	_, err = io.Copy(swb, dcr) //#nosec G110 -- The user is free to get decompression bomb
 	if err != nil {
 		return nil, err
 	}
