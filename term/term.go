@@ -131,7 +131,6 @@ func Print(a ...interface{}) (n int, err error) {
 }
 
 func InitTerm(colors bool) {
-	fmt.Println("term initialized")
 	if !colors {
 		Stdout = os.Stdout
 		Stderr = os.Stderr
