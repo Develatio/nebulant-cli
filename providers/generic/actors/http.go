@@ -119,6 +119,9 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err = json.Unmarshal(ctx.Action.Parameters, p); err != nil {
 		return nil, err
 	}
+	if p.Url == nil {
+		return nil, fmt.Errorf("http endpoint parameter of HTTP request cannot be empty")
+	}
 
 	if ctx.Rehearsal {
 		return nil, nil
@@ -318,38 +321,33 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 	result.Headers = sw.String()
 
 	// debug body
-	if resp.ContentLength > 0 {
-		var rawbody io.ReadCloser
-		switch resp.Header.Get("Content-Encoding") {
-		case "gzip", "x-gzip": // LZ77 CRC 32bits, unix like gzip, x-gzip as http1.1 alias
-			rawbody, err = gzip.NewReader(resp.Body)
-			if err != nil {
-				return nil, err
-			}
-			defer rawbody.Close()
-		case "deflate": // zlib rfc 1950 + deflate rfc 1951
-			rawbody, err = zlib.NewReader(resp.Body)
-			if err != nil {
-				return nil, err
-			}
-			defer rawbody.Close()
-		case "br": // brotli
-			rawbody = io.NopCloser(brotli.NewReader(resp.Body))
-		default:
-			rawbody = resp.Body
-		}
-
-		sw := new(strings.Builder)
-		_, err = io.Copy(sw, rawbody) //#nosec G110 -- The user is free to get decompression bomb
+	var rawbody io.ReadCloser
+	switch resp.Header.Get("Content-Encoding") {
+	case "gzip", "x-gzip": // LZ77 CRC 32bits, unix like gzip, x-gzip as http1.1 alias
+		rawbody, err = gzip.NewReader(resp.Body)
 		if err != nil {
 			return nil, err
 		}
-		ctx.Logger.LogDebug("Body: " + sw.String())
-		result.Body = sw.String()
-	} else {
-		ctx.Logger.LogDebug("Empty body")
-		result.Body = ""
+		defer rawbody.Close()
+	case "deflate": // zlib rfc 1950 + deflate rfc 1951
+		rawbody, err = zlib.NewReader(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		defer rawbody.Close()
+	case "br": // brotli
+		rawbody = io.NopCloser(brotli.NewReader(resp.Body))
+	default:
+		rawbody = resp.Body
 	}
+
+	swb := new(strings.Builder)
+	_, err = io.Copy(swb, rawbody) //#nosec G110 -- The user is free to get decompression bomb
+	if err != nil {
+		return nil, err
+	}
+	ctx.Logger.LogDebug("Body: " + swb.String())
+	result.Body = swb.String()
 
 	aout := base.NewActionOutput(ctx.Action, result, nil)
 	return aout, err
