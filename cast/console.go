@@ -63,12 +63,21 @@ func (c *ConsoleLogger) printMessage(fback *BusData) bool {
 	}
 
 	if fback.Raw {
-		_, err := term.Print(color + string(fback.B) + term.Reset)
+		var err error
+		if fback.M != nil {
+			_, err = term.Print(color + *fback.M + term.Reset)
+		} else {
+			_, err = term.Print(color + "" + term.Reset)
+		}
 		if err != nil {
 			return false
 		}
 	} else {
-		log.Println(color + prefx + term.Reset + string(fback.B) + term.Reset)
+		if fback.M != nil {
+			log.Println(color + prefx + term.Reset + *fback.M + term.Reset)
+		} else {
+			log.Println(color + prefx + term.Reset + "" + term.Reset)
+		}
 	}
 	return false
 }

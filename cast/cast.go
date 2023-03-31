@@ -139,7 +139,7 @@ type BusData struct {
 	ActionID *string     `json:"action_id,omitempty"`
 	// Msg data in bytes
 	ThreadID *string `json:"thread_id,omitempty"`
-	B        []byte  `json:"log_bytes,omitempty"`
+	M        *string `json:"message,omitempty"`
 	LogLevel *int    `json:"log_level,omitempty"`
 	EOF      bool    `json:"EOF,omitempty"`
 	// Event id
@@ -328,14 +328,14 @@ func (s *SystemBus) Close() *sync.WaitGroup {
 }
 
 // Log func
-func Log(level int, b []byte, ei *string, ai *string, ti *string, raw bool) {
+func Log(level int, m *string, ei *string, ai *string, ti *string, raw bool) {
 	// prevent debug messages on non-debug mode
 	if !config.DEBUG && level == DebugLevel {
 		return
 	}
 	bdata := &BusData{
 		TypeID:   BusDataTypeLog,
-		B:        b,
+		M:        m,
 		LogLevel: &level,
 		Raw:      raw,
 	}
@@ -357,27 +357,27 @@ func Log(level int, b []byte, ei *string, ai *string, ti *string, raw bool) {
 
 // LogCritical func
 func LogCritical(s string, re *string) {
-	Log(CriticalLevel, []byte(s), re, nil, nil, false)
+	Log(CriticalLevel, &s, re, nil, nil, false)
 }
 
 // LogErr func
 func LogErr(s string, re *string) {
-	Log(ErrorLevel, []byte(s), re, nil, nil, false)
+	Log(ErrorLevel, &s, re, nil, nil, false)
 }
 
 // LogWarn func
 func LogWarn(s string, re *string) {
-	Log(WarningLevel, []byte(s), re, nil, nil, false)
+	Log(WarningLevel, &s, re, nil, nil, false)
 }
 
 // LogInfo func
 func LogInfo(s string, re *string) {
-	Log(InfoLevel, []byte(s), re, nil, nil, false)
+	Log(InfoLevel, &s, re, nil, nil, false)
 }
 
 // LogDebug func
 func LogDebug(s string, re *string) {
-	Log(DebugLevel, []byte(s), re, nil, nil, false)
+	Log(DebugLevel, &s, re, nil, nil, false)
 }
 
 // SBusConnect func
@@ -506,37 +506,41 @@ func (l *Logger) SetThreadID(ti string) {
 
 // LogCritical func
 func (l *Logger) LogCritical(s string) {
-	Log(CriticalLevel, []byte(s), l.ExecutionUUID, l.ActionID, l.ThreadID, false)
+	Log(CriticalLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
 }
 
 // LogErr func
 func (l *Logger) LogErr(s string) {
-	Log(ErrorLevel, []byte(s), l.ExecutionUUID, l.ActionID, l.ThreadID, false)
+	Log(ErrorLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
 }
 
 // ByteLogErr func
 func (l *Logger) ByteLogErr(b []byte) {
-	Log(ErrorLevel, b, l.ExecutionUUID, l.ActionID, l.ThreadID, true)
+	// last chance to determine encoding
+	s := string(b)
+	Log(ErrorLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, true)
 }
 
 // LogWarn func
 func (l *Logger) LogWarn(s string) {
-	Log(WarningLevel, []byte(s), l.ExecutionUUID, l.ActionID, l.ThreadID, false)
+	Log(WarningLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
 }
 
 // LogInfo func
 func (l *Logger) LogInfo(s string) {
-	Log(InfoLevel, []byte(s), l.ExecutionUUID, l.ActionID, l.ThreadID, false)
+	Log(InfoLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
 }
 
 // ByteLogInfo func
 func (l *Logger) ByteLogInfo(b []byte) {
-	Log(InfoLevel, b, l.ExecutionUUID, l.ActionID, l.ThreadID, true)
+	// last chance to determine encoding
+	s := string(b)
+	Log(InfoLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, true)
 }
 
 // LogDebug func
 func (l *Logger) LogDebug(s string) {
-	Log(DebugLevel, []byte(s), l.ExecutionUUID, l.ActionID, l.ThreadID, false)
+	Log(DebugLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
 }
 
 type DummyLogger struct {
