@@ -84,32 +84,37 @@ func main() {
 		os.Exit(exitCode)
 	}()
 
-	var serverModeFlag = flag.Bool("s", false, "Server mode to be used within Nebulant Pipeline Builder.")
-	var addrFlag = flag.String("b", config.SERVER_ADDR+":"+config.SERVER_PORT, "Bind addr:port (ipv4) or [::1]:port (ipv6) for server mode.")
-	var versionFlag = flag.Bool("v", false, "Show version and exit.")
-	var debugFlag = flag.Bool("x", false, "Enable debug.")
-	var ipv6Flag = flag.Bool("6", false, "Force ipv6")
-	var colorFlag = flag.Bool("c", false, "Disable colors.")
-	var upgradeAssets = flag.Bool("u", false, "Upgrade assets from remote location and exit. Build search index as needed.")
-	var forceUpgradeAssets = flag.Bool("uu", false, "Force upgrade assets.")
-	var lookupAsset = flag.String("l", "", "Test asset search and exit. Use assetid:searchterm:offset:limit:sort syntax. Ej. nebulant -l \"aws_image:linux x86:10:5:-$.Name\"")
+	config.ServerModeFlag = flag.Bool("s", false, "Server mode to be used within Nebulant Pipeline Builder.")
+	config.AddrFlag = flag.String("b", config.SERVER_ADDR+":"+config.SERVER_PORT, "Bind addr:port (ipv4) or [::1]:port (ipv6) for server mode.")
+	config.VersionFlag = flag.Bool("v", false, "Show version and exit.")
+	config.DebugFlag = flag.Bool("x", false, "Enable debug.")
+	config.Ipv6Flag = flag.Bool("6", false, "Force ipv6")
+	config.ColorFlag = flag.Bool("c", false, "Disable colors.")
+	config.UpgradeAssetsFlag = flag.Bool("u", false, "Upgrade assets from remote location and exit. Build search index as needed.")
+	config.ForceUpgradeAssetsFlag = flag.Bool("uu", false, "Force upgrade assets.")
+	config.LookupAssetFlag = flag.String("l", "", "Test asset search and exit. Use assetid:searchterm:offset:limit:sort syntax. Ej. nebulant -l \"aws_image:linux x86:10:5:-$.Name\"")
+	config.NoTermFlag = flag.Bool("nt", false, "Disable term capabilities. This also disables color.")
 
 	flag.Parse()
 	args := flag.Args()
 	bluePrintFilePath := flag.Arg(0)
 
+	if *config.NoTermFlag {
+		*config.ColorFlag = true
+	}
+
 	var tcpaddr *net.TCPAddr
 	var err error
-	if *ipv6Flag {
-		tcpaddr, err = net.ResolveTCPAddr("tcp6", *addrFlag)
+	if *config.Ipv6Flag {
+		tcpaddr, err = net.ResolveTCPAddr("tcp6", *config.AddrFlag)
 	} else {
-		tcpaddr, err = net.ResolveTCPAddr("tcp", *addrFlag)
+		tcpaddr, err = net.ResolveTCPAddr("tcp", *config.AddrFlag)
 	}
 	if err != nil {
 		util.PrintUsage(err)
 		os.Exit(1)
 	}
-	if (*upgradeAssets || *forceUpgradeAssets) && *serverModeFlag {
+	if (*config.UpgradeAssetsFlag || *config.ForceUpgradeAssetsFlag) && *config.ServerModeFlag {
 		util.PrintUsage(fmt.Errorf("server mode and force asset upgrading are incompatible flags. Set only one of both"))
 		os.Exit(1)
 	}
@@ -124,18 +129,18 @@ func main() {
 	config.SERVER_PORT = port
 
 	// Version and exit
-	if *versionFlag {
+	if *config.VersionFlag {
 		fmt.Println("Nebulant CLI - A cloud builder by develat.io", "v"+config.Version, config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler)
 		os.Exit(0)
 	}
 
 	// Debug
-	if *debugFlag {
+	if *config.DebugFlag {
 		config.DEBUG = true
 	}
 
 	// Init Term
-	term.InitTerm(!*colorFlag)
+	term.InitTerm()
 
 	_, err = term.Println(term.Purple+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Cyan+"develat.io"+term.Reset)
 	if err != nil {
@@ -147,19 +152,19 @@ func main() {
 	}
 
 	// Init console logger
-	cast.InitConsoleLogger(!*colorFlag)
-
-	if *upgradeAssets || *forceUpgradeAssets {
-		err := assets.UpgradeAssets(*forceUpgradeAssets)
+	cast.InitConsoleLogger()
+	if *config.UpgradeAssetsFlag || *config.ForceUpgradeAssetsFlag {
+		err := assets.UpgradeAssets(*config.ForceUpgradeAssetsFlag)
 		if err != nil {
 			util.PrintUsage(err)
 			os.Exit(1)
 		}
+		cast.SBus.Close().Wait()
 		os.Exit(0)
 	}
 
-	if len(*lookupAsset) > 0 {
-		cut := strings.Split(*lookupAsset, ":")
+	if len(*config.LookupAssetFlag) > 0 {
+		cut := strings.Split(*config.LookupAssetFlag, ":")
 		if len(cut) <= 1 {
 			util.PrintUsage(fmt.Errorf("invalid search syntax "))
 			os.Exit(1)
@@ -207,6 +212,7 @@ func main() {
 			}
 		}
 		cast.LogInfo("Done.", nil)
+		cast.SBus.Close().Wait()
 		os.Exit(0)
 	}
 
@@ -242,7 +248,7 @@ func main() {
 			panic(err.Error())
 		}
 		executive.MDirector.HandleIRB <- irb
-	} else if *serverModeFlag {
+	} else if *config.ServerModeFlag {
 		// Director in server mode
 		err := executive.InitDirector(true, false) // Server mode
 		if err != nil {

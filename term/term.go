@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/develatio/nebulant-cli/config"
 )
 
 var Reset string = "\033[0m"
@@ -43,7 +45,7 @@ var CursorUp string = "\033[1F"
 var EraseLine string = "\033[K"
 
 var mls *MultilineStdout = nil
-var titleBarLine *oneLineWriteCloser = nil
+
 var statusBarLine *oneLineWriteCloser = nil
 
 // https://github.com/manifoldco/promptui/issues/49
@@ -62,49 +64,33 @@ func (n *noBellStdout) Close() error {
 
 var NoBellStdout = &noBellStdout{}
 
-func OpenTitleBar() *oneLineWriteCloser {
-	if titleBarLine != nil {
-		return titleBarLine
-	}
-	if mls == nil {
-		mls = &MultilineStdout{
-			// WARN: this sould be called AFTER InitTerm
-			MainStdout: Stdout,
-		}
-		log.SetOutput(mls)
-	}
-	titleBarLine = mls.AppendLine()
-	return titleBarLine
-}
-
-func CloseTitleBar() {
-	if titleBarLine != nil {
-		titleBarLine.Close()
-		titleBarLine = nil
-	}
-}
-
 func OpenStatusBar() *oneLineWriteCloser {
-	OpenTitleBar()
 	if statusBarLine != nil {
 		return statusBarLine
-	}
-	if mls == nil {
-		mls = &MultilineStdout{
-			// WARN: this sould be called AFTER InitTerm
-			MainStdout: Stdout,
-		}
-		log.SetOutput(mls)
 	}
 	statusBarLine = mls.AppendLine()
 	return statusBarLine
 }
 
-func CloseStatusBar() {
+func OpenMultilineStdout() {
+	if mls == nil {
+		mls = &MultilineStdout{
+			// WARN: this sould be called AFTER InitTerm
+			MainStdout: Stdout,
+		}
+		log.SetOutput(mls)
+	}
+}
+
+func CloseStatusBar() error {
 	if statusBarLine != nil {
-		statusBarLine.Close()
+		err := statusBarLine.Close()
+		if err != nil {
+			return err
+		}
 		statusBarLine = nil
 	}
+	return nil
 }
 
 // PrintInfo func
@@ -130,8 +116,8 @@ func Print(a ...interface{}) (n int, err error) {
 	return fmt.Fprint(Stdout, a...)
 }
 
-func InitTerm(colors bool) {
-	if !colors {
+func InitTerm() {
+	if *config.ColorFlag || *config.NoTermFlag {
 		Stdout = os.Stdout
 		Stderr = os.Stderr
 		Reset = ""
@@ -140,12 +126,18 @@ func InitTerm(colors bool) {
 		Yellow = ""
 		Blue = ""
 		Purple = ""
-		// Cyan = ""
+		Cyan = ""
 		Gray = ""
 		// White = ""
 		Bold = ""
 	} else {
 		log.SetOutput(Stdout)
 	}
-
+	//
+	// uses Stdout (term.Stdout in os.go)
+	// it can be equal to readline.Stdout
+	// as default, or can be os.Stdout if
+	// os cannot support colors or if has
+	// been disabled manually.
+	OpenMultilineStdout()
 }

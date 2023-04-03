@@ -114,13 +114,13 @@ L:
 }
 
 // InitConsoleLogger func
-func InitConsoleLogger(colors bool) {
+func InitConsoleLogger() {
 	fLink := &BusConsumerLink{
 		Name:       "Console",
 		LogChan:    make(chan *BusData, 100),
 		CommonChan: make(chan *BusData, 100),
 	}
-	clogger := &ConsoleLogger{fLink: fLink, colors: colors}
+	clogger := &ConsoleLogger{fLink: fLink, colors: !*config.ColorFlag}
 	SBus.connect <- fLink
 	SBus.castWaiter.Add(1)
 	go clogger.readCastBus()

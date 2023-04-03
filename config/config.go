@@ -78,6 +78,19 @@ var SERVER_PORT = "15678"
 // AssetDescriptorURL conf
 var AssetDescriptorURL = "https://builder-assets.nebulant.io/assets.json"
 
+// arg argv conf
+
+var ServerModeFlag *bool
+var AddrFlag *string
+var VersionFlag *bool
+var DebugFlag *bool
+var Ipv6Flag *bool
+var ColorFlag *bool
+var UpgradeAssetsFlag *bool
+var ForceUpgradeAssetsFlag *bool
+var LookupAssetFlag *string
+var NoTermFlag *bool
+
 func AppHomePath() string {
 	var userHomePath string
 	if runtime.GOOS == "windows" {

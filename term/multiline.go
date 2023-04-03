@@ -1,10 +1,13 @@
 package term
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
+	"github.com/develatio/nebulant-cli/config"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -14,11 +17,17 @@ type oneLineWriteCloser struct {
 }
 
 func (s *oneLineWriteCloser) Write(p []byte) (int, error) {
+	if *config.NoTermFlag {
+		return s.MainStdout.Write(p)
+	}
 	s.P = p
 	return s.MainStdout.RePaintLines()
 }
 
 func (s *oneLineWriteCloser) Close() error {
+	if *config.NoTermFlag {
+		return nil
+	}
 	s.P = []byte("")
 	_, err := s.MainStdout.RePaintLines()
 	if err != nil {
@@ -27,17 +36,53 @@ func (s *oneLineWriteCloser) Close() error {
 	return s.MainStdout.DeleteLine(s)
 }
 
+type alwaysReturnWrapWritCloser struct {
+	stdout io.WriteCloser
+}
+
+func (a *alwaysReturnWrapWritCloser) Write(p []byte) (int, error) {
+	if bytes.HasSuffix(p, []byte("\r")) {
+		p[len(p)-1] = 10
+	}
+	if bytes.HasPrefix(p, []byte("\r")) {
+		p = p[1:]
+	}
+	if !bytes.HasSuffix(p, []byte("\n")) {
+		p = append(p, 10)
+	}
+	return a.stdout.Write(p)
+}
+
+func (a *alwaysReturnWrapWritCloser) Close() error {
+	return a.stdout.Close()
+}
+
 func (s *oneLineWriteCloser) GetProgressBar(max int64, description string, showbytes bool) *progressbar.ProgressBar {
+	if *config.NoTermFlag {
+		arwc := &alwaysReturnWrapWritCloser{
+			stdout: s,
+		}
+		return progressbar.NewOptions64(max,
+			progressbar.OptionSetDescription(description),
+			progressbar.OptionSetWriter(arwc),
+			progressbar.OptionShowBytes(showbytes),
+			progressbar.OptionSetWidth(10),
+			progressbar.OptionThrottle(1*time.Second),
+			progressbar.OptionShowCount(),
+			progressbar.OptionUseANSICodes(true),
+			progressbar.OptionSpinnerType(14),
+			progressbar.OptionFullWidth(),
+			progressbar.OptionSetRenderBlankState(true),
+		)
+	}
 	return progressbar.NewOptions64(max,
 		progressbar.OptionSetDescription(description),
 		progressbar.OptionSetWriter(s),
 		progressbar.OptionShowBytes(showbytes),
+		progressbar.OptionEnableColorCodes(!*config.ColorFlag),
 		progressbar.OptionSetWidth(10),
 		progressbar.OptionThrottle(65*time.Millisecond),
 		progressbar.OptionShowCount(),
-		progressbar.OptionOnCompletion(func() {
-			s.Write([]byte("DONE"))
-		}),
 		progressbar.OptionSpinnerType(14),
 		progressbar.OptionFullWidth(),
 		progressbar.OptionSetRenderBlankState(true),
@@ -45,6 +90,11 @@ func (s *oneLineWriteCloser) GetProgressBar(max int64, description string, showb
 }
 
 func (m *oneLineWriteCloser) Print(s string) {
+	if *config.NoTermFlag {
+		if !strings.HasSuffix(s, "\n") {
+			s = s + "\n"
+		}
+	}
 	_, err := m.Write([]byte(s))
 	if err != nil {
 		panic(err)
@@ -57,6 +107,9 @@ type MultilineStdout struct {
 }
 
 func (m *MultilineStdout) Write(p []byte) (int, error) {
+	if *config.NoTermFlag {
+		return m.MainStdout.Write(p)
+	}
 	n, err := m.MainStdout.Write([]byte(EraseLine))
 	if err != nil {
 		return n, err
@@ -73,19 +126,31 @@ func (m *MultilineStdout) Write(p []byte) (int, error) {
 }
 
 func (m *MultilineStdout) Close() error {
-	return Stdout.Close()
+	return m.MainStdout.Close()
 }
 
 func (m *MultilineStdout) RePaintLines() (int, error) {
+	if *config.NoTermFlag {
+		return 0, nil
+	}
 	// Make space for Lines
 	for i := 0; i < len(m.Lines); i++ {
-		m.MainStdout.Write([]byte("\n"))
-		m.MainStdout.Write([]byte(EraseLine))
+		_, err := m.MainStdout.Write([]byte("\n"))
+		if err != nil {
+			return i, err
+		}
+		_, err = m.MainStdout.Write([]byte(EraseLine))
+		if err != nil {
+			return i, err
+		}
 	}
 
 	// Back
 	for i := 0; i < len(m.Lines); i++ {
-		m.MainStdout.Write([]byte(CursorUp))
+		_, err := m.MainStdout.Write([]byte(CursorUp))
+		if err != nil {
+			return i, err
+		}
 	}
 
 	// Write lines
@@ -97,15 +162,21 @@ func (m *MultilineStdout) RePaintLines() (int, error) {
 		}
 		_, err = m.MainStdout.Write(m.Lines[i].P)
 		if err != nil {
-			return 0, nil
+			return i, nil
 		}
 		// Line down
-		m.MainStdout.Write([]byte("\n"))
+		_, err = m.MainStdout.Write([]byte("\n"))
+		if err != nil {
+			return i, err
+		}
 	}
 
 	// Back again
 	for i := 0; i < len(m.Lines); i++ {
-		m.MainStdout.Write([]byte(CursorUp))
+		_, err := m.MainStdout.Write([]byte(CursorUp))
+		if err != nil {
+			return i, err
+		}
 	}
 
 	return len(m.Lines), nil

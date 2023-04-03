@@ -134,7 +134,7 @@ var AssetsDefinition map[string]*AssetDefinition = make(map[string]*AssetDefinit
 // 	return nil
 // }
 
-func writeIndexFile(fpath string, list *index) (int, error) {
+func writeIndexFile(fpath string, list *index, name string) (int, error) {
 	nn := 0
 	file, err := os.OpenFile(fpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) //#nosec G304-- file inclusion from var needed
 	if err != nil {
@@ -150,9 +150,12 @@ func writeIndexFile(fpath string, list *index) (int, error) {
 	partcount := 0
 	partlen := len(list.Parts)
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(int64(partlen), " Writing index file", false)
+	bar := sb.GetProgressBar(int64(partlen), " Writing "+name+" index file", false)
 	for tkn, positions := range list.Parts {
-		bar.Add(1)
+		err := bar.Add(1)
+		if err != nil {
+			cast.LogWarn("progress bar err "+err.Error(), nil)
+		}
 		partcount++
 		partsep := ""
 		if partcount < partlen {
@@ -336,8 +339,7 @@ func DownloadAsset(url string, assetdef *AssetDefinition) error {
 }
 
 func MakeIndex(assetdef *AssetDefinition) (int, error) {
-	tb := term.OpenTitleBar()
-	tb.Print(" Building Asset index " + assetdef.Name)
+	cast.LogInfo("Building Asset index "+assetdef.Name, nil)
 	n, err := MakeMainIndex(assetdef)
 	if err != nil {
 		return n, err
@@ -395,7 +397,10 @@ func MakeMainIndex(assetdef *AssetDefinition) (int, error) {
 
 	start := time.Now()
 	readed := dec.InputOffset()
-	bar.Add64(readed)
+	err = bar.Add64(readed)
+	if err != nil {
+		cast.LogWarn("progress bar err "+err.Error(), nil)
+	}
 	// loop arr values
 	for dec.More() {
 		m := assetdef.FreshItem()
@@ -404,9 +409,12 @@ func MakeMainIndex(assetdef *AssetDefinition) (int, error) {
 		byteinit := dec.InputOffset()
 		delta := byteinit - readed
 		readed = byteinit
-		bar.Add64(delta)
+		err := bar.Add64(delta)
+		if err != nil {
+			cast.LogWarn("progress bar err "+err.Error(), nil)
+		}
 
-		err := dec.Decode(m)
+		err = dec.Decode(m)
 		if err != nil {
 			return 0, fmt.Errorf("MainIndex:" + err.Error())
 		}
@@ -438,7 +446,7 @@ func MakeMainIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
 
-	n, err := writeIndexFile(assetdef.IndexPath+".tmp", idx)
+	n, err := writeIndexFile(assetdef.IndexPath+".tmp", idx, assetdef.Name)
 	if err != nil {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
@@ -464,7 +472,7 @@ func MakeSubIndex(assetdef *AssetDefinition) (int, error) {
 	}
 
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(fi.Size(), " Optimizing index", false)
+	bar := sb.GetProgressBar(fi.Size(), " Optimizing "+assetdef.Name+" index", false)
 	dec := json.NewDecoder(input)
 
 	// read {
@@ -482,7 +490,10 @@ func MakeSubIndex(assetdef *AssetDefinition) (int, error) {
 
 	start := time.Now()
 	readed := dec.InputOffset()
-	bar.Add64(readed)
+	err = bar.Add64(readed)
+	if err != nil {
+		cast.LogWarn("progress bar err "+err.Error(), nil)
+	}
 	// while the array contains values
 	for dec.More() {
 		var m tinyIndexItem
@@ -490,9 +501,12 @@ func MakeSubIndex(assetdef *AssetDefinition) (int, error) {
 		byteinit := dec.InputOffset()
 		delta := byteinit - readed
 		readed = byteinit
-		bar.Add64(delta)
+		err := bar.Add64(delta)
+		if err != nil {
+			cast.LogWarn("progress bar err "+err.Error(), nil)
+		}
 
-		err := dec.Decode(&m)
+		err = dec.Decode(&m)
 		if err != nil {
 			return 0, fmt.Errorf("SubIndex:" + err.Error())
 		}
@@ -519,7 +533,7 @@ func MakeSubIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("SubIndex:" + err.Error())
 	}
 
-	n, err := writeIndexFile(assetdef.SubIndexPath+".tmp", idx)
+	n, err := writeIndexFile(assetdef.SubIndexPath+".tmp", idx, "(sub)"+assetdef.Name)
 	if err != nil {
 		return 0, fmt.Errorf("SubIndex:" + err.Error())
 	}
@@ -906,10 +920,8 @@ func UpgradeAssets(force bool) error {
 		return err
 	}
 
-	tb := term.OpenTitleBar()
 	defer descfile.Close()
 	defer term.CloseStatusBar()
-	defer term.CloseTitleBar()
 
 	byteValue, _ := ioutil.ReadAll(descfile)
 	if err := json.Unmarshal(byteValue, &descriptor); err != nil {
@@ -968,14 +980,12 @@ func UpgradeAssets(force bool) error {
 				cast.LogInfo("Index of "+desc.ID+" up to date", nil)
 			} else if errors.Is(err, os.ErrNotExist) {
 				cast.LogInfo("Building "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
-				tb.Print("Building " + desc.ID + " index in bg... (from " + desc.URL + ")")
 				_, err := MakeIndex(def)
 				if err != nil {
 					cast.LogErr("Cannot build index of "+desc.ID+" due to "+err.Error(), nil)
 					continue
 				}
 				cast.LogInfo("Building index of "+desc.ID+"...DONE", nil)
-				tb.Print("Building index of " + desc.ID + "...DONE")
 			} else {
 				cast.LogErr("Cannot determine index status "+err.Error(), nil)
 			}
@@ -986,6 +996,5 @@ func UpgradeAssets(force bool) error {
 	}
 
 	cast.LogInfo("All assets up to date", nil)
-	tb.Print("All assets up to date")
 	return nil
 }
