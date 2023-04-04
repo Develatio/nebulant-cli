@@ -100,6 +100,13 @@ type AssetRemoteDescription struct {
 
 var AssetsDefinition map[string]*AssetDefinition = make(map[string]*AssetDefinition)
 
+func (s *SearchRequest) Validate() (bool, error) {
+	if !strings.HasPrefix(s.Sort, "-$") && !strings.HasPrefix(s.Sort, "$") {
+		return false, fmt.Errorf("please, use $ or -$ at the beginning of the sort attr " + (s.Sort))
+	}
+	return true, nil
+}
+
 // func Poc() error {
 // 	imgassetdef := &AssetDefinition{
 // 		IndexPath:    "/tmp/test.idx",
@@ -544,6 +551,9 @@ func MakeSubIndex(assetdef *AssetDefinition) (int, error) {
 }
 
 func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error) {
+	if valid, err := sr.Validate(); !valid {
+		return nil, err
+	}
 	searchres := &SearchResult{Count: 0}
 	term := strings.ToLower(sr.SearchTerm)
 	if len(term) <= 1 {
