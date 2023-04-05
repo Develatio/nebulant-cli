@@ -131,9 +131,9 @@ func (a *assetsState) loadState() error {
 		if os.IsNotExist(err) {
 			a.CurrentUpgradeState = UpgradeStateNone
 			a.LastUpgradeState = UpgradeStateNone
-		} else {
-			return err
+			return nil
 		}
+		return err
 	}
 	defer jsonFile.Close()
 	byteValue, _ := io.ReadAll(jsonFile)
