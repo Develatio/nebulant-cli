@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -45,6 +44,8 @@ import (
 
 type UpgradeStateType int
 
+// 1500MB zip file size limit (a reasonable, but arbitrary value)
+const maxZipFileSize = 1500 * 1024 * 1024
 const INDEX_TOKEN_SIZE = 3
 const SUB_INDEX_TOKEN_SIZE = 2
 const USED_BY_SPA = "SPA"
@@ -98,7 +99,7 @@ func (a *assetsState) saveState() error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filepath.Join(config.AppHomePath(), "assets", "state"), data, 0600)
+	err = os.WriteFile(filepath.Join(config.AppHomePath(), "assets", "state"), data, 0600)
 	if err != nil {
 		return err
 	}
@@ -135,7 +136,7 @@ func (a *assetsState) loadState() error {
 		}
 	}
 	defer jsonFile.Close()
-	byteValue, _ := ioutil.ReadAll(jsonFile)
+	byteValue, _ := io.ReadAll(jsonFile)
 	if err := json.Unmarshal(byteValue, a); err != nil {
 		return err
 	}
@@ -384,13 +385,13 @@ func logStats(prefix string) {
 }
 
 func b2unzipWithProgressBar(file string, msg string) error {
-	infile, err := os.OpenFile(file, os.O_RDONLY, 0600)
+	infile, err := os.OpenFile(file, os.O_RDONLY, 0600) // #nosec G304 -- Not a file inclusion, just a well know zipped file
 	if err != nil {
 		return err
 	}
 	defer infile.Close()
 
-	outfile, err := os.OpenFile(file+"---.uztmp", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	outfile, err := os.OpenFile(file+"---.uztmp", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304 -- Not a file inclusion, just a well know otput file
 	if err != nil {
 		return err
 	}
@@ -401,12 +402,19 @@ func b2unzipWithProgressBar(file string, msg string) error {
 		return err
 	}
 
+	if instats.Size() > maxZipFileSize {
+		return fmt.Errorf("the downloaded zip file is too big")
+	}
+
 	bz2dec := bzip2.NewReader(infile)
+	// limit bzip file size, LimitReader will launch
+	// EOF on read > maxZipFileSize
+	noZipBombReader := io.LimitReader(bz2dec, maxZipFileSize)
 
 	sb := term.OpenStatusBar()
 	bar := sb.GetProgressBar(instats.Size(), msg, true)
 
-	_, err = io.Copy(io.MultiWriter(outfile, bar), bz2dec)
+	_, err = io.Copy(io.MultiWriter(outfile, bar), noZipBombReader)
 	if err != nil {
 		return err
 	}
@@ -438,7 +446,6 @@ func downloadFileWithProgressBar(url string, outputfile string, msg string) erro
 	client := &http.Client{Transport: tr}
 	resp, err := client.Get(url)
 	if err != nil {
-		cast.LogDebug("Cannot download file "+err.Error(), nil)
 		return err
 	}
 	defer resp.Body.Close()
@@ -447,9 +454,8 @@ func downloadFileWithProgressBar(url string, outputfile string, msg string) erro
 		return fmt.Errorf(http.StatusText(resp.StatusCode))
 	}
 
-	file, err := os.OpenFile(outputfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	file, err := os.OpenFile(outputfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304 -- Not a file inclusion, just a well know otput file
 	if err != nil {
-		cast.LogDebug("Cannot download file "+err.Error(), nil)
 		return err
 	}
 	defer file.Close()
@@ -461,7 +467,6 @@ func downloadFileWithProgressBar(url string, outputfile string, msg string) erro
 
 	_, err = io.Copy(io.MultiWriter(file, bar, mimedetector), resp.Body)
 	if err != nil {
-		cast.LogDebug("Cannot write downloaded file "+err.Error(), nil)
 		return err
 	}
 
@@ -479,6 +484,7 @@ func downloadAsset(remotedef *AssetRemoteDescription, localdef *AssetDefinition)
 
 	err = downloadFileWithProgressBar(remotedef.URL+".bz2", localdef.FilePath, " Downloading asset descriptor...")
 	if err != nil {
+		cast.LogDebug("Err on bz2 asset descriptor download: "+err.Error(), nil)
 		err = downloadFileWithProgressBar(remotedef.URL, localdef.FilePath, " Downloading asset descriptor...")
 		if err != nil {
 			return err
@@ -496,6 +502,7 @@ func downloadIndex(remotedef *AssetRemoteDescription, localdef *AssetDefinition)
 	// download index
 	err = downloadFileWithProgressBar(remotedef.URL+".idx.bz2", localdef.IndexPath, " Downloading index...")
 	if err != nil {
+		cast.LogDebug("Err on bz2 index download: "+err.Error(), nil)
 		err = downloadFileWithProgressBar(remotedef.URL+".idx", localdef.IndexPath, " Downloading index...")
 		if err != nil {
 			return err
@@ -505,6 +512,7 @@ func downloadIndex(remotedef *AssetRemoteDescription, localdef *AssetDefinition)
 	// download subindex
 	err = downloadFileWithProgressBar(remotedef.URL+".subidx.bz2", localdef.SubIndexPath, " Downloading subindex...")
 	if err != nil {
+		cast.LogDebug("Err on bz2 subindex download: "+err.Error(), nil)
 		err = downloadFileWithProgressBar(remotedef.URL+".subidx", localdef.SubIndexPath, " Downloading subindex...")
 		if err != nil {
 			return err
@@ -732,7 +740,7 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 	subIdxFile, _ := os.Open(assetdef.SubIndexPath)
 	defer subIdxFile.Close()
 
-	bv, err := ioutil.ReadAll(subIdxFile)
+	bv, err := io.ReadAll(subIdxFile)
 	if err != nil {
 		return nil, err
 	}
@@ -1134,7 +1142,7 @@ func UpgradeAssets(force bool) error {
 	defer descfile.Close()
 	defer term.CloseStatusBar()
 
-	byteValue, _ := ioutil.ReadAll(descfile)
+	byteValue, _ := io.ReadAll(descfile)
 	if err := json.Unmarshal(byteValue, &descriptor); err != nil {
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		err2 := State.saveState()
