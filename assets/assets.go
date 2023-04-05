@@ -1175,101 +1175,140 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 		if desc.UsedBy == USED_BY_SPA {
 			continue
 		}
-		if def, exists := AssetsDefinition[desc.ID]; exists {
-			if _, err := os.Stat(def.FilePath); err == nil {
-				f, err := os.Open(def.FilePath)
-				if err != nil {
-					err2 := State.saveState()
-					if err2 != nil {
-						// use erros.Join() when go 1.20
-						return err2
-					}
-					State.setUpgradeState(UpgradeStateEndWithErr)
-					return err
-				}
-				defer f.Close()
 
-				h := md5.New() //#nosec G401-- weak, but ok
-				if _, err := io.Copy(h, f); err != nil {
-					cast.LogErr("Cannot determine asset"+desc.ID+" integrity due to "+err.Error(), nil)
-					State.setUpgradeState(UpgradeStateInProgressWithErr)
-					continue
-				}
+		def, exists := AssetsDefinition[desc.ID]
+		if !exists {
+			State.setUpgradeState(UpgradeStateInProgressWithErr)
+			cast.LogWarn("Unknown asset descriptor "+desc.ID, nil)
+			continue
+		}
 
-				filemd5 := fmt.Sprintf("%x", h.Sum(nil))
-				if force || filemd5 != desc.Hash {
-					err = downloadAsset(desc, def)
-					if err != nil {
-						State.setUpgradeState(UpgradeStateInProgressWithErr)
-						cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
-						continue
-					}
-					err := os.Remove(def.IndexPath)
-					if err != nil && !errors.Is(err, os.ErrNotExist) {
-						State.setUpgradeState(UpgradeStateInProgressWithErr)
-						cast.LogErr("Cannot purge old index file "+err.Error(), nil)
-						continue
-					}
-					err = os.Remove(def.SubIndexPath)
-					if err != nil && !errors.Is(err, os.ErrNotExist) {
-						State.setUpgradeState(UpgradeStateInProgressWithErr)
-						cast.LogErr("Cannot purge old index file "+err.Error(), nil)
-						continue
-					}
-				} else {
-					cast.LogInfo("Asset file "+desc.ID+" up to date. No download needed", nil)
+		if _, err := os.Stat(def.FilePath); err == nil {
+			//
+			// if file exists, test md5 to determine if download is needed
+			//
+			f, err := os.Open(def.FilePath)
+			if err != nil {
+				err2 := State.saveState()
+				if err2 != nil {
+					// use erros.Join() when go 1.20
+					return err2
 				}
-			} else if errors.Is(err, os.ErrNotExist) {
+				State.setUpgradeState(UpgradeStateEndWithErr)
+				return err
+			}
+			defer f.Close()
+
+			h := md5.New() //#nosec G401-- weak, but ok
+			if _, err := io.Copy(h, f); err != nil {
+				cast.LogErr("Cannot determine asset "+desc.ID+" integrity due to "+err.Error(), nil)
+				State.setUpgradeState(UpgradeStateInProgressWithErr)
+				continue
+			}
+
+			filemd5 := fmt.Sprintf("%x", h.Sum(nil))
+			if force || filemd5 != desc.Hash {
 				err = downloadAsset(desc, def)
 				if err != nil {
 					State.setUpgradeState(UpgradeStateInProgressWithErr)
 					cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
 					continue
 				}
-			} else {
-				State.setUpgradeState(UpgradeStateEndWithErr)
-				err2 := State.saveState()
-				if err2 != nil {
-					// use erros.Join() when go 1.20
-					return err2
+				err := os.Remove(def.IndexPath)
+				if err != nil && !errors.Is(err, os.ErrNotExist) {
+					State.setUpgradeState(UpgradeStateInProgressWithErr)
+					cast.LogErr("Cannot purge old index file "+err.Error(), nil)
+					continue
 				}
-				return err
+				err = os.Remove(def.SubIndexPath)
+				if err != nil && !errors.Is(err, os.ErrNotExist) {
+					State.setUpgradeState(UpgradeStateInProgressWithErr)
+					cast.LogErr("Cannot purge old index file "+err.Error(), nil)
+					continue
+				}
+			} else {
+				cast.LogInfo("Asset file "+desc.ID+" up to date. No download needed", nil)
 			}
-
-			if _, err := os.Stat(def.IndexPath); err == nil {
-				cast.LogInfo("Index of "+desc.ID+" up to date", nil)
-			} else if errors.Is(err, os.ErrNotExist) {
-				cast.LogInfo("Downloading "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
-				err = nil
-				if !skipdownload {
-					err = downloadIndex(desc, def)
-				}
-				if err != nil {
-					cast.LogWarn("Cannot download "+desc.ID+" index: ("+err.Error()+")", nil)
-					cast.LogWarn(desc.ID+": Since the index could not be downloaded, it will be built locally. This process is long and expensive.", nil)
-				}
-				if err != nil || skipdownload {
-					cast.LogInfo("Building "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
-					_, err := makeIndex(def)
-					if err != nil {
-						State.setUpgradeState(UpgradeStateInProgressWithErr)
-						cast.LogErr("Cannot build index of "+desc.ID+" due to "+err.Error(), nil)
-						continue
-					}
-					cast.LogInfo("Building index of "+desc.ID+"...DONE", nil)
-				}
-			} else {
+		} else if errors.Is(err, os.ErrNotExist) {
+			//
+			// if file does not exists, download
+			//
+			err = downloadAsset(desc, def)
+			if err != nil {
 				State.setUpgradeState(UpgradeStateInProgressWithErr)
-				cast.LogErr("Cannot determine index status "+err.Error(), nil)
+				cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
+				continue
 			}
+		} else {
+			//
+			// unknown error reading disk file
+			//
+			State.setUpgradeState(UpgradeStateEndWithErr)
+			err2 := State.saveState()
+			if err2 != nil {
+				// use erros.Join() when go 1.20
+				return err2
+			}
+			return err
+		}
 
+		// test downloaded asset integrity
+		if _, err := os.Stat(def.FilePath); err == nil {
+			f2, err2 := os.Open(def.FilePath)
+			if err2 != nil {
+				State.setUpgradeState(UpgradeStateInProgressWithErr)
+				cast.LogErr("Cannot determine asset "+desc.ID+" integrity after download due to "+err2.Error(), nil)
+				continue
+			}
+			h2 := md5.New() //#nosec G401-- weak, but ok
+			if _, err := io.Copy(h2, f2); err != nil {
+				State.setUpgradeState(UpgradeStateInProgressWithErr)
+				cast.LogErr("Cannot determine asset "+desc.ID+" integrity after download due to "+err.Error(), nil)
+				continue
+			}
+			file2md5 := fmt.Sprintf("%x", h2.Sum(nil))
+			if file2md5 != desc.Hash {
+				State.setUpgradeState(UpgradeStateInProgressWithErr)
+				cast.LogErr("Cannot determine asset "+desc.ID+" integrity after download: hash mismatch", nil)
+				continue
+			}
 		} else {
 			State.setUpgradeState(UpgradeStateInProgressWithErr)
-			cast.LogWarn("Unknown asset descriptor "+desc.ID, nil)
+			cast.LogErr("Cannot determine asset "+desc.ID+" integrity after download due to "+err.Error(), nil)
+			continue
+		}
+
+		// download or gen index
+		if _, err := os.Stat(def.IndexPath); err == nil {
+			cast.LogInfo("Index of "+desc.ID+" up to date", nil)
+		} else if errors.Is(err, os.ErrNotExist) {
+			err = nil
+			if !skipdownload {
+				cast.LogInfo("Downloading "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
+				err = downloadIndex(desc, def)
+			}
+			if err != nil {
+				cast.LogWarn("Cannot download "+desc.ID+" index: ("+err.Error()+")", nil)
+				cast.LogWarn(desc.ID+": Since the index could not be downloaded, it will be built locally. This process is long and expensive.", nil)
+			}
+			if err != nil || skipdownload {
+				cast.LogInfo("Building "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
+				_, err := makeIndex(def)
+				if err != nil {
+					State.setUpgradeState(UpgradeStateInProgressWithErr)
+					cast.LogErr("Cannot build index of "+desc.ID+" due to "+err.Error(), nil)
+					continue
+				}
+				cast.LogInfo("Building index of "+desc.ID+"...DONE", nil)
+			}
+		} else {
+			State.setUpgradeState(UpgradeStateInProgressWithErr)
+			cast.LogErr("Cannot determine index status "+err.Error(), nil)
 		}
 	}
 
 	if State.CurrentUpgradeState == UpgradeStateInProgressWithErr {
+		cast.LogErr("Asset process done. Some problems found.", nil)
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		err2 := State.saveState()
 		if err2 != nil {
@@ -1277,6 +1316,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			return err2
 		}
 	} else if State.CurrentUpgradeState == UpgradeStateInProgress {
+		cast.LogInfo("Asset process done. All is up to date", nil)
 		State.setUpgradeState(UpgradeStateEndOK)
 		err2 := State.saveState()
 		if err2 != nil {
@@ -1285,7 +1325,6 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 		}
 	}
 
-	cast.LogInfo("All assets up to date", nil)
 	return nil
 }
 
