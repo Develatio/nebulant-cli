@@ -25,8 +25,6 @@ import (
 	"github.com/develatio/nebulant-cli/term"
 )
 
-var failprefx string = "[!] "
-var okprefx string = "(·) "
 var counter int = 0
 
 var colormap map[int]string = map[int]string{
@@ -39,12 +37,12 @@ var colormap map[int]string = map[int]string{
 }
 
 var prefxmap map[int]string = map[int]string{
-	CriticalLevel: failprefx,
-	ErrorLevel:    failprefx,
-	WarningLevel:  failprefx,
-	InfoLevel:     okprefx,
-	DebugLevel:    okprefx,
-	NotsetLevel:   okprefx,
+	CriticalLevel: "[😱] ",
+	ErrorLevel:    "[🚨] ",
+	WarningLevel:  "|🚧| ",
+	InfoLevel:     "(✔) ",
+	DebugLevel:    "(🔧) ",
+	NotsetLevel:   "(·) ",
 }
 
 // ConsoleLogger struct

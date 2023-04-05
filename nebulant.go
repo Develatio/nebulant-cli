@@ -157,6 +157,14 @@ func main() {
 
 	// Init console logger
 	cast.InitConsoleLogger()
+	if config.DEBUG {
+		cast.LogDebug("Debug mode activated. Testing message levels...", nil)
+		cast.LogInfo("Info message", nil)
+		cast.LogWarn("Warning message", nil)
+		cast.LogErr("Error message", nil)
+		cast.LogCritical("Critical message", nil)
+	}
+
 	if *config.UpgradeAssetsFlag || *config.ForceUpgradeAssetsFlag || *config.ForceUpgradeAssetsNoDownloadFlag {
 		err := assets.UpgradeAssets(*config.ForceUpgradeAssetsFlag, *config.ForceUpgradeAssetsNoDownloadFlag)
 		if err != nil {
