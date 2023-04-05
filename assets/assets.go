@@ -992,6 +992,25 @@ func updateDescriptor(descpath string) error {
 	return nil
 }
 
+func GenerateIndexFromFile(term string) error {
+	terms := strings.Split(term, ":")
+	// cast.LogInfo("Building index of asset "+terms[1]+" from file "+terms[0]+" into dir "+terms[2], nil)
+	def, assetExists := AssetsDefinition[terms[1]]
+	if !assetExists {
+		return fmt.Errorf("unknown asset id")
+	}
+
+	def.FilePath = terms[0]
+	def.IndexPath = filepath.Join(terms[2], terms[1]+".idx")
+	def.SubIndexPath = filepath.Join(terms[2], terms[1]+".subidx")
+	_, err := makeIndex(def)
+	if err != nil {
+		return err
+	}
+	cast.LogInfo("Index gen DONE", nil)
+	return nil
+}
+
 func UpgradeAssets(force bool) error {
 	State.setUpgradeState(UpgradeStateInProgress)
 	err := State.saveState()

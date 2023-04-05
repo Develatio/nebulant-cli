@@ -90,6 +90,7 @@ var UpgradeAssetsFlag *bool
 var ForceUpgradeAssetsFlag *bool
 var LookupAssetFlag *string
 var NoTermFlag *bool
+var BuildAssetIndexFlag *string
 
 func AppHomePath() string {
 	var userHomePath string

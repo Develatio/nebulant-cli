@@ -94,6 +94,7 @@ func main() {
 	config.ForceUpgradeAssetsFlag = flag.Bool("uu", false, "Force upgrade assets.")
 	config.LookupAssetFlag = flag.String("l", "", "Test asset search and exit. Use assetid:searchterm:offset:limit:sort syntax. Ej. nebulant -l \"aws_images:linux x86:10:5:-$.Name\"")
 	config.NoTermFlag = flag.Bool("nt", false, "Disable term capabilities. This also disables color.")
+	config.BuildAssetIndexFlag = flag.String("i", "", "Build asset index and exit. Use inputfile:assetid:outputdir. Ej. nebulant -bi \"./file.json:aws_images:./\"")
 
 	flag.Parse()
 	args := flag.Args()
@@ -114,6 +115,12 @@ func main() {
 		util.PrintUsage(err)
 		os.Exit(1)
 	}
+
+	if *config.BuildAssetIndexFlag != "" && *config.ServerModeFlag {
+		util.PrintUsage(fmt.Errorf("server mode and index generation are incompatible flags. Set only one of both"))
+		os.Exit(1)
+	}
+
 	if (*config.UpgradeAssetsFlag || *config.ForceUpgradeAssetsFlag) && *config.ServerModeFlag {
 		util.PrintUsage(fmt.Errorf("server mode and force asset upgrading are incompatible flags. Set only one of both"))
 		os.Exit(1)
@@ -156,6 +163,15 @@ func main() {
 	if *config.UpgradeAssetsFlag || *config.ForceUpgradeAssetsFlag {
 		err := assets.UpgradeAssets(*config.ForceUpgradeAssetsFlag)
 		if err != nil {
+			os.Exit(1)
+		}
+		cast.SBus.Close().Wait()
+		os.Exit(0)
+	}
+
+	if *config.BuildAssetIndexFlag != "" {
+		err := assets.GenerateIndexFromFile(*config.BuildAssetIndexFlag)
+		if err != nil {
 			util.PrintUsage(err)
 			os.Exit(1)
 		}
@@ -166,7 +182,7 @@ func main() {
 	if len(*config.LookupAssetFlag) > 0 {
 		cut := strings.Split(*config.LookupAssetFlag, ":")
 		if len(cut) <= 1 {
-			util.PrintUsage(fmt.Errorf("invalid search syntax "))
+			util.PrintUsage(fmt.Errorf("invalid search syntax"))
 			os.Exit(1)
 		}
 		assetid := cut[0]
