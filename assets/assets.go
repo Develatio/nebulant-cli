@@ -17,6 +17,7 @@
 package assets
 
 import (
+	"compress/bzip2"
 	"crypto/md5" //#nosec G501-- weak, but ok
 	"encoding/json"
 	"errors"
@@ -39,6 +40,7 @@ import (
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/term"
+	"github.com/develatio/nebulant-cli/util"
 )
 
 type UpgradeStateType int
@@ -381,12 +383,53 @@ func logStats(prefix string) {
 	cast.LogDebug(fmt.Sprintf("%s: Alloc: %v MiB\tHeapInuse: %v MiB\tFrees: %v MiB\tSys: %v MiB\tNumGC: %v", prefix, m.Alloc/1024/1024, m.HeapInuse/1024/1024, m.Frees/1024/1024, m.Sys/1024/1024, m.NumGC), nil)
 }
 
-func DownloadAsset(url string, assetdef *AssetDefinition) error {
-	err := os.MkdirAll(filepath.Dir(assetdef.FilePath), os.ModePerm)
+func b2unzipWithProgressBar(file string, msg string) error {
+	infile, err := os.OpenFile(file, os.O_RDONLY, 0600)
+	if err != nil {
+		return err
+	}
+	defer infile.Close()
+
+	outfile, err := os.OpenFile(file+"---.uztmp", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	defer outfile.Close()
+
+	instats, err := infile.Stat()
 	if err != nil {
 		return err
 	}
 
+	bz2dec := bzip2.NewReader(infile)
+
+	sb := term.OpenStatusBar()
+	bar := sb.GetProgressBar(instats.Size(), msg, true)
+
+	_, err = io.Copy(io.MultiWriter(outfile, bar), bz2dec)
+	if err != nil {
+		return err
+	}
+
+	err = outfile.Close()
+	if err != nil {
+		return err
+	}
+
+	err = infile.Close()
+	if err != nil {
+		return err
+	}
+
+	err = os.Rename(file+"---.uztmp", file)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func downloadFileWithProgressBar(url string, outputfile string, msg string) error {
 	tr := &http.Transport{
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
@@ -395,6 +438,7 @@ func DownloadAsset(url string, assetdef *AssetDefinition) error {
 	client := &http.Client{Transport: tr}
 	resp, err := client.Get(url)
 	if err != nil {
+		cast.LogDebug("Cannot download file "+err.Error(), nil)
 		return err
 	}
 	defer resp.Body.Close()
@@ -403,18 +447,68 @@ func DownloadAsset(url string, assetdef *AssetDefinition) error {
 		return fmt.Errorf(http.StatusText(resp.StatusCode))
 	}
 
-	file, err := os.OpenFile(assetdef.FilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	file, err := os.OpenFile(outputfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
+		cast.LogDebug("Cannot download file "+err.Error(), nil)
 		return err
 	}
 	defer file.Close()
 
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(resp.ContentLength, " Downloading asset descriptor", true)
+	bar := sb.GetProgressBar(resp.ContentLength, msg, false)
 
-	_, err = io.Copy(io.MultiWriter(file, bar), resp.Body)
+	mimedetector := &util.MimeDetectorWriter{}
+
+	_, err = io.Copy(io.MultiWriter(file, bar, mimedetector), resp.Body)
+	if err != nil {
+		cast.LogDebug("Cannot write downloaded file "+err.Error(), nil)
+		return err
+	}
+
+	if mimedetector.MimeType != nil && *mimedetector.MimeType == "application/x-bzip2" {
+		return b2unzipWithProgressBar(outputfile, "b2unzip")
+	}
+	return nil
+}
+
+func downloadAsset(remotedef *AssetRemoteDescription, localdef *AssetDefinition) error {
+	err := os.MkdirAll(filepath.Dir(localdef.FilePath), os.ModePerm)
 	if err != nil {
 		return err
+	}
+
+	err = downloadFileWithProgressBar(remotedef.URL+".bz2", localdef.FilePath, " Downloading asset descriptor...")
+	if err != nil {
+		err = downloadFileWithProgressBar(remotedef.URL, localdef.FilePath, " Downloading asset descriptor...")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func downloadIndex(remotedef *AssetRemoteDescription, localdef *AssetDefinition) error {
+	err := os.MkdirAll(filepath.Dir(localdef.FilePath), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	// download index
+	err = downloadFileWithProgressBar(remotedef.URL+".idx.bz2", localdef.IndexPath, " Downloading index...")
+	if err != nil {
+		err = downloadFileWithProgressBar(remotedef.URL+".idx", localdef.IndexPath, " Downloading index...")
+		if err != nil {
+			return err
+		}
+	}
+
+	// download subindex
+	err = downloadFileWithProgressBar(remotedef.URL+".subidx.bz2", localdef.SubIndexPath, " Downloading subindex...")
+	if err != nil {
+		err = downloadFileWithProgressBar(remotedef.URL+".subidx", localdef.SubIndexPath, " Downloading subindex...")
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -1001,8 +1095,8 @@ func GenerateIndexFromFile(term string) error {
 	}
 
 	def.FilePath = terms[0]
-	def.IndexPath = filepath.Join(terms[2], terms[1]+".idx")
-	def.SubIndexPath = filepath.Join(terms[2], terms[1]+".subidx")
+	def.IndexPath = filepath.Join(terms[2], filepath.Base(terms[0])+".idx")
+	def.SubIndexPath = filepath.Join(terms[2], filepath.Base(terms[0])+".subidx")
 	_, err := makeIndex(def)
 	if err != nil {
 		return err
@@ -1078,7 +1172,7 @@ func UpgradeAssets(force bool) error {
 
 				filemd5 := fmt.Sprintf("%x", h.Sum(nil))
 				if force || filemd5 != desc.Hash {
-					err = DownloadAsset(desc.URL, def)
+					err = downloadAsset(desc, def)
 					if err != nil {
 						State.setUpgradeState(UpgradeStateInProgressWithErr)
 						cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
@@ -1100,7 +1194,7 @@ func UpgradeAssets(force bool) error {
 					cast.LogInfo("Asset file "+desc.ID+" up to date. No download needed", nil)
 				}
 			} else if errors.Is(err, os.ErrNotExist) {
-				err = DownloadAsset(desc.URL, def)
+				err = downloadAsset(desc, def)
 				if err != nil {
 					State.setUpgradeState(UpgradeStateInProgressWithErr)
 					cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
@@ -1119,14 +1213,20 @@ func UpgradeAssets(force bool) error {
 			if _, err := os.Stat(def.IndexPath); err == nil {
 				cast.LogInfo("Index of "+desc.ID+" up to date", nil)
 			} else if errors.Is(err, os.ErrNotExist) {
-				cast.LogInfo("Building "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
-				_, err := makeIndex(def)
+				cast.LogInfo("Downloading "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
+				err := downloadIndex(desc, def)
 				if err != nil {
-					State.setUpgradeState(UpgradeStateInProgressWithErr)
-					cast.LogErr("Cannot build index of "+desc.ID+" due to "+err.Error(), nil)
-					continue
+					cast.LogWarn("Cannot download "+desc.ID+" index: ("+err.Error()+")", nil)
+					cast.LogWarn(desc.ID+": Since the index could not be downloaded, it will be built locally. This process is long and expensive.", nil)
+					cast.LogInfo("Building "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
+					_, err := makeIndex(def)
+					if err != nil {
+						State.setUpgradeState(UpgradeStateInProgressWithErr)
+						cast.LogErr("Cannot build index of "+desc.ID+" due to "+err.Error(), nil)
+						continue
+					}
+					cast.LogInfo("Building index of "+desc.ID+"...DONE", nil)
 				}
-				cast.LogInfo("Building index of "+desc.ID+"...DONE", nil)
 			} else {
 				State.setUpgradeState(UpgradeStateInProgressWithErr)
 				cast.LogErr("Cannot determine index status "+err.Error(), nil)
