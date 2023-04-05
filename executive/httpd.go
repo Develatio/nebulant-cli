@@ -205,7 +205,7 @@ func (h *Httpd) route(w http.ResponseWriter, r *http.Request) {
 func (h *Httpd) Serve(addr *string) error {
 	go func() {
 		cast.LogInfo("Updating assets in bg...", nil)
-		aerr := assets.UpgradeAssets(false)
+		aerr := assets.UpgradeAssets(false, false)
 		if aerr != nil {
 			cast.LogErr("Error loading assets", nil)
 			cast.LogErr(aerr.Error(), nil)

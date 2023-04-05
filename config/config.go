@@ -91,6 +91,7 @@ var ForceUpgradeAssetsFlag *bool
 var LookupAssetFlag *string
 var NoTermFlag *bool
 var BuildAssetIndexFlag *string
+var ForceUpgradeAssetsNoDownloadFlag *bool
 
 func AppHomePath() string {
 	var userHomePath string

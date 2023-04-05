@@ -412,7 +412,7 @@ func b2unzipWithProgressBar(file string, msg string) error {
 	noZipBombReader := io.LimitReader(bz2dec, maxZipFileSize)
 
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(instats.Size(), msg, true)
+	bar := sb.GetProgressBar(instats.Size(), msg, false)
 
 	_, err = io.Copy(io.MultiWriter(outfile, bar), noZipBombReader)
 	if err != nil {
@@ -461,7 +461,7 @@ func downloadFileWithProgressBar(url string, outputfile string, msg string) erro
 	defer file.Close()
 
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(resp.ContentLength, msg, false)
+	bar := sb.GetProgressBar(resp.ContentLength, msg, true)
 
 	mimedetector := &util.MimeDetectorWriter{}
 
@@ -1113,7 +1113,7 @@ func GenerateIndexFromFile(term string) error {
 	return nil
 }
 
-func UpgradeAssets(force bool) error {
+func UpgradeAssets(force bool, skipdownload bool) error {
 	State.setUpgradeState(UpgradeStateInProgress)
 	err := State.saveState()
 	if err != nil {
@@ -1222,10 +1222,15 @@ func UpgradeAssets(force bool) error {
 				cast.LogInfo("Index of "+desc.ID+" up to date", nil)
 			} else if errors.Is(err, os.ErrNotExist) {
 				cast.LogInfo("Downloading "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
-				err := downloadIndex(desc, def)
+				err = nil
+				if !skipdownload {
+					err = downloadIndex(desc, def)
+				}
 				if err != nil {
 					cast.LogWarn("Cannot download "+desc.ID+" index: ("+err.Error()+")", nil)
 					cast.LogWarn(desc.ID+": Since the index could not be downloaded, it will be built locally. This process is long and expensive.", nil)
+				}
+				if err != nil || skipdownload {
 					cast.LogInfo("Building "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
 					_, err := makeIndex(def)
 					if err != nil {
