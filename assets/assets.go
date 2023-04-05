@@ -41,9 +41,18 @@ import (
 	"github.com/develatio/nebulant-cli/term"
 )
 
+type UpgradeStateType int
+
 const INDEX_TOKEN_SIZE = 3
 const SUB_INDEX_TOKEN_SIZE = 2
 const USED_BY_SPA = "SPA"
+const (
+	UpgradeStateNone UpgradeStateType = iota
+	UpgradeStateInProgress
+	UpgradeStateInProgressWithErr
+	UpgradeStateEndWithErr
+	UpgradeStateEndOK
+)
 
 type index struct {
 	Parts map[string]map[int64]bool
@@ -67,6 +76,68 @@ type indexList struct {
 type matchInfo struct {
 	token string
 	count int
+}
+
+type assetsState struct {
+	// use this for generic state
+	LastUpgradeState    UpgradeStateType `json:"last_upgrade_status"`
+	CurrentUpgradeState UpgradeStateType `json:"-"`
+	LastUpgradeDate     time.Time        `json:"last_upgrade_date"`
+	// Leter to Marty McFly: for by-asset status, define array or map here
+}
+
+func (a *assetsState) setUpgradeState(us UpgradeStateType) {
+	a.CurrentUpgradeState = us
+}
+
+func (a *assetsState) saveState() error {
+	a.LastUpgradeState = a.CurrentUpgradeState
+	data, err := json.Marshal(a)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(filepath.Join(config.AppHomePath(), "assets", "state"), data, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *assetsState) IsUpgradeInProgress() bool {
+	return a.CurrentUpgradeState == UpgradeStateInProgress || a.CurrentUpgradeState == UpgradeStateInProgressWithErr
+}
+
+func (a *assetsState) NeedUpgrade() bool {
+	if a.IsUpgradeInProgress() {
+		return false
+	}
+	if a.LastUpgradeState == UpgradeStateNone {
+		return true
+	}
+	if a.LastUpgradeState == UpgradeStateEndWithErr {
+		return true
+	}
+	return false
+	// TODO: test last date upgrade
+	//return false
+}
+
+func (a *assetsState) loadState() error {
+	jsonFile, err := os.Open(filepath.Join(config.AppHomePath(), "assets", "state")) //#nosec G304 -- Not a file inclusion, just a json read
+	if err != nil {
+		if os.IsNotExist(err) {
+			a.CurrentUpgradeState = UpgradeStateNone
+			a.LastUpgradeState = UpgradeStateNone
+		} else {
+			return err
+		}
+	}
+	defer jsonFile.Close()
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	if err := json.Unmarshal(byteValue, a); err != nil {
+		return err
+	}
+	return nil
 }
 
 type AssetDefinition struct {
@@ -100,6 +171,10 @@ type AssetRemoteDescription struct {
 
 var AssetsDefinition map[string]*AssetDefinition = make(map[string]*AssetDefinition)
 
+// var CurrentUpgradeState UpgradeStateType
+// var LastUpgradeState UpgradeStateType
+var State *assetsState
+
 func (s *SearchRequest) Validate() (bool, error) {
 	if !strings.HasPrefix(s.Sort, "-$") && !strings.HasPrefix(s.Sort, "$") {
 		return false, fmt.Errorf("please, use $ or -$ at the beginning of the sort attr " + (s.Sort))
@@ -124,11 +199,11 @@ func (s *SearchRequest) Validate() (bool, error) {
 // 		},
 // 	}
 
-// 	// _, err := MakeIndex(imgassetdef)
+// 	// _, err := makeIndex(imgassetdef)
 // 	// if err != nil {
 // 	// 	return err
 // 	// }
-// 	// _, err = MakeSubIndex(imgassetdef)
+// 	// _, err = makeSubIndex(imgassetdef)
 // 	// if err != nil {
 // 	// 	return err
 // 	// }
@@ -345,21 +420,21 @@ func DownloadAsset(url string, assetdef *AssetDefinition) error {
 	return nil
 }
 
-func MakeIndex(assetdef *AssetDefinition) (int, error) {
+func makeIndex(assetdef *AssetDefinition) (int, error) {
 	cast.LogInfo("Building Asset index "+assetdef.Name, nil)
-	n, err := MakeMainIndex(assetdef)
+	n, err := makeMainIndex(assetdef)
 	if err != nil {
 		return n, err
 	}
-	nn, err := MakeSubIndex(assetdef)
+	nn, err := makeSubIndex(assetdef)
 	if err != nil {
 		return n + nn, err
 	}
 	return n + nn, nil
 }
 
-// MakeMainIndex func TODO: explore ways to not store the entire file into ram
-func MakeMainIndex(assetdef *AssetDefinition) (int, error) {
+// makeMainIndex func TODO: explore ways to not store the entire file into ram
+func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 	var count int64 = 0
 	idx := &index{}
 	idx.Parts = make(map[string]map[int64]bool)
@@ -463,7 +538,7 @@ func MakeMainIndex(assetdef *AssetDefinition) (int, error) {
 	return n, nil
 }
 
-func MakeSubIndex(assetdef *AssetDefinition) (int, error) {
+func makeSubIndex(assetdef *AssetDefinition) (int, error) {
 	idx := &index{}
 	idx.Parts = make(map[string]map[int64]bool)
 
@@ -918,15 +993,28 @@ func updateDescriptor(descpath string) error {
 }
 
 func UpgradeAssets(force bool) error {
+	State.setUpgradeState(UpgradeStateInProgress)
+	err := State.saveState()
+	if err != nil {
+		// use erros.Join() when go 1.20
+		return err
+	}
 	var descriptor []*AssetRemoteDescription
 	descpath := filepath.Join(config.AppHomePath(), "assets", "descriptor.json")
 
 	if err := updateDescriptor(descpath); err != nil {
+		State.setUpgradeState(UpgradeStateEndWithErr)
+		err2 := State.saveState()
+		if err2 != nil {
+			// use erros.Join() when go 1.20
+			return err2
+		}
 		return err
 	}
 
 	descfile, err := os.Open(descpath) //#nosec G304 -- Not a file inclusion, just a json read
 	if err != nil {
+		State.setUpgradeState(UpgradeStateEndWithErr)
 		return err
 	}
 
@@ -935,6 +1023,12 @@ func UpgradeAssets(force bool) error {
 
 	byteValue, _ := ioutil.ReadAll(descfile)
 	if err := json.Unmarshal(byteValue, &descriptor); err != nil {
+		State.setUpgradeState(UpgradeStateEndWithErr)
+		err2 := State.saveState()
+		if err2 != nil {
+			// use erros.Join() when go 1.20
+			return err2
+		}
 		return err
 	}
 
@@ -946,6 +1040,12 @@ func UpgradeAssets(force bool) error {
 			if _, err := os.Stat(def.FilePath); err == nil {
 				f, err := os.Open(def.FilePath)
 				if err != nil {
+					err2 := State.saveState()
+					if err2 != nil {
+						// use erros.Join() when go 1.20
+						return err2
+					}
+					State.setUpgradeState(UpgradeStateEndWithErr)
 					return err
 				}
 				defer f.Close()
@@ -953,6 +1053,7 @@ func UpgradeAssets(force bool) error {
 				h := md5.New() //#nosec G401-- weak, but ok
 				if _, err := io.Copy(h, f); err != nil {
 					cast.LogErr("Cannot determine asset"+desc.ID+" integrity due to "+err.Error(), nil)
+					State.setUpgradeState(UpgradeStateInProgressWithErr)
 					continue
 				}
 
@@ -960,16 +1061,19 @@ func UpgradeAssets(force bool) error {
 				if force || filemd5 != desc.Hash {
 					err = DownloadAsset(desc.URL, def)
 					if err != nil {
+						State.setUpgradeState(UpgradeStateInProgressWithErr)
 						cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
 						continue
 					}
 					err := os.Remove(def.IndexPath)
 					if err != nil && !errors.Is(err, os.ErrNotExist) {
+						State.setUpgradeState(UpgradeStateInProgressWithErr)
 						cast.LogErr("Cannot purge old index file "+err.Error(), nil)
 						continue
 					}
 					err = os.Remove(def.SubIndexPath)
 					if err != nil && !errors.Is(err, os.ErrNotExist) {
+						State.setUpgradeState(UpgradeStateInProgressWithErr)
 						cast.LogErr("Cannot purge old index file "+err.Error(), nil)
 						continue
 					}
@@ -979,10 +1083,17 @@ func UpgradeAssets(force bool) error {
 			} else if errors.Is(err, os.ErrNotExist) {
 				err = DownloadAsset(desc.URL, def)
 				if err != nil {
+					State.setUpgradeState(UpgradeStateInProgressWithErr)
 					cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
 					continue
 				}
 			} else {
+				State.setUpgradeState(UpgradeStateEndWithErr)
+				err2 := State.saveState()
+				if err2 != nil {
+					// use erros.Join() when go 1.20
+					return err2
+				}
 				return err
 			}
 
@@ -990,21 +1101,49 @@ func UpgradeAssets(force bool) error {
 				cast.LogInfo("Index of "+desc.ID+" up to date", nil)
 			} else if errors.Is(err, os.ErrNotExist) {
 				cast.LogInfo("Building "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
-				_, err := MakeIndex(def)
+				_, err := makeIndex(def)
 				if err != nil {
+					State.setUpgradeState(UpgradeStateInProgressWithErr)
 					cast.LogErr("Cannot build index of "+desc.ID+" due to "+err.Error(), nil)
 					continue
 				}
 				cast.LogInfo("Building index of "+desc.ID+"...DONE", nil)
 			} else {
+				State.setUpgradeState(UpgradeStateInProgressWithErr)
 				cast.LogErr("Cannot determine index status "+err.Error(), nil)
 			}
 
 		} else {
+			State.setUpgradeState(UpgradeStateInProgressWithErr)
 			cast.LogWarn("Unknown asset descriptor "+desc.ID, nil)
+		}
+	}
+
+	if State.CurrentUpgradeState == UpgradeStateInProgressWithErr {
+		State.setUpgradeState(UpgradeStateEndWithErr)
+		err2 := State.saveState()
+		if err2 != nil {
+			// use erros.Join() when go 1.20
+			return err2
+		}
+	} else if State.CurrentUpgradeState == UpgradeStateInProgress {
+		State.setUpgradeState(UpgradeStateEndOK)
+		err2 := State.saveState()
+		if err2 != nil {
+			// use erros.Join() when go 1.20
+			return err2
 		}
 	}
 
 	cast.LogInfo("All assets up to date", nil)
 	return nil
+}
+
+func init() {
+	State = &assetsState{}
+	err := State.loadState()
+	if err != nil {
+		// should panic?
+		fmt.Println(err.Error())
+	}
 }

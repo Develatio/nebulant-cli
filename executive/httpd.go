@@ -670,6 +670,26 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+	if assets.State.IsUpgradeInProgress() {
+		w.WriteHeader(512) // 512 is not part of ianna assignments but means "not updated"
+		resp := &GenericResponse{
+			Code:             "E00",
+			Fail:             true,
+			Errors:           []string{http.StatusText(512), "Upgrade assets in progress"},
+			ValidationErrors: nil,
+		}
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			http.Error(w, "E00 "+err.Error(), 512)
+		}
+		return
+	}
+
+	if assets.State.NeedUpgrade() {
+		cast.LogWarn("Assets need to be updated", nil)
+	}
+
 	u := r.URL
 	asset_id := path.Base(u.Path)
 	assetdef, ok := assets.AssetsDefinition[asset_id]
