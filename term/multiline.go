@@ -17,7 +17,7 @@ type oneLineWriteCloser struct {
 }
 
 func (s *oneLineWriteCloser) Write(p []byte) (int, error) {
-	if *config.NoTermFlag {
+	if !isTerminal() {
 		return s.MainStdout.Write(p)
 	}
 	s.P = p
@@ -25,7 +25,7 @@ func (s *oneLineWriteCloser) Write(p []byte) (int, error) {
 }
 
 func (s *oneLineWriteCloser) Close() error {
-	if *config.NoTermFlag {
+	if !isTerminal() {
 		return nil
 	}
 	s.P = []byte("")
@@ -58,39 +58,39 @@ func (a *alwaysReturnWrapWritCloser) Close() error {
 }
 
 func (s *oneLineWriteCloser) GetProgressBar(max int64, description string, showbytes bool) *progressbar.ProgressBar {
-	if *config.NoTermFlag {
+	if !isTerminal() {
 		arwc := &alwaysReturnWrapWritCloser{
 			stdout: s,
 		}
+		arwc.Write([]byte(" " + description))
+		description = " " + description
 		return progressbar.NewOptions64(max,
 			progressbar.OptionSetDescription(description),
 			progressbar.OptionSetWriter(arwc),
 			progressbar.OptionShowBytes(showbytes),
-			progressbar.OptionSetWidth(10),
-			progressbar.OptionThrottle(1*time.Second),
+			progressbar.OptionSetWidth(20),
+			progressbar.OptionThrottle(30*time.Second),
 			progressbar.OptionShowCount(),
 			progressbar.OptionUseANSICodes(true),
-			progressbar.OptionSpinnerType(14),
-			progressbar.OptionFullWidth(),
-			progressbar.OptionSetRenderBlankState(true),
+			progressbar.OptionSpinnerCustom([]string{}),
 		)
 	}
+	description = " " + description
 	return progressbar.NewOptions64(max,
 		progressbar.OptionSetDescription(description),
 		progressbar.OptionSetWriter(s),
 		progressbar.OptionShowBytes(showbytes),
-		progressbar.OptionEnableColorCodes(!*config.ColorFlag),
-		progressbar.OptionSetWidth(10),
+		progressbar.OptionEnableColorCodes(!*config.DisableColorFlag),
+		progressbar.OptionSetWidth(20),
 		progressbar.OptionThrottle(65*time.Millisecond),
 		progressbar.OptionShowCount(),
 		progressbar.OptionSpinnerType(14),
-		progressbar.OptionFullWidth(),
 		progressbar.OptionSetRenderBlankState(true),
 	)
 }
 
 func (m *oneLineWriteCloser) Print(s string) {
-	if *config.NoTermFlag {
+	if !isTerminal() {
 		if !strings.HasSuffix(s, "\n") {
 			s = s + "\n"
 		}
@@ -107,7 +107,7 @@ type MultilineStdout struct {
 }
 
 func (m *MultilineStdout) Write(p []byte) (int, error) {
-	if *config.NoTermFlag {
+	if !isTerminal() {
 		return m.MainStdout.Write(p)
 	}
 	n, err := m.MainStdout.Write([]byte(EraseLine))
@@ -130,7 +130,7 @@ func (m *MultilineStdout) Close() error {
 }
 
 func (m *MultilineStdout) RePaintLines() (int, error) {
-	if *config.NoTermFlag {
+	if !isTerminal() {
 		return 0, nil
 	}
 	// Make space for Lines

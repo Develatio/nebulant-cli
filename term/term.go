@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/develatio/nebulant-cli/config"
+	"golang.org/x/term"
 )
 
 var Reset string = "\033[0m"
@@ -63,6 +64,13 @@ func (n *noBellStdout) Close() error {
 }
 
 var NoBellStdout = &noBellStdout{}
+
+func isTerminal() bool {
+	if *config.ForceTerm {
+		return true
+	}
+	return term.IsTerminal(int(os.Stdout.Fd()))
+}
 
 func OpenStatusBar() *oneLineWriteCloser {
 	if statusBarLine != nil {
@@ -117,7 +125,7 @@ func Print(a ...interface{}) (n int, err error) {
 }
 
 func InitTerm() {
-	if *config.ColorFlag || *config.NoTermFlag {
+	if *config.DisableColorFlag {
 		Stdout = os.Stdout
 		Stderr = os.Stderr
 		Reset = ""

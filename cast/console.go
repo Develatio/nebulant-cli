@@ -120,7 +120,7 @@ func InitConsoleLogger() {
 		LogChan:    make(chan *BusData, 100),
 		CommonChan: make(chan *BusData, 100),
 	}
-	clogger := &ConsoleLogger{fLink: fLink, colors: !*config.ColorFlag}
+	clogger := &ConsoleLogger{fLink: fLink, colors: !*config.DisableColorFlag}
 	SBus.connect <- fLink
 	SBus.castWaiter.Add(1)
 	go clogger.readCastBus()

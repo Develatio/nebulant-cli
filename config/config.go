@@ -85,11 +85,11 @@ var AddrFlag *string
 var VersionFlag *bool
 var DebugFlag *bool
 var Ipv6Flag *bool
-var ColorFlag *bool
+var DisableColorFlag *bool
 var UpgradeAssetsFlag *bool
 var ForceUpgradeAssetsFlag *bool
 var LookupAssetFlag *string
-var NoTermFlag *bool
+var ForceTerm *bool
 var BuildAssetIndexFlag *string
 var ForceUpgradeAssetsNoDownloadFlag *bool
 

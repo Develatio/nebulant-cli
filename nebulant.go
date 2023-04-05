@@ -89,21 +89,17 @@ func main() {
 	config.VersionFlag = flag.Bool("v", false, "Show version and exit.")
 	config.DebugFlag = flag.Bool("x", false, "Enable debug.")
 	config.Ipv6Flag = flag.Bool("6", false, "Force ipv6")
-	config.ColorFlag = flag.Bool("c", false, "Disable colors.")
+	config.DisableColorFlag = flag.Bool("c", false, "Disable colors.")
 	config.UpgradeAssetsFlag = flag.Bool("u", false, "Upgrade assets from remote location and exit. Build search index as needed.")
 	config.ForceUpgradeAssetsFlag = flag.Bool("uu", false, "Force upgrade assets.")
 	config.ForceUpgradeAssetsNoDownloadFlag = flag.Bool("uuu", false, "Force upgrade assets. Skip download prebuild-index.")
 	config.LookupAssetFlag = flag.String("l", "", "Test asset search and exit. Use assetid:searchterm:offset:limit:sort syntax. Ej. nebulant -l \"aws_images:linux x86:10:5:-$.Name\"")
-	config.NoTermFlag = flag.Bool("nt", false, "Disable term capabilities. This also disables color.")
+	config.ForceTerm = flag.Bool("ft", false, "Force terminal. Bypass no-term detection.")
 	config.BuildAssetIndexFlag = flag.String("i", "", "Build asset index and exit. Use inputfile:assetid:outputdir. Ej. nebulant -bi \"./file.json:aws_images:./\"")
 
 	flag.Parse()
 	args := flag.Args()
 	bluePrintFilePath := flag.Arg(0)
-
-	if *config.NoTermFlag {
-		*config.ColorFlag = true
-	}
 
 	var tcpaddr *net.TCPAddr
 	var err error

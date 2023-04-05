@@ -235,7 +235,7 @@ func writeIndexFile(fpath string, list *index, name string) (int, error) {
 	partcount := 0
 	partlen := len(list.Parts)
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(int64(partlen), " Writing "+name+" index file", false)
+	bar := sb.GetProgressBar(int64(partlen), "Writing "+name+" index file", false)
 	for tkn, positions := range list.Parts {
 		err := bar.Add(1)
 		if err != nil {
@@ -471,7 +471,7 @@ func downloadFileWithProgressBar(url string, outputfile string, msg string) erro
 	}
 
 	if mimedetector.MimeType != nil && *mimedetector.MimeType == "application/x-bzip2" {
-		return b2unzipWithProgressBar(outputfile, "b2unzip")
+		return b2unzipWithProgressBar(outputfile, "Unzipping file "+filepath.Base(outputfile)+"...")
 	}
 	return nil
 }
@@ -482,10 +482,10 @@ func downloadAsset(remotedef *AssetRemoteDescription, localdef *AssetDefinition)
 		return err
 	}
 
-	err = downloadFileWithProgressBar(remotedef.URL+".bz2", localdef.FilePath, " Downloading asset descriptor...")
+	err = downloadFileWithProgressBar(remotedef.URL+".bz2", localdef.FilePath, "Downloading asset "+localdef.Name+"...")
 	if err != nil {
 		cast.LogDebug("Err on bz2 asset descriptor download: "+err.Error(), nil)
-		err = downloadFileWithProgressBar(remotedef.URL, localdef.FilePath, " Downloading asset descriptor...")
+		err = downloadFileWithProgressBar(remotedef.URL, localdef.FilePath, "Downloading asset "+localdef.Name+"...")
 		if err != nil {
 			return err
 		}
@@ -500,20 +500,20 @@ func downloadIndex(remotedef *AssetRemoteDescription, localdef *AssetDefinition)
 	}
 
 	// download index
-	err = downloadFileWithProgressBar(remotedef.URL+".idx.bz2", localdef.IndexPath, " Downloading index...")
+	err = downloadFileWithProgressBar(remotedef.URL+".idx.bz2", localdef.IndexPath, "Downloading index...")
 	if err != nil {
 		cast.LogDebug("Err on bz2 index download: "+err.Error(), nil)
-		err = downloadFileWithProgressBar(remotedef.URL+".idx", localdef.IndexPath, " Downloading index...")
+		err = downloadFileWithProgressBar(remotedef.URL+".idx", localdef.IndexPath, "Downloading index...")
 		if err != nil {
 			return err
 		}
 	}
 
 	// download subindex
-	err = downloadFileWithProgressBar(remotedef.URL+".subidx.bz2", localdef.SubIndexPath, " Downloading subindex...")
+	err = downloadFileWithProgressBar(remotedef.URL+".subidx.bz2", localdef.SubIndexPath, "Downloading subindex...")
 	if err != nil {
 		cast.LogDebug("Err on bz2 subindex download: "+err.Error(), nil)
-		err = downloadFileWithProgressBar(remotedef.URL+".subidx", localdef.SubIndexPath, " Downloading subindex...")
+		err = downloadFileWithProgressBar(remotedef.URL+".subidx", localdef.SubIndexPath, "Downloading subindex...")
 		if err != nil {
 			return err
 		}
@@ -562,7 +562,7 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 	}
 
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(fi.Size(), " Reading asset items", false)
+	bar := sb.GetProgressBar(fi.Size(), "Reading asset items", false)
 
 	dec := json.NewDecoder(input)
 
@@ -656,7 +656,7 @@ func makeSubIndex(assetdef *AssetDefinition) (int, error) {
 	}
 
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(fi.Size(), " Optimizing "+assetdef.Name+" index", false)
+	bar := sb.GetProgressBar(fi.Size(), "Optimizing "+assetdef.Name+" index", false)
 	dec := json.NewDecoder(input)
 
 	// read {
@@ -1084,7 +1084,7 @@ func updateDescriptor(descpath string) error {
 	defer file.Close()
 
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(resp.ContentLength, " Downloading asset descriptor", true)
+	bar := sb.GetProgressBar(resp.ContentLength, "Downloading asset descriptor", true)
 
 	_, err = io.Copy(io.MultiWriter(file, bar), resp.Body)
 
