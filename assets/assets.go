@@ -96,7 +96,7 @@ func (a *assetsState) saveState() error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(filepath.Join(config.AppHomePath(), "assets", "state"), data, 0644)
+	err = ioutil.WriteFile(filepath.Join(config.AppHomePath(), "assets", "state"), data, 0600)
 	if err != nil {
 		return err
 	}
