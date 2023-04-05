@@ -235,7 +235,10 @@ func writeIndexFile(fpath string, list *index, name string) (int, error) {
 	partcount := 0
 	partlen := len(list.Parts)
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(int64(partlen), "Writing "+name+" index file", false)
+	bar, err := sb.GetProgressBar(int64(partlen), "Writing "+name+" index file", false)
+	if err != nil {
+		return 0, err
+	}
 	for tkn, positions := range list.Parts {
 		err := bar.Add(1)
 		if err != nil {
@@ -412,7 +415,10 @@ func b2unzipWithProgressBar(file string, msg string) error {
 	noZipBombReader := io.LimitReader(bz2dec, maxZipFileSize)
 
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(instats.Size(), msg, false)
+	bar, err := sb.GetProgressBar(instats.Size(), msg, false)
+	if err != nil {
+		return err
+	}
 
 	_, err = io.Copy(io.MultiWriter(outfile, bar), noZipBombReader)
 	if err != nil {
@@ -461,7 +467,10 @@ func downloadFileWithProgressBar(url string, outputfile string, msg string) erro
 	defer file.Close()
 
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(resp.ContentLength, msg, true)
+	bar, err := sb.GetProgressBar(resp.ContentLength, msg, true)
+	if err != nil {
+		return err
+	}
 
 	mimedetector := &util.MimeDetectorWriter{}
 
@@ -562,7 +571,10 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 	}
 
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(fi.Size(), "Reading asset items", false)
+	bar, err := sb.GetProgressBar(fi.Size(), "Reading asset items", false)
+	if err != nil {
+		return 0, err
+	}
 
 	dec := json.NewDecoder(input)
 
@@ -656,7 +668,10 @@ func makeSubIndex(assetdef *AssetDefinition) (int, error) {
 	}
 
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(fi.Size(), "Optimizing "+assetdef.Name+" index", false)
+	bar, err := sb.GetProgressBar(fi.Size(), "Optimizing "+assetdef.Name+" index", false)
+	if err != nil {
+		return 0, err
+	}
 	dec := json.NewDecoder(input)
 
 	// read {
@@ -1084,7 +1099,10 @@ func updateDescriptor(descpath string) error {
 	defer file.Close()
 
 	sb := term.OpenStatusBar()
-	bar := sb.GetProgressBar(resp.ContentLength, "Downloading asset descriptor", true)
+	bar, err := sb.GetProgressBar(resp.ContentLength, "Downloading asset descriptor", true)
+	if err != nil {
+		return err
+	}
 
 	_, err = io.Copy(io.MultiWriter(file, bar), resp.Body)
 

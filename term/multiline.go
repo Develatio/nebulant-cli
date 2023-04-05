@@ -57,13 +57,17 @@ func (a *alwaysReturnWrapWritCloser) Close() error {
 	return a.stdout.Close()
 }
 
-func (s *oneLineWriteCloser) GetProgressBar(max int64, description string, showbytes bool) *progressbar.ProgressBar {
+func (s *oneLineWriteCloser) GetProgressBar(max int64, description string, showbytes bool) (*progressbar.ProgressBar, error) {
+	description = " " + description
 	if !isTerminal() {
 		arwc := &alwaysReturnWrapWritCloser{
 			stdout: s,
 		}
-		arwc.Write([]byte(" " + description))
-		description = " " + description
+		_, err := arwc.Write([]byte(description))
+		if err != nil {
+			return nil, err
+		}
+
 		return progressbar.NewOptions64(max,
 			progressbar.OptionSetDescription(description),
 			progressbar.OptionSetWriter(arwc),
@@ -73,9 +77,9 @@ func (s *oneLineWriteCloser) GetProgressBar(max int64, description string, showb
 			progressbar.OptionShowCount(),
 			progressbar.OptionUseANSICodes(true),
 			progressbar.OptionSpinnerCustom([]string{}),
-		)
+		), nil
 	}
-	description = " " + description
+
 	return progressbar.NewOptions64(max,
 		progressbar.OptionSetDescription(description),
 		progressbar.OptionSetWriter(s),
@@ -86,7 +90,7 @@ func (s *oneLineWriteCloser) GetProgressBar(max int64, description string, showb
 		progressbar.OptionShowCount(),
 		progressbar.OptionSpinnerType(14),
 		progressbar.OptionSetRenderBlankState(true),
-	)
+	), nil
 }
 
 func (m *oneLineWriteCloser) Print(s string) {
