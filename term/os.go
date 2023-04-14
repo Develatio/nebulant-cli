@@ -27,6 +27,7 @@ import (
 
 var Stdout = readline.Stdout
 var Stderr = readline.Stderr
+var Stdin = readline.Stdin
 var CharBell = []byte(fmt.Sprintf("%c", readline.CharBell))[0]
 var ErrInterrupt = promptui.ErrInterrupt
 var ErrEOF = promptui.ErrEOF

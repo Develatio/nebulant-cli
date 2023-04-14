@@ -17,6 +17,7 @@
 package actors
 
 import (
+	"bufio"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,13 +25,33 @@ import (
 	"unicode/utf8"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/joho/godotenv"
 )
 
+type VarType string
+
+const (
+	VarTypeString             VarType = "string"
+	VarTypeBool               VarType = "boolean"
+	VarTypeInt                VarType = "int"
+	VarTypeSelectableStatic   VarType = "selectable-static-values"
+	VarTypeSelectableVariable VarType = "selectable-variables"
+)
+
+type defineVarsParametersVarOptions struct {
+	Label string `json:"label" validate:"required"`
+	Value string `json:"value" validate:"required"`
+}
+
 type defineVarsParametersVar struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	AskAtRuntime *bool                            `json:"ask_at_runtime"`
+	Key          string                           `json:"key" validate:"required"`
+	Value        interface{}                      `json:"value"`
+	Type         VarType                          `json:"type" validate:"required"`
+	Options      []defineVarsParametersVarOptions `json:"options"`
+	Required     bool                             `json:"required"`
 }
 
 type defineVarsParameters struct {
@@ -394,24 +415,105 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
+	// validate var type/value
+	for _, v := range params.Vars {
+		// test type
+		switch v.Type {
+		case VarTypeBool, VarTypeInt, VarTypeSelectableStatic, VarTypeSelectableVariable, VarTypeString:
+			//ok
+		default:
+			return nil, fmt.Errorf("Unknown vartype " + v.Key)
+		}
+
+		// test nil/required
+		if v.Value == nil {
+			if v.Required && (v.AskAtRuntime != nil && !*v.AskAtRuntime) {
+				return nil, fmt.Errorf("Cannot process required empty var " + v.Key)
+			}
+		}
+
+		// test string
+		if _, isString := v.Value.(string); isString {
+			switch v.Type {
+			case VarTypeString, VarTypeSelectableStatic, VarTypeSelectableVariable:
+				continue
+			default:
+				return nil, fmt.Errorf("Invalid var type string for " + v.Key)
+			}
+		}
+
+		// test bool
+		_, isBool := v.Value.(bool)
+		if isBool && v.Type != VarTypeBool {
+			return nil, fmt.Errorf("Invalid var type bool for " + v.Key)
+		}
+
+		// test int
+		_, isInt := v.Value.(int)
+		if isInt && v.Type != VarTypeInt {
+			return nil, fmt.Errorf("Invalid var type int for " + v.Key)
+		}
+	}
+
 	if ctx.Rehearsal {
 		return nil, nil
 	}
 
 	for _, v := range params.Vars {
 		varname := v.Key
-		varvalue := v.Value
 		ctx.Logger.LogInfo("Setting var " + varname)
-		err := ctx.Store.Interpolate(&varvalue)
-		if err != nil {
-			return nil, err
+
+		// nil value allowed, store nil and continue to next var
+		if v.Value == nil {
+			if !v.Required && (v.AskAtRuntime == nil || (v.AskAtRuntime != nil && !*v.AskAtRuntime)) {
+				// store nil :shrug:
+				err := ctx.Store.Insert(&base.StorageRecord{
+					RefName: varname,
+					Aout:    nil,
+					Value:   nil,
+					Action:  ctx.Action,
+				}, ctx.Action.Provider)
+				if err != nil {
+					return nil, err
+				}
+				continue
+			}
 		}
-		varvalue = strings.Replace(varvalue, "\\{", "{", -1)
-		varvalue = strings.Replace(varvalue, "\\}", "}", -1)
-		err = ctx.Store.Insert(&base.StorageRecord{
+
+		switch v.Type {
+		case VarTypeString:
+			var varvalue string
+			if v.Value == nil && v.AskAtRuntime != nil && *v.AskAtRuntime {
+				reader := bufio.NewReader(term.Stdin)
+				fmt.Print("Enter text: ")
+				varvalue, _ = reader.ReadString('\n')
+			} else {
+				varvalue = v.Value.(string)
+			}
+
+			err := ctx.Store.Interpolate(&varvalue)
+			if err != nil {
+				return nil, err
+			}
+			varvalue = strings.Replace(varvalue, "\\{", "{", -1)
+			varvalue = strings.Replace(varvalue, "\\}", "}", -1)
+			err = ctx.Store.Insert(&base.StorageRecord{
+				RefName: varname,
+				Aout:    nil,
+				Value:   varvalue,
+				Action:  ctx.Action,
+			}, ctx.Action.Provider)
+			if err != nil {
+				return nil, err
+			}
+			continue
+
+		}
+
+		err := ctx.Store.Insert(&base.StorageRecord{
 			RefName: varname,
 			Aout:    nil,
-			Value:   varvalue,
+			Value:   v.Value,
 			Action:  ctx.Action,
 		}, ctx.Action.Provider)
 		if err != nil {
@@ -419,6 +521,8 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
+	// if params has .Files, we should read those files
+	// and store var & values
 	for _, file := range params.Files {
 		envs, err := godotenv.Read(file)
 		if err != nil {
