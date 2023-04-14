@@ -18,8 +18,10 @@ package aws
 
 import (
 	"fmt"
+	"net"
 	"sync"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 
@@ -99,12 +101,35 @@ func (p *Provider) HandleAction(action *blueprint.Action) (*base.ActionOutput, e
 
 // OnActionErrorHook func
 func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Action, error) {
-	if aerr, ok := aout.Records[0].Error.(awserr.Error); ok {
-		// if reqErr, ok := aout.Records[0].Error.(awserr.Error).(awserr.RequestFailure); ok {
-		// 	// p.Logger.LogDebug(fmt.Sprintf("AWS: Retry Hook. AWS Service errCode:%v - StatusCode:%v - RequestID:%v", aerr.Code(), reqErr.StatusCode(), reqErr.RequestID()))
-		// }
 
-		// skip retry if:
+	// retry on net err, skip others
+	if _, ok := aout.Records[0].Error.(net.Error); ok {
+		phcontext := &hook_providers.ProviderHookContext{
+			Logger: p.Logger,
+			Store:  p.store,
+		}
+		return hook_providers.DefaultOnActionErrorHook(phcontext, aout)
+	}
+
+	// retry on some aws api errs
+	if aerr, ok := aout.Records[0].Error.(awserr.Error); ok {
+
+		// retry on allowed-retry aws http status codes
+		if reqErr, ok := aout.Records[0].Error.(awserr.Error).(awserr.RequestFailure); ok {
+			// p.Logger.LogDebug(fmt.Sprintf("AWS: Retry Hook. AWS Service errCode:%v - StatusCode:%v - RequestID:%v", aerr.Code(), reqErr.StatusCode(), reqErr.RequestID()))
+			switch reqErr.StatusCode() {
+			case 418:
+				p.Logger.LogDebug("Tea time 🫖")
+			case 429, 502, 503, 504:
+				phcontext := &hook_providers.ProviderHookContext{
+					Logger: p.Logger,
+					Store:  p.store,
+				}
+				return hook_providers.DefaultOnActionErrorHook(phcontext, aout)
+			}
+		}
+
+		// retry if:
 		switch aerr.Code() {
 		case
 			// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html
@@ -124,7 +149,7 @@ func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Acti
 			// InvalidParameterCombination
 			// InvalidParameterValue
 			// InvalidQueryParameter
-			"MalformedQueryString",
+			// "MalformedQueryString",
 			// MissingAction
 			// MissingAuthenticationToken
 			// MissingParameter
@@ -193,17 +218,17 @@ func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Acti
 			// InterfaceInUseByTrafficMirrorTarget
 			// InternetGatewayLimitExceeded
 			// InvalidAddress.Locked
-			"InvalidAddress.Malformed",
+			// "InvalidAddress.Malformed",
 			// InvalidAddress.NotFound
 			// InvalidAddressID.NotFound
 			// InvalidAffinity
 			// InvalidAllocationID.NotFound
 			// InvalidAMIAttributeItemValue
-			"InvalidAMIID.Malformed",
+			// "InvalidAMIID.Malformed",
 			// InvalidAMIID.NotFound
 			// InvalidAMIID.Unavailable
 			// InvalidAMIName.Duplicate
-			"InvalidAMIName.Malformed",
+			// "InvalidAMIName.Malformed",
 			// InvalidAssociationID.NotFound
 			// InvalidAttachment.NotFound
 			// InvalidAttachmentID.NotFound
@@ -228,129 +253,129 @@ func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Acti
 			// InvalidClientVpnActiveAssociationNotFound
 			// InvalidClientVpnEndpointId.NotFound
 			// InvalidConversionTaskId
-			"InvalidConversionTaskId.Malformed",
-			"InvalidCpuCredits.Malformed",
+			// "InvalidConversionTaskId.Malformed",
+			// "InvalidCpuCredits.Malformed",
 			// InvalidCustomerGateway.DuplicateIpAddress
-			"InvalidCustomerGatewayId.Malformed",
+			// "InvalidCustomerGatewayId.Malformed",
 			// InvalidCustomerGatewayID.NotFound
 			// InvalidCustomerGatewayState
 			// InvalidDevice.InUse
 			// InvalidDhcpOptionID.NotFound
 			// InvalidDhcpOptionsID.NotFound
-			"InvalidDhcpOptionsId.Malformed",
+			// "InvalidDhcpOptionsId.Malformed",
 			// InvalidExportTaskID.NotFound
 			// InvalidFilter
 			// InvalidFlowLogId.NotFound
 			// InvalidFormat
-			"InvalidFpgaImageID.Malformed",
+			// "InvalidFpgaImageID.Malformed",
 			// InvalidFpgaImageID.NotFound
 			// InvalidGatewayID.NotFound
 			// InvalidGroup.Duplicate
-			"InvalidGroupId.Malformed",
+			// "InvalidGroupId.Malformed",
 			// InvalidGroup.InUse
 			// InvalidGroup.NotFound
 			// InvalidGroup.Reserved
 			// InvalidHostConfiguration
 			// InvalidHostId
-			"InvalidHostID.Malformed",
-			"InvalidHostId.Malformed",
+			// "InvalidHostID.Malformed",
+			// "InvalidHostId.Malformed",
 			// InvalidHostID.NotFound
 			// InvalidHostId.NotFound
-			"InvalidHostReservationId.Malformed",
-			"InvalidHostReservationOfferingId.Malformed",
+			// "InvalidHostReservationId.Malformed",
+			// "InvalidHostReservationOfferingId.Malformed",
 			// InvalidHostState
-			"InvalidIamInstanceProfileArn.Malformed",
+			// "InvalidIamInstanceProfileArn.Malformed",
 			// InvalidID
 			// InvalidInput
 			// InvalidInstanceAttributeValue
 			// InvalidInstanceCreditSpecification.DuplicateInstanceId
 			// InvalidInstanceFamily
 			// InvalidInstanceID
-			"InvalidInstanceID.Malformed",
+			// "InvalidInstanceID.Malformed",
 			// InvalidInstanceID.NotFound
 			// InvalidInstanceID.NotLinkable
 			// InvalidInstanceState
 			// InvalidInstanceType
 			// InvalidInterface.IpAddressLimitExceeded
-			"InvalidInternetGatewayId.Malformed",
+			// "InvalidInternetGatewayId.Malformed",
 			// InvalidInternetGatewayID.NotFound
 			// InvalidIPAddress.InUse
-			"InvalidKernelId.Malformed",
+			// "InvalidKernelId.Malformed",
 			// InvalidKey.Format
 			// InvalidKeyPair.Duplicate
 			// InvalidKeyPair.Format
 			// InvalidKeyPair.NotFound
-			"InvalidCapacityReservationIdMalformedException",
+			// "InvalidCapacityReservationIdMalformedException",
 			// InvalidCapacityReservationIdNotFoundException
-			"InvalidLaunchTemplateId.Malformed",
+			// "InvalidLaunchTemplateId.Malformed",
 			// InvalidLaunchTemplateId.NotFound
 			// InvalidLaunchTemplateId.VersionNotFound
 			// InvalidLaunchTemplateName.AlreadyExistsException
-			"InvalidLaunchTemplateName.MalformedException",
+			// "InvalidLaunchTemplateName.MalformedException",
 			// InvalidLaunchTemplateName.NotFoundException
 			// InvalidManifest
 			// InvalidMaxResults
 			// InvalidNatGatewayID.NotFound
 			// InvalidNetworkAclEntry.NotFound
-			"InvalidNetworkAclId.Malformed",
+			// "InvalidNetworkAclId.Malformed",
 			// InvalidNetworkAclID.NotFound
-			"InvalidNetworkLoadBalancerArn.Malformed",
+			// "InvalidNetworkLoadBalancerArn.Malformed",
 			// InvalidNetworkLoadBalancerArn.NotFound
-			"InvalidNetworkInterfaceAttachmentId.Malformed",
+			// "InvalidNetworkInterfaceAttachmentId.Malformed",
 			// InvalidNetworkInterface.InUse
-			"InvalidNetworkInterfaceId.Malformed",
+			// "InvalidNetworkInterfaceId.Malformed",
 			// InvalidNetworkInterfaceID.NotFound
 			// InvalidNextToken
 			// InvalidOption.Conflict
 			// InvalidPermission.Duplicate
-			"InvalidPermission.Malformed",
+			// "InvalidPermission.Malformed",
 			// InvalidPermission.NotFound
 			// InvalidPlacementGroup.Duplicate
 			// InvalidPlacementGroup.InUse
 			// InvalidPlacementGroup.Unknown
 			// InvalidPolicyDocument
-			"InvalidPrefixListId.Malformed",
+			// "InvalidPrefixListId.Malformed",
 			// InvalidPrefixListId.NotFound
 			// InvalidProductInfo
 			// InvalidPurchaseToken.Expired
-			"InvalidPurchaseToken.Malformed",
+			// "InvalidPurchaseToken.Malformed",
 			// InvalidQuantity
-			"InvalidRamDiskId.Malformed",
+			// "InvalidRamDiskId.Malformed",
 			// InvalidRegion
 			// InvalidRequest
-			"InvalidReservationID.Malformed",
+			// "InvalidReservationID.Malformed",
 			// InvalidReservationID.NotFound
 			// InvalidReservedInstancesId
 			// InvalidReservedInstancesOfferingId
 			// InvalidResourceType.Unknown
 			// InvalidRoute.InvalidState
-			"InvalidRoute.Malformed",
+			// "InvalidRoute.Malformed",
 			// InvalidRoute.NotFound
-			"InvalidRouteTableId.Malformed",
+			// "InvalidRouteTableId.Malformed",
 			// InvalidRouteTableID.NotFound
 			// InvalidScheduledInstance
-			"InvalidSecurityGroupId.Malformed",
+			// "InvalidSecurityGroupId.Malformed",
 			// InvalidSecurityGroupID.NotFound
 			// InvalidSecurity.RequestHasExpired
 			// InvalidServiceName
-			"InvalidSnapshotID.Malformed",
+			// "InvalidSnapshotID.Malformed",
 			// InvalidSnapshot.InUse
 			// InvalidSnapshot.NotFound
 			// InvalidSpotDatafeed.NotFound
 			// InvalidSpotFleetRequestConfig
-			"InvalidSpotFleetRequestId.Malformed",
+			// "InvalidSpotFleetRequestId.Malformed",
 			// InvalidSpotFleetRequestId.NotFound
-			"InvalidSpotInstanceRequestID.Malformed",
+			// "InvalidSpotInstanceRequestID.Malformed",
 			// InvalidSpotInstanceRequestID.NotFound
 			// InvalidState
 			// InvalidStateTransition
 			// InvalidSubnet
 			// InvalidSubnet.Conflict
-			"InvalidSubnetID.Malformed",
+			// "InvalidSubnetID.Malformed",
 			// InvalidSubnetID.NotFound
 			// InvalidSubnetId.NotFound
 			// InvalidSubnet.Range
-			"InvalidTagKey.Malformed",
+			// "InvalidTagKey.Malformed",
 			// InvalidTargetArn.Unknown
 			// InvalidTenancy
 			// InvalidTime
@@ -358,21 +383,21 @@ func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Acti
 			// InvalidTrafficMirrorFilterRuleNotFound
 			// InvalidTrafficMirrorSessionNotFound
 			// InvalidTrafficMirrorTargetNoFound
-			"InvalidUserID.Malformed",
+			// "InvalidUserID.Malformed",
 			// InvalidVolumeID.Duplicate
-			"InvalidVolumeID.Malformed",
+			// "InvalidVolumeID.Malformed",
 			// InvalidVolumeID.ZoneMismatch
 			// InvalidVolume.NotFound
 			// InvalidVolume.ZoneMismatch
-			"InvalidVpcEndpointId.Malformed",
+			// "InvalidVpcEndpointId.Malformed",
 			// InvalidVpcEndpoint.NotFound
 			// InvalidVpcEndpointId.NotFound
 			// InvalidVpcEndpointService.NotFound
 			// InvalidVpcEndpointServiceId.NotFound
 			// InvalidVpcEndpointType
-			"InvalidVpcID.Malformed",
+			// "InvalidVpcID.Malformed",
 			// InvalidVpcID.NotFound
-			"InvalidVpcPeeringConnectionId.Malformed",
+			// "InvalidVpcPeeringConnectionId.Malformed",
 			// InvalidVpcPeeringConnectionID.NotFound
 			// InvalidVpcPeeringConnectionState.DnsHostnamesDisabled
 			// InvalidVpcRange
@@ -399,7 +424,7 @@ func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Acti
 			// MaxTemplateVersionLimitExceeded
 			// MissingInput
 			// NatGatewayLimitExceeded
-			"NatGatewayMalformed",
+			// "NatGatewayMalformed",
 			// NatGatewayNotFound
 			// NetworkAclEntryAlreadyExists
 			// NetworkAclEntryLimitExceeded
@@ -482,27 +507,26 @@ func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Acti
 			// VpnGatewayLimitExceeded
 			// ZonesMismatched
 			// ---- Server error codes
-			// InsufficientAddressCapacity
-			// InsufficientCapacity
-			// InsufficientInstanceCapacity
-			// InsufficientHostCapacity
-			// InsufficientReservedInstanceCapacity
-			// InsufficientVolumeCapacity
-			// InternalError
-			// InternalFailure
-			// RequestLimitExceeded
-			// ServiceUnavailable
-			// Unavailable
+			"InsufficientAddressCapacity",
+			"InsufficientCapacity",
+			"InsufficientInstanceCapacity",
+			"InsufficientHostCapacity",
+			"InsufficientReservedInstanceCapacity",
+			"InsufficientVolumeCapacity",
+			"InternalError",
+			"InternalFailure",
+			"RequestLimitExceeded",
+			"ServiceUnavailable",
+			"Unavailable",
 			"hey!, hi dev! :)":
-			p.Logger.LogDebug("Malformed user query, skip retry")
-			return nil, nil
+			phcontext := &hook_providers.ProviderHookContext{
+				Logger: p.Logger,
+				Store:  p.store,
+			}
+			return hook_providers.DefaultOnActionErrorHook(phcontext, aout)
 		}
 	}
-	phcontext := &hook_providers.ProviderHookContext{
-		Logger: p.Logger,
-		Store:  p.store,
-	}
-	return hook_providers.DefaultOnActionErrorHook(phcontext, aout)
+	return nil, nil
 }
 
 func (p *Provider) touchSession() error {
@@ -519,6 +543,7 @@ func (p *Provider) touchSession() error {
 	// NewSessionWithOptions + SharedConfigState + SharedConfigEnable = use
 	// credentials and config from ~/.aws/config and ~/.aws/credentials
 	sess, serr := session.NewSessionWithOptions(session.Options{
+		Config:            *aws.NewConfig().WithMaxRetries(0),
 		SharedConfigState: session.SharedConfigEnable,
 	})
 	if serr != nil {
