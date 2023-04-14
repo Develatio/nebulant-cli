@@ -28,9 +28,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type defineVarsParametersVar struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 type defineVarsParameters struct {
-	Vars  map[string]string `json:"vars"`
-	Files []string          `json:"files"`
+	Vars  []*defineVarsParametersVar `json:"vars"`
+	Files []string                   `json:"files"`
 }
 
 type SleepParameters struct {
@@ -393,8 +398,9 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	for varname := range params.Vars {
-		varvalue := params.Vars[varname]
+	for _, v := range params.Vars {
+		varname := v.Key
+		varvalue := v.Value
 		ctx.Logger.LogInfo("Setting var " + varname)
 		err := ctx.Store.Interpolate(&varvalue)
 		if err != nil {
