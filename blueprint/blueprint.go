@@ -354,6 +354,7 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 		// return nil, fmt.Errorf("no first action found in blueprint")
 	}
 
+	// parse next and parents
 	for _, action := range irb.Actions {
 		// empty parameters
 		if len(action.Parameters) <= 0 {
@@ -408,9 +409,17 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 		}
 	}
 
+	// parse end cajitas
+	for _, action := range irb.Actions {
+		action.NextAction.NextOk = replaceEndActions(action.NextAction.NextOk, true)
+		action.NextAction.NextOkTrue = replaceEndActions(action.NextAction.NextOkTrue, true)
+		action.NextAction.NextOkFalse = replaceEndActions(action.NextAction.NextOkFalse, true)
+		action.NextAction.NextKo = replaceEndActions(action.NextAction.NextKo, false)
+	}
+
 	// prepare for join threads
 	for _, action := range irb.JoinThreadPoints {
-		knowParents := buildParentPaths(action)
+		knowParents := buildDirectAscendants(action)
 		action.KnowParentIDs = knowParents
 	}
 
@@ -418,7 +427,7 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	for _, action := range irb.Actions {
 	L1ok:
 		for _, ca := range action.NextAction.NextOk {
-			knowParents := buildParentPaths(ca)
+			knowParents := buildDirectAscendants(ca)
 			if _, exists := knowParents[action.ActionID]; exists {
 				action.NextAction.NextOkLoop = true
 				break L1ok
@@ -426,7 +435,7 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 		}
 	L2ko:
 		for _, ca := range action.NextAction.NextKo {
-			knowParents := buildParentPaths(ca)
+			knowParents := buildDirectAscendants(ca)
 			if _, exists := knowParents[action.ActionID]; exists {
 				action.NextAction.NextKoLoop = true
 				break L2ko
@@ -441,7 +450,9 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	return irb, nil
 }
 
-func buildParentPaths(action *Action) map[string]bool {
+// buildDirectAscendants func
+// extract all degrees of direct ascendant
+func buildDirectAscendants(action *Action) map[string]bool {
 	knowParents := make(map[string]bool)
 	queueParents := action.Parents
 	var processingParents []*Action
@@ -464,6 +475,22 @@ func buildParentPaths(action *Action) map[string]bool {
 	}
 
 	return knowParents
+}
+
+func replaceEndActions(actions []*Action, OK bool) []*Action {
+	var nextActions []*Action
+	for _, action := range actions {
+		if action.ActionName == "end" && action.Provider == "generic" {
+			if OK {
+				nextActions = append(nextActions, action.NextAction.NextOk...)
+				continue
+			}
+			nextActions = append(nextActions, action.NextAction.NextKo...)
+			continue
+		}
+		nextActions = append(nextActions, action)
+	}
+	return nextActions
 }
 
 func parseNextActions(okko json.RawMessage, actions map[string]*Action) ([]*Action, []*Action, []*Action, error) {
@@ -492,11 +519,13 @@ func parseNextActions(okko json.RawMessage, actions map[string]*Action) ([]*Acti
 	var normalActions []string
 	var conditionals *ConditionalNextActions = new(ConditionalNextActions)
 
+	// Parse non-conditional next actions
+
 	// for ["id", "id2", ...] format
 	err = json.Unmarshal(okko, &normalActions)
 	if err == nil {
-		for _, oneID := range normalActions {
-			action := actions[oneID]
+		for _, nextID := range normalActions {
+			action := actions[nextID]
 			if action == nil {
 				return nil, nil, nil, fmt.Errorf("reference to unknown action")
 			}
@@ -505,6 +534,8 @@ func parseNextActions(okko json.RawMessage, actions map[string]*Action) ([]*Acti
 		return nextActions, nextTrueActions, nextFalseActions, nil
 	}
 
+	// Parse conditional next actions
+
 	// for {"true": ["id", "id2", ... ], "false": ["id", "id2", ... ]} format
 	err = util.UnmarshalValidJSON(okko, conditionals)
 	if err != nil {
@@ -512,8 +543,8 @@ func parseNextActions(okko json.RawMessage, actions map[string]*Action) ([]*Acti
 	}
 
 	if len(conditionals.True) > 0 {
-		for _, oneID := range conditionals.True {
-			action := actions[oneID]
+		for _, nextTrueID := range conditionals.True {
+			action := actions[nextTrueID]
 			if action == nil {
 				return nil, nil, nil, fmt.Errorf("reference to unknown action")
 			}
@@ -523,8 +554,8 @@ func parseNextActions(okko json.RawMessage, actions map[string]*Action) ([]*Acti
 	}
 
 	if len(conditionals.False) > 0 {
-		for _, oneID := range conditionals.False {
-			action := actions[oneID]
+		for _, nextFalseID := range conditionals.False {
+			action := actions[nextFalseID]
 			if action == nil {
 				return nil, nil, nil, fmt.Errorf("reference to unknown action")
 			}
