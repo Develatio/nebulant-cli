@@ -189,6 +189,14 @@ func (s *Store) SetPrivateVar(varname string, value interface{}) {
 }
 
 // GetProvider func
+func (s *Store) ExistsRefName(refname string) bool {
+	if _, exists := s.recordsByRefName[refname]; exists {
+		return true
+	}
+	return false
+}
+
+// GetProvider func
 func (s *Store) GetByRefName(refname string) (*base.StorageRecord, error) {
 	if record, exists := s.recordsByRefName[refname]; exists {
 		return record, nil

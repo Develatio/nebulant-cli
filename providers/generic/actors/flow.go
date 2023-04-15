@@ -17,7 +17,6 @@
 package actors
 
 import (
-	"bufio"
 	"fmt"
 	"strconv"
 	"strings"
@@ -25,7 +24,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/joho/godotenv"
 )
@@ -49,9 +47,10 @@ type defineVarsParametersVar struct {
 	AskAtRuntime *bool                            `json:"ask_at_runtime"`
 	Key          string                           `json:"key" validate:"required"`
 	Value        interface{}                      `json:"value"`
-	Type         VarType                          `json:"type" validate:"required"`
+	Type         *VarType                         `json:"type"`
 	Options      []defineVarsParametersVarOptions `json:"options"`
 	Required     bool                             `json:"required"`
+	Stack        *bool                            `json:"stack"`
 }
 
 type defineVarsParameters struct {
@@ -416,42 +415,31 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	// validate var type/value
+	// TODO: ask at runtime and store values:
+	//  * Unmarshall
+	//  * fill
+	//  * Marshall
 	for _, v := range params.Vars {
+		if v.Type == nil {
+			v.Type = new(VarType)
+			*v.Type = VarTypeString
+		}
 		// test type
-		switch v.Type {
-		case VarTypeBool, VarTypeInt, VarTypeSelectableStatic, VarTypeSelectableVariable, VarTypeString:
-			//ok
+		switch *v.Type {
+		case VarTypeSelectableStatic, VarTypeSelectableVariable, VarTypeString:
+			if _, isString := v.Value.(string); !isString {
+				return nil, fmt.Errorf("Var type string mismatch var value for key " + v.Key)
+			}
+		case VarTypeBool:
+			if _, isBool := v.Value.(bool); !isBool {
+				return nil, fmt.Errorf("Var type bool mismatch var value for key " + v.Key)
+			}
+		case VarTypeInt:
+			if _, isInt := v.Value.(int); !isInt {
+				return nil, fmt.Errorf("Var type int mismatch var value for key " + v.Key)
+			}
 		default:
-			return nil, fmt.Errorf("Unknown vartype " + v.Key)
-		}
-
-		// test nil/required
-		if v.Value == nil {
-			if v.Required && (v.AskAtRuntime != nil && !*v.AskAtRuntime) {
-				return nil, fmt.Errorf("Cannot process required empty var " + v.Key)
-			}
-		}
-
-		// test string
-		if _, isString := v.Value.(string); isString {
-			switch v.Type {
-			case VarTypeString, VarTypeSelectableStatic, VarTypeSelectableVariable:
-				continue
-			default:
-				return nil, fmt.Errorf("Invalid var type string for " + v.Key)
-			}
-		}
-
-		// test bool
-		_, isBool := v.Value.(bool)
-		if isBool && v.Type != VarTypeBool {
-			return nil, fmt.Errorf("Invalid var type bool for " + v.Key)
-		}
-
-		// test int
-		_, isInt := v.Value.(int)
-		if isInt && v.Type != VarTypeInt {
-			return nil, fmt.Errorf("Invalid var type int for " + v.Key)
+			return nil, fmt.Errorf("Unknown vartype for key " + v.Key)
 		}
 	}
 
@@ -460,60 +448,50 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	for _, v := range params.Vars {
+		var recordvalue interface{}
 		varname := v.Key
 		ctx.Logger.LogInfo("Setting var " + varname)
 
-		// nil value allowed, store nil and continue to next var
-		if v.Value == nil {
-			if !v.Required && (v.AskAtRuntime == nil || (v.AskAtRuntime != nil && !*v.AskAtRuntime)) {
-				// store nil :shrug:
-				err := ctx.Store.Insert(&base.StorageRecord{
-					RefName: varname,
-					Aout:    nil,
-					Value:   nil,
-					Action:  ctx.Action,
-				}, ctx.Action.Provider)
-				if err != nil {
-					return nil, err
-				}
-				continue
-			}
-		}
-
-		switch v.Type {
+		switch *v.Type {
 		case VarTypeString:
-			var varvalue string
-			if v.Value == nil && v.AskAtRuntime != nil && *v.AskAtRuntime {
-				reader := bufio.NewReader(term.Stdin)
-				fmt.Print("Enter text: ")
-				varvalue, _ = reader.ReadString('\n')
-			} else {
-				varvalue = v.Value.(string)
-			}
-
+			varvalue := v.Value.(string)
 			err := ctx.Store.Interpolate(&varvalue)
 			if err != nil {
 				return nil, err
 			}
 			varvalue = strings.Replace(varvalue, "\\{", "{", -1)
 			varvalue = strings.Replace(varvalue, "\\}", "}", -1)
-			err = ctx.Store.Insert(&base.StorageRecord{
-				RefName: varname,
-				Aout:    nil,
-				Value:   varvalue,
-				Action:  ctx.Action,
-			}, ctx.Action.Provider)
-			if err != nil {
-				return nil, err
-			}
-			continue
+			recordvalue = varvalue
+		default:
+			recordvalue = v.Value
+		}
 
+		if v.Stack != nil && *v.Stack {
+			var newstackitems []interface{}
+			if ctx.Store.ExistsRefName(varname) {
+				sr, err := ctx.Store.GetByRefName(varname)
+				if err != nil {
+					return nil, err
+				}
+
+				if _, ok := sr.Value.(*base.StorageRecordStack); ok {
+					newstackitems = append(newstackitems, recordvalue)
+					newstackitems = append(newstackitems, sr.Value.(*base.StorageRecordStack).Items...)
+				} else {
+					newstackitems = []interface{}{recordvalue, sr.Value}
+				}
+			} else {
+				newstackitems = []interface{}{recordvalue}
+			}
+			recordvalue = &base.StorageRecordStack{
+				Items: newstackitems,
+			}
 		}
 
 		err := ctx.Store.Insert(&base.StorageRecord{
 			RefName: varname,
 			Aout:    nil,
-			Value:   v.Value,
+			Value:   recordvalue,
 			Action:  ctx.Action,
 		}, ctx.Action.Provider)
 		if err != nil {
