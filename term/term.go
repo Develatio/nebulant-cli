@@ -27,17 +27,24 @@ import (
 
 var Reset string = "\033[0m"
 var Red string = "\033[31m"
+var BGRed string = "\033[41m"
+var BGBrightRed string = "\033[101m"
 
 var Green string = "\033[32m"
 var Yellow string = "\033[33m"
+var BGYellow string = "\033[43m"
+var BGBrightYellow string = "\033[103m"
 
 var Blue string = "\033[34m"
-var Purple string = "\033[35m"
+var Black string = "\033[30m"
+var BGBlack string = "\033[40m"
+var Magenta string = "\033[35m"
+var BGBrightMagenta string = "\033[105m"
 
 var Cyan string = "\033[36m"
 var Gray string = "\033[97m"
 
-// var White string = "\033[97m"
+var White string = "\033[97m"
 
 var Bold string = "\033[1m"
 
@@ -133,7 +140,7 @@ func InitTerm() {
 		Green = ""
 		Yellow = ""
 		Blue = ""
-		Purple = ""
+		Magenta = ""
 		Cyan = ""
 		Gray = ""
 		// White = ""
