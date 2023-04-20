@@ -140,6 +140,9 @@ func InitTerm() {
 		Bold = ""
 	} else {
 		log.SetOutput(Stdout)
+		if !config.DEBUG {
+			log.SetFlags(0)
+		}
 	}
 	//
 	// uses Stdout (term.Stdout in os.go)
