@@ -28,21 +28,21 @@ import (
 var counter int = 0
 
 var colormap map[int]string = map[int]string{
-	CriticalLevel: term.Red,
-	ErrorLevel:    term.Red,
-	WarningLevel:  term.Yellow,
-	InfoLevel:     term.Blue,
-	DebugLevel:    term.Purple,
+	CriticalLevel: term.BGRed + term.White,
+	ErrorLevel:    term.BGRed + term.White,
+	WarningLevel:  term.BGYellow + term.Black,
+	InfoLevel:     term.BGBlack + term.Cyan,
+	DebugLevel:    term.BGBrightMagenta + term.Black,
 	NotsetLevel:   term.Blue,
 }
 
 var prefxmap map[int]string = map[int]string{
-	CriticalLevel: "[😱] ",
-	ErrorLevel:    "[🚨] ",
-	WarningLevel:  "|🚧| ",
-	InfoLevel:     "(✔) ",
-	DebugLevel:    "(🔧) ",
-	NotsetLevel:   "(·) ",
+	CriticalLevel: " 😱 CRITICAL ERROR ",
+	ErrorLevel:    " 🚨 ERROR ",
+	WarningLevel:  " 🚧 WARNING ",
+	InfoLevel:     "(✔)",
+	DebugLevel:    " 🔧 DEBUG",
+	NotsetLevel:   "( · ) ",
 }
 
 // ConsoleLogger struct
@@ -56,8 +56,12 @@ func (c *ConsoleLogger) printMessage(fback *BusData) bool {
 		return false
 	}
 
+	prefx := prefxmap[*fback.LogLevel]
+	if config.DEBUG {
+		prefx = prefx + " " + strconv.Itoa(*fback.LogLevel) + " "
+	}
+
 	color := ""
-	prefx := strconv.Itoa(*fback.LogLevel) + prefxmap[*fback.LogLevel]
 	if c.colors {
 		color = colormap[*fback.LogLevel]
 	}
@@ -78,9 +82,9 @@ func (c *ConsoleLogger) printMessage(fback *BusData) bool {
 			// because log.SetOutput(Stdout)
 			if config.DEBUG {
 				counter++
-				log.Println(color + prefx + term.Reset + fmt.Sprintf("[%v] %v", counter, *fback.M) + term.Reset)
+				log.Println(color + prefx + term.Reset + " " + fmt.Sprintf("[%v] %v", counter, *fback.M) + term.Reset)
 			} else {
-				log.Println(color + prefx + term.Reset + *fback.M + term.Reset)
+				log.Println(color + prefx + term.Reset + " " + *fback.M + term.Reset)
 			}
 		} else {
 			log.Println(color + prefx + term.Reset + "" + term.Reset)

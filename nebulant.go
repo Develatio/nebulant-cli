@@ -146,7 +146,7 @@ func main() {
 	// Init Term
 	term.InitTerm()
 
-	_, err = term.Println(term.Purple+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Cyan+"develat.io"+term.Reset)
+	_, err = term.Println(term.Magenta+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Cyan+"develat.io"+term.Reset)
 	if err != nil {
 		fmt.Println("Nebulant CLI - A cloud builder by develat.io")
 	}
