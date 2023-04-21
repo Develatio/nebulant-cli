@@ -19,7 +19,6 @@ package cast
 import (
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/term"
@@ -27,28 +26,18 @@ import (
 
 var counter int = 0
 
-var colormap map[int]string = map[int]string{
-	CriticalLevel: term.BGRed + term.White,
-	ErrorLevel:    term.BGRed + term.White,
-	WarningLevel:  term.BGYellow + term.Black,
-	InfoLevel:     term.BGBlack + term.Cyan,
-	DebugLevel:    term.BGBrightMagenta + term.Black,
-	NotsetLevel:   term.Blue,
-}
-
 var prefxmap map[int]string = map[int]string{
-	CriticalLevel: " 😱 CRITICAL ERROR ",
-	ErrorLevel:    " 🚨 ERROR ",
-	WarningLevel:  " 🚧 WARNING ",
-	InfoLevel:     "(✔)",
-	DebugLevel:    " 🔧 DEBUG",
-	NotsetLevel:   "( · ) ",
+	CriticalLevel: "!CRITICAL ",
+	ErrorLevel:    "!ERROR ",
+	WarningLevel:  "!WARNING ",
+	InfoLevel:     "",
+	DebugLevel:    "DEBUG ",
+	NotsetLevel:   "",
 }
 
 // ConsoleLogger struct
 type ConsoleLogger struct {
-	fLink  *BusConsumerLink
-	colors bool
+	fLink *BusConsumerLink
 }
 
 func (c *ConsoleLogger) printMessage(fback *BusData) bool {
@@ -56,22 +45,12 @@ func (c *ConsoleLogger) printMessage(fback *BusData) bool {
 		return false
 	}
 
-	prefx := prefxmap[*fback.LogLevel]
-	if config.DEBUG {
-		prefx = prefx + " " + strconv.Itoa(*fback.LogLevel) + " "
-	}
-
-	color := ""
-	if c.colors {
-		color = colormap[*fback.LogLevel]
-	}
-
 	if fback.Raw {
 		var err error
 		if fback.M != nil {
-			_, err = term.Print(color + *fback.M + term.Reset)
+			_, err = term.Print(term.Reset + *fback.M + term.Reset)
 		} else {
-			_, err = term.Print(color + "" + term.Reset)
+			_, err = term.Print(term.Reset)
 		}
 		if err != nil {
 			return false
@@ -82,12 +61,12 @@ func (c *ConsoleLogger) printMessage(fback *BusData) bool {
 			// because log.SetOutput(Stdout)
 			if config.DEBUG {
 				counter++
-				log.Println(color + prefx + term.Reset + " " + fmt.Sprintf("[%v] %v", counter, *fback.M) + term.Reset)
+				log.Println(prefxmap[*fback.LogLevel] + " " + fmt.Sprintf("[%v] %v", counter, *fback.M) + term.Reset)
 			} else {
-				log.Println(color + prefx + term.Reset + " " + *fback.M + term.Reset)
+				log.Println(prefxmap[*fback.LogLevel] + " " + *fback.M + term.Reset)
 			}
 		} else {
-			log.Println(color + prefx + term.Reset + "" + term.Reset)
+			log.Println(prefxmap[*fback.LogLevel] + "" + term.Reset)
 		}
 	}
 	return false
@@ -115,6 +94,17 @@ L:
 	}
 }
 
+func (c *ConsoleLogger) setDefaultTheme() {
+	prefxmap = map[int]string{
+		CriticalLevel: " " + term.BGRed + term.White + " 😱 CRITICAL ERROR " + term.Reset,
+		ErrorLevel:    " " + term.BGRed + term.White + " 🚨 ERROR " + term.Reset,
+		WarningLevel:  " " + term.BGYellow + term.Black + " 🚧 WARNING " + term.Reset,
+		InfoLevel:     " " + term.Blue + "»" + term.Magenta + "»" + term.Reset,
+		DebugLevel:    " " + term.BGBrightMagenta + term.Black + " 🔧 DEBUG " + term.Reset,
+		NotsetLevel:   "( · ) ",
+	}
+}
+
 // InitConsoleLogger func
 func InitConsoleLogger() {
 	fLink := &BusConsumerLink{
@@ -122,7 +112,8 @@ func InitConsoleLogger() {
 		LogChan:    make(chan *BusData, 100),
 		CommonChan: make(chan *BusData, 100),
 	}
-	clogger := &ConsoleLogger{fLink: fLink, colors: !*config.DisableColorFlag}
+	clogger := &ConsoleLogger{fLink: fLink}
+	clogger.setDefaultTheme()
 	SBus.connect <- fLink
 	SBus.castWaiter.Add(1)
 	go clogger.readCastBus()

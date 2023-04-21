@@ -31,17 +31,22 @@ var BGRed string = "\033[41m"
 var BGBrightRed string = "\033[101m"
 
 var Green string = "\033[32m"
+var BGBrightGreen string = "\033[102m"
 var Yellow string = "\033[33m"
 var BGYellow string = "\033[43m"
 var BGBrightYellow string = "\033[103m"
 
 var Blue string = "\033[34m"
+var BGBlue string = "\033[44m"
 var Black string = "\033[30m"
 var BGBlack string = "\033[40m"
 var Magenta string = "\033[35m"
+var BGMagenta string = "\033[45m"
 var BGBrightMagenta string = "\033[105m"
 
 var Cyan string = "\033[36m"
+var BGCyan string = "\033[46m"
+
 var Gray string = "\033[97m"
 
 var White string = "\033[97m"
@@ -135,21 +140,31 @@ func InitTerm() {
 	if *config.DisableColorFlag {
 		Stdout = os.Stdout
 		Stderr = os.Stderr
-		Reset = ""
+		// Reset = ""
 		Red = ""
+		BGRed = ""
+		BGBrightRed = ""
 		Green = ""
+		BGBrightGreen = ""
 		Yellow = ""
+		BGYellow = ""
+		BGBrightYellow = ""
 		Blue = ""
+		Black = ""
+		BGBlack = ""
 		Magenta = ""
+		BGBrightMagenta = ""
 		Cyan = ""
 		Gray = ""
-		// White = ""
+		White = ""
 		Bold = ""
+		// CursorUp = ""
+		// EraseLine = ""
 	} else {
 		log.SetOutput(Stdout)
-		if !config.DEBUG {
-			log.SetFlags(0)
-		}
+	}
+	if !config.DEBUG {
+		log.SetFlags(0)
 	}
 	//
 	// uses Stdout (term.Stdout in os.go)
