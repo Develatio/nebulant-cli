@@ -313,11 +313,15 @@ L:
 				continue
 			}
 
+			debugmsg := ""
+			if config.DEBUG {
+				debugmsg = " [" + s.CurrentAction.ActionID + "]"
+			}
 			// Running action Feedback
 			if s.CurrentAction.Output != nil {
-				s.logger.LogInfo(s.lpfx() + "Running [" + s.CurrentAction.ActionName + " => " + *s.CurrentAction.Output + "] [" + s.CurrentAction.ActionID + "] ...")
+				s.logger.LogInfo(s.lpfx() + "Running [" + s.CurrentAction.ActionName + " => " + *s.CurrentAction.Output + "]" + debugmsg + " ...")
 			} else {
-				s.logger.LogInfo(s.lpfx() + "Running [" + s.CurrentAction.ActionName + "] [" + s.CurrentAction.ActionID + "] ...")
+				s.logger.LogInfo(s.lpfx() + "Running [" + s.CurrentAction.ActionName + "]" + debugmsg + " ...")
 			}
 
 			// Running action comunication to manager
