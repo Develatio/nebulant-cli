@@ -77,6 +77,9 @@ func (c *ConsoleLogger) readCastBus() {
 	power := true
 L:
 	for {
+		if !power && len(c.fLink.LogChan) <= 0 {
+			break L
+		}
 		select {
 		case fback := <-c.fLink.CommonChan:
 			if fback.TypeID == BusDataTypeEOF {
@@ -85,11 +88,6 @@ L:
 			}
 		case fback := <-c.fLink.LogChan:
 			c.printMessage(fback)
-		default:
-			// perform exit
-			if !power {
-				break L
-			}
 		}
 	}
 }
