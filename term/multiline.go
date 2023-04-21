@@ -1,15 +1,52 @@
 package term
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/schollz/progressbar/v3"
+	"golang.org/x/crypto/ssh/terminal"
 )
+
+type stdinEcoWriter struct {
+	// where to write cumulated eco
+	stdout io.WriteCloser
+	p      []byte
+}
+
+func (s *stdinEcoWriter) Write(p []byte) (int, error) {
+	s.p = append(s.p, p...)
+	return s.stdout.Write(s.p)
+}
+
+type alwaysReturnWrapWritCloser struct {
+	stdout io.WriteCloser
+}
+
+func (a *alwaysReturnWrapWritCloser) Write(p []byte) (int, error) {
+	if bytes.HasSuffix(p, []byte("\r")) {
+		// 10 == ascii line feed
+		p[len(p)-1] = 10
+	}
+	if bytes.HasPrefix(p, []byte("\r")) {
+		p = p[1:]
+	}
+	if !bytes.HasSuffix(p, []byte("\n")) {
+		// 10 == ascii line feed
+		p = append(p, 10)
+	}
+	return a.stdout.Write(p)
+}
+
+func (a *alwaysReturnWrapWritCloser) Close() error {
+	return a.stdout.Close()
+}
 
 type oneLineWriteCloser struct {
 	MainStdout *MultilineStdout
@@ -34,27 +71,6 @@ func (s *oneLineWriteCloser) Close() error {
 		return err
 	}
 	return s.MainStdout.DeleteLine(s)
-}
-
-type alwaysReturnWrapWritCloser struct {
-	stdout io.WriteCloser
-}
-
-func (a *alwaysReturnWrapWritCloser) Write(p []byte) (int, error) {
-	if bytes.HasSuffix(p, []byte("\r")) {
-		p[len(p)-1] = 10
-	}
-	if bytes.HasPrefix(p, []byte("\r")) {
-		p = p[1:]
-	}
-	if !bytes.HasSuffix(p, []byte("\n")) {
-		p = append(p, 10)
-	}
-	return a.stdout.Write(p)
-}
-
-func (a *alwaysReturnWrapWritCloser) Close() error {
-	return a.stdout.Close()
 }
 
 func (s *oneLineWriteCloser) GetProgressBar(max int64, description string, showbytes bool) (*progressbar.ProgressBar, error) {
@@ -103,6 +119,47 @@ func (m *oneLineWriteCloser) Print(s string) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (m *oneLineWriteCloser) Scanln(prompt string, a ...any) (n int, err error) {
+	oldState, err := terminal.MakeRaw(0)
+	if err != nil {
+		panic(err)
+	}
+	defer terminal.Restore(0, oldState)
+	n, err = m.MainStdout.Write([]byte(HideCursor))
+	if err != nil {
+		return n, err
+	}
+	defer m.MainStdout.Write([]byte(ShowCursor)) //#nosec G104 -- Unhandle is OK here
+
+	var buff bytes.Buffer
+	eco := &stdinEcoWriter{stdout: m}
+	eco.Write([]byte(prompt))
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		char, size, err := reader.ReadRune()
+		if err != nil {
+			return size, err
+		}
+
+		// ascii codes:
+		// 127 for del
+		// 3 for ^C
+		// -1 for eof
+		if char == 13 || char == -1 {
+			fmt.Fscan(bytes.NewReader(buff.Bytes()), a...)
+			return 0, nil
+		}
+		eco.Write([]byte(string(char)))
+		buff.WriteRune(char)
+		// var buf []byte
+		// utf8.EncodeRune(buf, char)
+		// buff.Write(buf)
+
+	}
+	return 0, io.EOF
 }
 
 type MultilineStdout struct {

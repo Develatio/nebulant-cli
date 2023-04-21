@@ -55,6 +55,9 @@ var Bold string = "\033[1m"
 
 var CursorUp string = "\033[1F"
 
+var HideCursor string = "\033[?25l"
+var ShowCursor string = "\033[?25h"
+
 var EraseLine string = "\033[K"
 
 var mls *MultilineStdout = nil
@@ -90,6 +93,14 @@ func OpenStatusBar() *oneLineWriteCloser {
 	}
 	statusBarLine = mls.AppendLine()
 	return statusBarLine
+}
+
+func AppendLine() *oneLineWriteCloser {
+	return mls.AppendLine()
+}
+
+func DeleteLine(line *oneLineWriteCloser) error {
+	return mls.DeleteLine(line)
 }
 
 func OpenMultilineStdout() {
