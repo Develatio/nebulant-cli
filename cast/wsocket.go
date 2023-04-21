@@ -162,6 +162,9 @@ func (c *WSocketLogger) readCastBus() {
 	power := true
 
 	for {
+		if !power && len(c.fLink.LogChan) <= 0 {
+			return
+		}
 		select {
 		case fback, ok := <-c.fLink.CommonChan:
 			// No timeout for msg
@@ -256,10 +259,6 @@ func (c *WSocketLogger) readCastBus() {
 				return
 			}
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return
-			}
-		default:
-			if !power {
 				return
 			}
 		}
