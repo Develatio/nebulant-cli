@@ -17,13 +17,16 @@
 package actors
 
 import (
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/joho/godotenv"
 )
@@ -51,6 +54,46 @@ type defineVarsParametersVar struct {
 	Options      []defineVarsParametersVarOptions `json:"options"`
 	Required     bool                             `json:"required"`
 	Stack        *bool                            `json:"stack"`
+}
+
+func (d *defineVarsParametersVar) askForValue() error {
+	// reflect.ValueOf(d.Value).IsNil()
+	v := reflect.ValueOf(d.Value)
+	isEmpty := v.Kind() == reflect.Ptr && v.IsNil()
+	isNotValid := !v.IsValid()
+	if d.AskAtRuntime != nil && (isEmpty || isNotValid) {
+		lin := term.AppendLine()
+		var err error
+		switch *d.Type {
+		case VarTypeString:
+			var vv string
+			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", &vv)
+			if err != nil {
+				return err
+			}
+			d.Value = vv
+		case VarTypeInt:
+			var vv int
+			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", &vv)
+			if err != nil {
+				return err
+			}
+			d.Value = vv
+		case VarTypeBool, VarTypeSelectableStatic, VarTypeSelectableVariable:
+			return fmt.Errorf("var type not supported yet")
+		default:
+			return fmt.Errorf("unknown var type")
+		}
+		// _, err = lin.Write([]byte("var setted to " + first))
+		// if err != nil {
+		// 	return err
+		// }
+		err = term.DeleteLine(lin)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type defineVarsParameters struct {
@@ -424,19 +467,25 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 			v.Type = new(VarType)
 			*v.Type = VarTypeString
 		}
+		if ctx.Rehearsal {
+			err := v.askForValue()
+			if err != nil {
+				return nil, err
+			}
+		}
 		// test type
 		switch *v.Type {
 		case VarTypeSelectableStatic, VarTypeSelectableVariable, VarTypeString:
 			if _, isString := v.Value.(string); !isString {
-				return nil, fmt.Errorf("Var type string mismatch var value for key " + v.Key)
+				return nil, fmt.Errorf("Var type string mismatch for " + v.Key)
 			}
 		case VarTypeBool:
 			if _, isBool := v.Value.(bool); !isBool {
-				return nil, fmt.Errorf("Var type bool mismatch var value for key " + v.Key)
+				return nil, fmt.Errorf("Var type bool mismatch for " + v.Key)
 			}
 		case VarTypeInt:
 			if _, isInt := v.Value.(int); !isInt {
-				return nil, fmt.Errorf("Var type int mismatch var value for key " + v.Key)
+				return nil, fmt.Errorf("Var type int mismatch for " + v.Key)
 			}
 		default:
 			return nil, fmt.Errorf("Unknown vartype for key " + v.Key)
@@ -444,10 +493,21 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	if ctx.Rehearsal {
+		jj, err := json.Marshal(params)
+		if err != nil {
+			return nil, err
+		}
+		ctx.Action.Parameters = jj
 		return nil, nil
 	}
 
 	for _, v := range params.Vars {
+		// ask for value as needed
+		err := v.askForValue()
+		if err != nil {
+			return nil, err
+		}
+
 		var recordvalue interface{}
 		varname := v.Key
 		ctx.Logger.LogInfo("Setting var " + varname)
@@ -488,7 +548,7 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 			}
 		}
 
-		err := ctx.Store.Insert(&base.StorageRecord{
+		err = ctx.Store.Insert(&base.StorageRecord{
 			RefName: varname,
 			Aout:    nil,
 			Value:   recordvalue,

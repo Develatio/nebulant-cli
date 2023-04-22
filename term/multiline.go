@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/develatio/nebulant-cli/config"
@@ -18,11 +19,59 @@ type stdinEcoWriter struct {
 	// where to write cumulated eco
 	stdout io.WriteCloser
 	p      []byte
+	close  chan bool
+	mu     sync.Mutex
+	tick   bool
 }
 
 func (s *stdinEcoWriter) Write(p []byte) (int, error) {
 	s.p = append(s.p, p...)
-	return s.stdout.Write(s.p)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.eco(true)
+	return 0, nil
+	// return s.stdout.Write(spc)
+}
+
+func (s *stdinEcoWriter) eco(tick bool) {
+	var spc []byte
+	if tick && s.tick {
+		spc = append(s.p, []byte(Blue+"\u2588"+Reset)...)
+		s.tick = !s.tick
+	} else if tick && !s.tick {
+		spc = append(s.p, []byte(Magenta+"\u2588"+Reset)...)
+		s.tick = !s.tick
+	} else {
+		spc = append(s.p, []byte(Magenta+" "+Reset)...)
+	}
+	s.stdout.Write(spc)
+}
+
+func (s *stdinEcoWriter) Init() {
+	go func() {
+		ticker := time.NewTicker((1 * time.Second) / 2)
+		tick := true
+		for {
+			select {
+			case <-s.close:
+				fmt.Println("eco close")
+				return
+			case <-ticker.C:
+				s.mu.Lock()
+				s.eco(tick)
+				s.mu.Unlock()
+				tick = !tick
+			}
+		}
+	}()
+}
+
+func (s *stdinEcoWriter) Stop() {
+	select {
+	case s.close <- true:
+	default:
+		// Hey developer!,  what a wonderful day!
+	}
 }
 
 type alwaysReturnWrapWritCloser struct {
@@ -135,6 +184,8 @@ func (m *oneLineWriteCloser) Scanln(prompt string, a ...any) (n int, err error) 
 
 	var buff bytes.Buffer
 	eco := &stdinEcoWriter{stdout: m}
+	eco.Init()
+	defer eco.Stop()
 	eco.Write([]byte(prompt))
 	reader := bufio.NewReader(os.Stdin)
 

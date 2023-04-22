@@ -270,11 +270,11 @@ func (s *Store) Interpolate(sourcetext *string) error {
 			refpath = strings.TrimPrefix(refpath, refname)
 			refpath = strings.TrimPrefix(refpath, ".")
 			if len(refpath) <= 0 {
-				return fmt.Errorf("environment var access with empty var name")
+				return fmt.Errorf("environment var access with empty var name " + refname)
 			}
 			varval, exists := os.LookupEnv(strings.TrimSpace(refpath))
 			if !exists {
-				return fmt.Errorf("environment var access with empty var name")
+				return fmt.Errorf("'" + refpath + "' environment var not found")
 			}
 			if varval == "" {
 				s.logger.LogWarn("Interpolation results in an empty string replacement for " + match[0])
