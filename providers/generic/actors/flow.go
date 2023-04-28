@@ -79,7 +79,17 @@ func (d *defineVarsParametersVar) askForValue() error {
 				return err
 			}
 			d.Value = vv
-		case VarTypeBool, VarTypeSelectableStatic, VarTypeSelectableVariable:
+		case VarTypeSelectableStatic:
+			options := []string{"option 1", "option 2", "option 3"}
+			optidx, err := term.Selectable("Please, enter value for "+d.Key+": ", options)
+			if err != nil {
+				return err
+			}
+			if optidx < 0 {
+				return fmt.Errorf("no option selected")
+			}
+			d.Value = options[optidx]
+		case VarTypeBool, VarTypeSelectableVariable:
 			return fmt.Errorf("var type not supported yet")
 		default:
 			return fmt.Errorf("unknown var type")
