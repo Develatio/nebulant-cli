@@ -25,9 +25,9 @@ type stdinEcoWriter struct {
 }
 
 func (s *stdinEcoWriter) Write(p []byte) (int, error) {
-	s.p = append(s.p, p...)
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.p = append(s.p, p...)
 	s.eco(true)
 	return 0, nil
 	// return s.stdout.Write(spc)
@@ -72,6 +72,12 @@ func (s *stdinEcoWriter) Stop() {
 	default:
 		// Hey developer!,  what a wonderful day!
 	}
+}
+func (s *stdinEcoWriter) Backspace() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.p = s.p[:len(s.p)-1]
+	s.eco(true)
 }
 
 type alwaysReturnWrapWritCloser struct {
@@ -202,6 +208,14 @@ func (o *oneLineWriteCloser) Scanln(prompt string, a ...any) (n int, err error) 
 		if char == 13 || char == -1 {
 			fmt.Fscan(bytes.NewReader(buff.Bytes()), a...)
 			return 0, nil
+		}
+		if char == 127 {
+			if buff.Len() <= 0 {
+				continue
+			}
+			eco.Backspace()
+			buff.Truncate(buff.Len() - 1)
+			continue
 		}
 		eco.Write([]byte(string(char)))
 		buff.WriteRune(char)
