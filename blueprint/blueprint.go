@@ -409,6 +409,19 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 		}
 	}
 
+	// WIP: ASK FOR INPUT HOWTO
+	// go func() {
+	// 	var first string
+	// 	lin := term.AppendLine()
+	// 	lin.Scanln("Enter value for var: ", &first)
+	// 	// fmt.Println("Var setted to: ", first)
+	// 	lin.Write([]byte("var setted to " + first))
+	// 	err = term.DeleteLine(lin)
+	// 	if err != nil {
+	// 		panic("there is a problem with the terminal")
+	// 	}
+	// }()
+
 	// parse end cajitas
 	for _, action := range irb.Actions {
 		action.NextAction.NextOk = replaceEndActions(action.NextAction.NextOk, true)

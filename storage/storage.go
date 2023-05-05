@@ -189,6 +189,14 @@ func (s *Store) SetPrivateVar(varname string, value interface{}) {
 }
 
 // GetProvider func
+func (s *Store) ExistsRefName(refname string) bool {
+	if _, exists := s.recordsByRefName[refname]; exists {
+		return true
+	}
+	return false
+}
+
+// GetProvider func
 func (s *Store) GetByRefName(refname string) (*base.StorageRecord, error) {
 	if record, exists := s.recordsByRefName[refname]; exists {
 		return record, nil
@@ -262,11 +270,11 @@ func (s *Store) Interpolate(sourcetext *string) error {
 			refpath = strings.TrimPrefix(refpath, refname)
 			refpath = strings.TrimPrefix(refpath, ".")
 			if len(refpath) <= 0 {
-				return fmt.Errorf("environment var access with empty var name")
+				return fmt.Errorf("environment var access with empty var name " + refname)
 			}
 			varval, exists := os.LookupEnv(strings.TrimSpace(refpath))
 			if !exists {
-				return fmt.Errorf("environment var access with empty var name")
+				return fmt.Errorf("'" + refpath + "' environment var not found")
 			}
 			if varval == "" {
 				s.logger.LogWarn("Interpolation results in an empty string replacement for " + match[0])

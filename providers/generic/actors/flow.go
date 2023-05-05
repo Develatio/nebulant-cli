@@ -17,20 +17,96 @@
 package actors
 
 import (
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/joho/godotenv"
 )
 
+type VarType string
+
+const (
+	VarTypeString             VarType = "string"
+	VarTypeBool               VarType = "boolean"
+	VarTypeInt                VarType = "int"
+	VarTypeSelectableStatic   VarType = "selectable-static-values"
+	VarTypeSelectableVariable VarType = "selectable-variables"
+)
+
+type defineVarsParametersVarOptions struct {
+	Label string `json:"label" validate:"required"`
+	Value string `json:"value" validate:"required"`
+}
+
 type defineVarsParametersVar struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	AskAtRuntime *bool                            `json:"ask_at_runtime"`
+	Key          string                           `json:"key" validate:"required"`
+	Value        interface{}                      `json:"value"`
+	Type         *VarType                         `json:"type"`
+	Options      []defineVarsParametersVarOptions `json:"options"`
+	Required     bool                             `json:"required"`
+	Stack        *bool                            `json:"stack"`
+}
+
+func (d *defineVarsParametersVar) askForValue() error {
+	// reflect.ValueOf(d.Value).IsNil()
+	v := reflect.ValueOf(d.Value)
+	isEmpty := v.Kind() == reflect.Ptr && v.IsNil()
+	isNotValid := !v.IsValid()
+	if d.AskAtRuntime != nil && *d.AskAtRuntime && (isEmpty || isNotValid) && d.Required {
+		lin := term.AppendLine()
+		var err error
+		switch *d.Type {
+		case VarTypeString:
+			var vv string
+			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", &vv)
+			if err != nil {
+				return err
+			}
+			d.Value = vv
+		case VarTypeInt:
+			var vv int
+			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", &vv)
+			if err != nil {
+				return err
+			}
+			d.Value = vv
+		case VarTypeSelectableStatic:
+			var options []string
+			for _, obj := range d.Options {
+				options = append(options, obj.Label)
+			}
+			optidx, err := term.Selectable("Please, enter value for "+d.Key+": ", options)
+			if err != nil {
+				return err
+			}
+			if optidx < 0 {
+				return fmt.Errorf("no option selected")
+			}
+			d.Value = d.Options[optidx].Value
+		case VarTypeBool, VarTypeSelectableVariable:
+			return fmt.Errorf("var type not supported yet")
+		default:
+			return fmt.Errorf("unknown var type")
+		}
+		// _, err = lin.Write([]byte("var setted to " + first))
+		// if err != nil {
+		// 	return err
+		// }
+		err = term.DeleteLine(lin)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type defineVarsParameters struct {
@@ -252,9 +328,9 @@ func NOOP(ctx *ActionContext) (*base.ActionOutput, error) {
 	return nil, nil
 }
 
-func Start(ctx *ActionContext) (*base.ActionOutput, error) {
-	return nil, nil
-}
+// func Start(ctx *ActionContext) (*base.ActionOutput, error) {
+// 	return nil, nil
+// }
 
 func Stop(ctx *ActionContext) (*base.ActionOutput, error) {
 	return nil, nil
@@ -394,24 +470,97 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
+	// validate var type/value
+	for _, v := range params.Vars {
+		if v.Type == nil {
+			v.Type = new(VarType)
+			*v.Type = VarTypeString
+		}
+		if ctx.Rehearsal {
+			err := v.askForValue()
+			if err != nil {
+				return nil, err
+			}
+		}
+		// test type
+		switch *v.Type {
+		case VarTypeSelectableStatic, VarTypeSelectableVariable, VarTypeString:
+			if _, isString := v.Value.(string); !isString {
+				return nil, fmt.Errorf("Var type string mismatch for " + v.Key)
+			}
+		case VarTypeBool:
+			if _, isBool := v.Value.(bool); !isBool {
+				return nil, fmt.Errorf("Var type bool mismatch for " + v.Key)
+			}
+		case VarTypeInt:
+			if _, isInt := v.Value.(int); !isInt {
+				return nil, fmt.Errorf("Var type int mismatch for " + v.Key)
+			}
+		default:
+			return nil, fmt.Errorf("Unknown vartype for key " + v.Key)
+		}
+	}
+
 	if ctx.Rehearsal {
+		jj, err := json.Marshal(params)
+		if err != nil {
+			return nil, err
+		}
+		ctx.Action.Parameters = jj
 		return nil, nil
 	}
 
 	for _, v := range params.Vars {
-		varname := v.Key
-		varvalue := v.Value
-		ctx.Logger.LogInfo("Setting var " + varname)
-		err := ctx.Store.Interpolate(&varvalue)
+		// ask for value as needed
+		err := v.askForValue()
 		if err != nil {
 			return nil, err
 		}
-		varvalue = strings.Replace(varvalue, "\\{", "{", -1)
-		varvalue = strings.Replace(varvalue, "\\}", "}", -1)
+
+		var recordvalue interface{}
+		varname := v.Key
+		ctx.Logger.LogInfo("Setting var " + varname)
+
+		switch *v.Type {
+		case VarTypeString:
+			varvalue := v.Value.(string)
+			err := ctx.Store.Interpolate(&varvalue)
+			if err != nil {
+				return nil, err
+			}
+			varvalue = strings.Replace(varvalue, "\\{", "{", -1)
+			varvalue = strings.Replace(varvalue, "\\}", "}", -1)
+			recordvalue = varvalue
+		default:
+			recordvalue = v.Value
+		}
+
+		if v.Stack != nil && *v.Stack {
+			var newstackitems []interface{}
+			if ctx.Store.ExistsRefName(varname) {
+				sr, err := ctx.Store.GetByRefName(varname)
+				if err != nil {
+					return nil, err
+				}
+
+				if _, ok := sr.Value.(*base.StorageRecordStack); ok {
+					newstackitems = append(newstackitems, recordvalue)
+					newstackitems = append(newstackitems, sr.Value.(*base.StorageRecordStack).Items...)
+				} else {
+					newstackitems = []interface{}{recordvalue, sr.Value}
+				}
+			} else {
+				newstackitems = []interface{}{recordvalue}
+			}
+			recordvalue = &base.StorageRecordStack{
+				Items: newstackitems,
+			}
+		}
+
 		err = ctx.Store.Insert(&base.StorageRecord{
 			RefName: varname,
 			Aout:    nil,
-			Value:   varvalue,
+			Value:   recordvalue,
 			Action:  ctx.Action,
 		}, ctx.Action.Provider)
 		if err != nil {
@@ -419,6 +568,8 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
+	// if params has .Files, we should read those files
+	// and store var & values
 	for _, file := range params.Files {
 		envs, err := godotenv.Read(file)
 		if err != nil {

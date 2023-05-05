@@ -152,6 +152,10 @@ func (a *AttrTreeValue) String() string {
 	return a.Description
 }
 
+type StorageRecordStack struct {
+	Items []interface{}
+}
+
 // StorageRecord struct
 type StorageRecord struct {
 	ValueID    string                    `json:"valueID"`
@@ -249,4 +253,5 @@ type IStore interface {
 	DumpValuesToJSONFile() (*os.File, error)
 	GetByRefName(refname string) (*StorageRecord, error)
 	DeepInterpolation(v interface{}) error
+	ExistsRefName(refname string) bool
 }

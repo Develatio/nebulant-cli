@@ -25,6 +25,7 @@ import (
 
 var Stdout = os.Stdout
 var Stderr = os.Stderr
+var Stdin = os.Stdin
 var CharBell = []byte(fmt.Sprintf("%c", 7))[0]
 
 // Jus for bypass build, not really used

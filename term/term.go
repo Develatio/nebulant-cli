@@ -53,7 +53,11 @@ var White string = "\033[97m"
 
 var Bold string = "\033[1m"
 
+var CorsorToColZero = "\033[0G"
 var CursorUp string = "\033[1F"
+
+var HideCursor string = "\033[?25l"
+var ShowCursor string = "\033[?25h"
 
 var EraseLine string = "\033[K"
 
@@ -92,6 +96,18 @@ func OpenStatusBar() *oneLineWriteCloser {
 	return statusBarLine
 }
 
+func AppendLine() *oneLineWriteCloser {
+	return mls.AppendLine()
+}
+
+func Selectable(prompt string, options []string) (int, error) {
+	return mls.SelectTest(prompt, options)
+}
+
+func DeleteLine(line *oneLineWriteCloser) error {
+	return mls.DeleteLine(line)
+}
+
 func OpenMultilineStdout() {
 	if mls == nil {
 		mls = &MultilineStdout{
@@ -104,7 +120,7 @@ func OpenMultilineStdout() {
 
 func CloseStatusBar() error {
 	if statusBarLine != nil {
-		err := statusBarLine.Close()
+		err := mls.DeleteLine(statusBarLine)
 		if err != nil {
 			return err
 		}
