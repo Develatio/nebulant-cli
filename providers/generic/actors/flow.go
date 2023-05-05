@@ -80,7 +80,10 @@ func (d *defineVarsParametersVar) askForValue() error {
 			}
 			d.Value = vv
 		case VarTypeSelectableStatic:
-			options := []string{"option 1", "option 2", "option 3"}
+			var options []string
+			for _, obj := range d.Options {
+				options = append(options, obj.Label)
+			}
 			optidx, err := term.Selectable("Please, enter value for "+d.Key+": ", options)
 			if err != nil {
 				return err
@@ -88,7 +91,7 @@ func (d *defineVarsParametersVar) askForValue() error {
 			if optidx < 0 {
 				return fmt.Errorf("no option selected")
 			}
-			d.Value = options[optidx]
+			d.Value = d.Options[optidx].Value
 		case VarTypeBool, VarTypeSelectableVariable:
 			return fmt.Errorf("var type not supported yet")
 		default:
@@ -325,9 +328,9 @@ func NOOP(ctx *ActionContext) (*base.ActionOutput, error) {
 	return nil, nil
 }
 
-func Start(ctx *ActionContext) (*base.ActionOutput, error) {
-	return nil, nil
-}
+// func Start(ctx *ActionContext) (*base.ActionOutput, error) {
+// 	return nil, nil
+// }
 
 func Stop(ctx *ActionContext) (*base.ActionOutput, error) {
 	return nil, nil
