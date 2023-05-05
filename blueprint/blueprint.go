@@ -45,10 +45,12 @@ type wrappedBlueprint struct {
 
 // Blueprint struct
 type Blueprint struct {
-	ExecutionUUID *string
-	Actions       []Action `json:"actions"`
-	MinCLIVersion *string  `json:"min_cli_version"`
-	Raw           *[]byte
+	ExecutionUUID   *string
+	Actions         []Action `json:"actions"`
+	MinCLIVersion   *string  `json:"min_cli_version"`
+	Raw             *[]byte
+	BuilderErrors   int `json:"n_errors"`
+	BuilderWarnings int `json:"n_warnings"`
 }
 
 // Action struct
@@ -313,6 +315,9 @@ func (ies IRBErrors) Error() string {
 
 // GenerateIRB func
 func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
+	if bp.BuilderErrors > 0 {
+		return nil, fmt.Errorf("sorry, I'm not going to run this blueprint because it contains " + fmt.Sprintf("%v", bp.BuilderErrors) + " errors from the builder")
+	}
 	var errors IRBErrors
 	irb := &IRBlueprint{
 		BP:               bp,

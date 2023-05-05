@@ -109,6 +109,9 @@ L:
 				cast.PushEvent(cast.EventManagerOut, instr.ExecutionUUID)
 			}
 		case irb := <-d.HandleIRB:
+			if irb.BP.BuilderWarnings > 0 {
+				cast.LogWarn("This blueprint has "+fmt.Sprintf("%v", irb.BP.BuilderWarnings)+" warnings from the builder", irb.BP.ExecutionUUID)
+			}
 			manager := NewManager()
 			d.managersByIRB[irb] = manager
 			d.managers[manager] = irb
