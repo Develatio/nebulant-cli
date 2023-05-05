@@ -53,7 +53,7 @@ var White string = "\033[97m"
 
 var Bold string = "\033[1m"
 
-var CorsorToColZero = "\033[0G"
+var CursorToColZero = "\033[0G"
 var CursorUp string = "\033[1F"
 
 var HideCursor string = "\033[?25l"

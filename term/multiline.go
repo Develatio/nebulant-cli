@@ -50,7 +50,7 @@ func (s *stdinEcoWriter) eco(tick bool) {
 	} else {
 		spc = append(s.p, []byte(Magenta+" "+Reset)...)
 	}
-	s.stdout.Write(spc)
+	s.stdout.Write(spc) //#nosec G104 -- Unhandle is OK here
 }
 
 func (s *stdinEcoWriter) Init() {
@@ -202,7 +202,10 @@ func (o *oneLineWriteCloser) Scanln(prompt string, a ...any) (n int, err error) 
 	eco := &stdinEcoWriter{stdout: o}
 	eco.Init()
 	defer eco.Stop()
-	eco.Write([]byte(prompt))
+	_, err = eco.Write([]byte(prompt))
+	if err != nil {
+		return -1, err
+	}
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
@@ -216,7 +219,10 @@ func (o *oneLineWriteCloser) Scanln(prompt string, a ...any) (n int, err error) 
 		// 3 for ^C
 		// -1 for eof
 		if char == 13 || char == -1 {
-			fmt.Fscan(bytes.NewReader(buff.Bytes()), a...)
+			_, err := fmt.Fscan(bytes.NewReader(buff.Bytes()), a...)
+			if err != nil {
+				return -1, err
+			}
 			return 0, nil
 		}
 		if char == 127 {
@@ -227,7 +233,10 @@ func (o *oneLineWriteCloser) Scanln(prompt string, a ...any) (n int, err error) 
 			buff.Truncate(buff.Len() - 1)
 			continue
 		}
-		eco.Write([]byte(string(char)))
+		_, err = eco.Write([]byte(string(char)))
+		if err != nil {
+			return -1, err
+		}
 		buff.WriteRune(char)
 		// var buf []byte
 		// utf8.EncodeRune(buf, char)
@@ -387,15 +396,27 @@ func (m *MultilineStdout) SelectTest(prompt string, options []string) (int, erro
 
 	for {
 		// prompt
-		lines[0].Write([]byte(CorsorToColZero + EraseLine + prompt))
+		_, err := lines[0].Write([]byte(CursorToColZero + EraseLine + prompt))
+		if err != nil {
+			return -1, err
+		}
 
 		// helper text
-		lines[1].Write([]byte(CorsorToColZero + EraseLine + "use arrows :)"))
+		_, err = lines[1].Write([]byte(CursorToColZero + EraseLine + "use arrows :)"))
+		if err != nil {
+			return -1, err
+		}
 		for i := 0; i < len(options); i++ {
 			if i == selected {
-				lines[i+2].Write([]byte(CorsorToColZero + Reset + EraseLine + Blue + "»" + Magenta + "» " + Reset + options[i] + Reset))
+				_, err := lines[i+2].Write([]byte(CursorToColZero + Reset + EraseLine + Blue + "»" + Magenta + "» " + Reset + options[i] + Reset))
+				if err != nil {
+					return -1, err
+				}
 			} else {
-				lines[i+2].Write([]byte(CorsorToColZero + Reset + EraseLine + "   " + options[i] + Reset))
+				_, err := lines[i+2].Write([]byte(CursorToColZero + Reset + EraseLine + "   " + options[i] + Reset))
+				if err != nil {
+					return -1, err
+				}
 			}
 		}
 
@@ -407,9 +428,15 @@ func (m *MultilineStdout) SelectTest(prompt string, options []string) (int, erro
 
 		if char == 13 || char == 10 {
 			for i := 0; i < len(lines); i++ {
-				lines[i].Write([]byte(CorsorToColZero + Reset + EraseLine))
+				_, err := lines[i].Write([]byte(CursorToColZero + Reset + EraseLine))
+				if err != nil {
+					return -1, err
+				}
 			}
-			lines[0].Write([]byte("  ✓ " + options[selected]))
+			_, err := lines[0].Write([]byte("  ✓ " + options[selected]))
+			if err != nil {
+				return -1, err
+			}
 			return selected, nil
 		}
 		if char == -1 {
