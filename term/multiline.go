@@ -15,6 +15,12 @@ import (
 	"golang.org/x/term"
 )
 
+type threadSafeInput struct {
+	mu sync.Mutex
+}
+
+var tsi = &threadSafeInput{}
+
 type stdinEcoWriter struct {
 	// where to write cumulated eco
 	stdout io.WriteCloser
@@ -177,6 +183,10 @@ func (o *oneLineWriteCloser) Print(s string) {
 }
 
 func (o *oneLineWriteCloser) Scanln(prompt string, a ...any) (n int, err error) {
+	// to prevent interactively ask many
+	// options at a time
+	tsi.mu.Lock()
+	defer tsi.mu.Unlock()
 	oldState, err := term.MakeRaw(0)
 	if err != nil {
 		panic(err)
@@ -340,6 +350,8 @@ func (m *MultilineStdout) DeleteLine(line *oneLineWriteCloser) error {
 }
 
 func (m *MultilineStdout) SelectTest(prompt string, options []string) (int, error) {
+	tsi.mu.Lock()
+	defer tsi.mu.Unlock()
 	oldState, err := term.MakeRaw(0)
 	if err != nil {
 		panic(err)

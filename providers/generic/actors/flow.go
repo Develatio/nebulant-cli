@@ -61,7 +61,7 @@ func (d *defineVarsParametersVar) askForValue() error {
 	v := reflect.ValueOf(d.Value)
 	isEmpty := v.Kind() == reflect.Ptr && v.IsNil()
 	isNotValid := !v.IsValid()
-	if d.AskAtRuntime != nil && (isEmpty || isNotValid) {
+	if d.AskAtRuntime != nil && *d.AskAtRuntime && (isEmpty || isNotValid) && d.Required {
 		lin := term.AppendLine()
 		var err error
 		switch *d.Type {
@@ -471,10 +471,6 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	// validate var type/value
-	// TODO: ask at runtime and store values:
-	//  * Unmarshall
-	//  * fill
-	//  * Marshall
 	for _, v := range params.Vars {
 		if v.Type == nil {
 			v.Type = new(VarType)
