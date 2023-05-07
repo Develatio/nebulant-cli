@@ -15,3 +15,29 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package subcom
+
+import (
+	"flag"
+	"fmt"
+	"strings"
+)
+
+func PrintDefaults(f *flag.FlagSet) {
+	f.VisitAll(func(ff *flag.Flag) {
+		var b strings.Builder
+		fmt.Fprintf(&b, "  -%s ", ff.Name)
+		name, usage := flag.UnquoteUsage(ff)
+		if len(name) > 0 {
+			b.WriteString(name)
+		}
+		l := 25 - (len(b.String()) + len(name))
+		for i := 0; i < l; i++ {
+			b.WriteString(" ")
+		}
+		b.WriteString(usage)
+		if ff.DefValue != "" && ff.DefValue != "false" {
+			fmt.Fprintf(&b, " (default %v)", ff.DefValue)
+		}
+		fmt.Fprint(f.Output(), b.String(), "\n")
+	})
+}

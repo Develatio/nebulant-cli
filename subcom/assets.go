@@ -24,19 +24,17 @@ import (
 	"github.com/develatio/nebulant-cli/assets"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
-	"github.com/develatio/nebulant-cli/util"
 )
 
 func parseAssetsFs() (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("assets", flag.ExitOnError)
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets [command] [options]\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
-		util.PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\nCommands:\n")
 		fmt.Fprintf(fs.Output(), "  upgrade\t\tLookup for new assets update\n")
 		fmt.Fprintf(fs.Output(), "  build\t\t\tLocaly build asset index\n")
 		fmt.Fprintf(fs.Output(), "  search\t\tSearch for data into assets\n")
+		fmt.Fprintf(fs.Output(), "\n\n")
 	}
 	fs.Parse(flag.Args()[1:])
 	return fs, nil
@@ -50,7 +48,8 @@ func parseAssetsUpgradeFs() (*flag.FlagSet, error) {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets upgrade [options]\n")
 		fmt.Fprintf(fs.Output(), "\nLookup for new assets upgrade\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
-		util.PrintDefaults(fs)
+		PrintDefaults(fs)
+		fmt.Fprintf(fs.Output(), "\n\n")
 	}
 	fs.Parse(flag.Args()[2:])
 	return fs, nil
@@ -60,12 +59,13 @@ func parseAssetsBuildFs() (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("build", flag.ExitOnError)
 	fs.String("f", "", "Input file. Ej. -f ./file.json")
 	fs.String("a", "", "Asset ID. Ej. -a aws_images")
-	fs.String("d", "", "Output dir")
+	fs.String("d", "", "Output dir to save generated files")
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets build [options]\n")
 		fmt.Fprintf(fs.Output(), "\nLocally build asset index\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
-		util.PrintDefaults(fs)
+		PrintDefaults(fs)
+		fmt.Fprintf(fs.Output(), "\n\n")
 	}
 	fs.Parse(flag.Args()[2:])
 	return fs, nil
@@ -81,14 +81,15 @@ func parseAssetsSearchFs() (*flag.FlagSet, error) {
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets search [options]\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
-		util.PrintDefaults(fs)
+		PrintDefaults(fs)
+		fmt.Fprintf(fs.Output(), "\n\n")
 	}
 	fs.Parse(flag.Args()[2:])
 	return fs, nil
 }
 
 func AssetsCmd() (int, error) {
-	_, err := parseAssetsFs()
+	fs, err := parseAssetsFs()
 	if err != nil {
 		return 1, err
 	}
@@ -169,6 +170,9 @@ func AssetsCmd() (int, error) {
 				break
 			}
 		}
+	default:
+		fs.Usage()
+		return 1, fmt.Errorf("please provide some subcommand to assets")
 	}
 	return 0, nil
 }

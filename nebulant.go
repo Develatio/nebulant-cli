@@ -92,13 +92,13 @@ func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "\nUsage: nebulant [options] [command]\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nGlobal options:\n")
-		util.PrintDefaults(flag.CommandLine)
+		subcom.PrintDefaults(flag.CommandLine)
 		fmt.Fprintf(flag.CommandLine.Output(), "\nCommands:\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  serve\t\t\t\U0001F477 Start server mode\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  run\t\t\t\U000026A1 Run blueprint form file or net\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  assets\t\t\U0001F5C2  Handle cli assets\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  interactive\t\t\U0001F6D7  Start interactive menu\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "\n\nrun nebulant [command] --help to show help for a command")
+		fmt.Fprintf(flag.CommandLine.Output(), "\n\nrun nebulant [command] --help to show help for a command\n")
 	}
 
 	flag.Parse()
@@ -156,9 +156,6 @@ func main() {
 		exitCode, err = subcom.ServeCmd()
 		if err != nil {
 			cast.LogErr(err.Error(), nil)
-			if exitCode > 1 {
-				panic(err.Error())
-			}
 			cast.SBus.Close().Wait()
 			os.Exit(exitCode)
 		}
@@ -166,9 +163,6 @@ func main() {
 		exitCode, err = subcom.RunCmd()
 		if err != nil {
 			cast.LogErr(err.Error(), nil)
-			if exitCode > 1 {
-				panic(err.Error())
-			}
 			cast.SBus.Close().Wait()
 			os.Exit(exitCode)
 		}
@@ -176,9 +170,6 @@ func main() {
 		exitCode, err = subcom.AssetsCmd()
 		if err != nil {
 			cast.LogErr(err.Error(), nil)
-			if exitCode > 1 {
-				panic(err.Error())
-			}
 			cast.SBus.Close().Wait()
 			os.Exit(exitCode)
 		}
@@ -198,130 +189,16 @@ func main() {
 			}
 			exitCode = 1
 			cast.LogErr(err.Error(), nil)
-			panic(err.Error())
+			os.Exit(exitCode)
 		}
 		cast.SBus.Close().Wait()
 		os.Exit(0)
-	case "default":
-		fmt.Fprintf(flag.CommandLine.Output(), "\nUnknown command\n")
-		util.PrintDefaults(flag.CommandLine)
+	default:
+		flag.Usage()
+		cast.LogErr("Unknown command", nil)
 		cast.SBus.Close().Wait()
 		os.Exit(1)
 	}
-
-	// bluePrintFilePath := flag.Arg(0)
-
-	// if *config.BuildAssetIndexFlag != "" && *config.ServerModeFlag {
-	// 	util.PrintUsage(fmt.Errorf("server mode and index generation are incompatible flags. Set only one of both"))
-	// 	os.Exit(1)
-	// }
-
-	// if (*config.UpgradeAssetsFlag || *config.ForceUpgradeAssetsFlag || *config.ForceUpgradeAssetsNoDownloadFlag) && *config.ServerModeFlag {
-	// 	util.PrintUsage(fmt.Errorf("server mode and force asset upgrading are incompatible flags. Set only one of both"))
-	// 	os.Exit(1)
-	// }
-
-	// if *config.UpgradeAssetsFlag || *config.ForceUpgradeAssetsFlag || *config.ForceUpgradeAssetsNoDownloadFlag {
-	// 	err := assets.UpgradeAssets(*config.ForceUpgradeAssetsFlag, *config.ForceUpgradeAssetsNoDownloadFlag)
-	// 	if err != nil {
-	// 		os.Exit(1)
-	// 	}
-	// 	cast.SBus.Close().Wait()
-	// 	os.Exit(0)
-	// }
-
-	// if *config.BuildAssetIndexFlag != "" {
-	// 	err := assets.GenerateIndexFromFile(*config.BuildAssetIndexFlag)
-	// 	if err != nil {
-	// 		util.PrintUsage(err)
-	// 		os.Exit(1)
-	// 	}
-	// 	cast.SBus.Close().Wait()
-	// 	os.Exit(0)
-	// }
-
-	// // assetid:searchterm:offset:limit:sort
-	// if len(*config.LookupAssetFlag) > 0 {
-	// 	cut := strings.Split(*config.LookupAssetFlag, ":")
-	// 	if len(cut) <= 1 {
-	// 		util.PrintUsage(fmt.Errorf("invalid search syntax"))
-	// 		os.Exit(1)
-	// 	}
-	// 	assetid := cut[0]
-	// 	term := cut[1]
-	// 	assetdef, ok := assets.AssetsDefinition[assetid]
-	// 	if !ok {
-	// 		util.PrintUsage(fmt.Errorf("unknown asset id"))
-	// 		os.Exit(1)
-	// 	}
-	// 	cast.LogInfo("Looking for "+term+" in "+assetid, nil)
-	// 	srq := &assets.SearchRequest{SearchTerm: term}
-	// 	if len(cut) > 2 {
-	// 		srq.Offset, err = strconv.Atoi(cut[2])
-	// 		if err != nil {
-	// 			util.PrintUsage(fmt.Errorf("invalid search pagination offset"))
-	// 			os.Exit(1)
-	// 		}
-	// 	}
-	// 	if len(cut) > 3 {
-	// 		srq.Limit, err = strconv.Atoi(cut[3])
-	// 		if err != nil {
-	// 			util.PrintUsage(fmt.Errorf("invalid search pagination limit"))
-	// 			os.Exit(1)
-	// 		}
-	// 	}
-	// 	if len(cut) > 4 {
-	// 		srq.Sort = cut[4]
-	// 	}
-
-	// 	cast.LogDebug("lookup "+fmt.Sprintf("%v", srq), nil)
-	// 	searchres, err := assets.Search(srq, assetdef)
-	// 	if err != nil {
-	// 		util.PrintUsage(err)
-	// 		os.Exit(1)
-	// 	}
-	// 	cast.LogInfo("Found "+fmt.Sprintf("%v", searchres.Count)+" items", nil)
-
-	// 	for e, item := range searchres.Results {
-	// 		cast.LogInfo(fmt.Sprintf("Result %v / %v -> %v", e, searchres.Count, item), nil)
-	// 		if e >= 10 {
-	// 			cast.LogInfo("[...]", nil)
-	// 			break
-	// 		}
-	// 	}
-	// 	cast.LogInfo("Done.", nil)
-	// 	cast.SBus.Close().Wait()
-	// 	os.Exit(0)
-	// }
-
-	// bluePrintFilePath := ""
-	// if bluePrintFilePath != "" {
-	// 	cast.LogInfo("Processing blueprint...", nil)
-	// 	irb, err := blueprint.NewIRBFromAny(bluePrintFilePath)
-	// 	if err != nil {
-	// 		cast.LogErr(err.Error(), nil)
-	// 		exitCode = 1
-	// 		return
-	// 	}
-	// 	// Director in one run mode
-	// 	err = executive.InitDirector(false, false)
-	// 	if err != nil {
-	// 		cast.LogErr(err.Error(), nil)
-	// 		exitCode = 1
-	// 		panic(err.Error())
-	// 	}
-	// 	executive.MDirector.HandleIRB <- irb
-	// } else if *config.ServerModeFlag {
-	// 	// Director in server mode
-	// 	err := executive.InitDirector(true, false) // Server mode
-	// 	if err != nil {
-	// 		cast.LogErr(err.Error(), nil)
-	// 		panic(err.Error())
-	// 	}
-	// 	executive.InitServerMode(config.SERVER_ADDR, config.SERVER_PORT)
-	// } else if len(args) <= 0 {
-
-	// }
 
 	// hey hacker:
 	// uncomment for profiling
@@ -333,13 +210,10 @@ func main() {
 	// 	grmon.Start()
 	// }
 
-	// executive.ServerWaiter.Wait() // None to wait if server mode is disabled
-	// if executive.ServerError != nil {
-	// 	exitCode = 1
-	// 	cast.LogErr(executive.ServerError.Error(), nil)
-	// 	panic(executive.ServerError.Error())
-	// }
-	executive.MDirector.Wait() // None to wait if director has stoped
+	// None to wait if director hasn't been started
+	if executive.MDirector != nil {
+		executive.MDirector.Wait() // None to wait if director has stoped
+	}
 	//
 	// Please don't print anything here, SBus is still closing (because defer)
 	// there are still messages in the logger buffer that have to be processed.

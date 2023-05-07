@@ -24,7 +24,6 @@ import (
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/executive"
-	"github.com/develatio/nebulant-cli/util"
 )
 
 func parseServeFs() (*flag.FlagSet, error) {
@@ -33,7 +32,7 @@ func parseServeFs() (*flag.FlagSet, error) {
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant serve [options]\n")
 		fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		util.PrintDefaults(fs)
+		PrintDefaults(fs)
 	}
 	fs.Parse(flag.Args()[1:])
 
@@ -78,9 +77,6 @@ func ServeCmd() (int, error) {
 	executive.ServerWaiter.Wait() // None to wait if server mode is disabled
 	if executive.ServerError != nil {
 		return 2, executive.ServerError
-		// exitCode = 1
-		// cast.LogErr(executive.ServerError.Error(), nil)
-		// panic(executive.ServerError.Error())
 	}
 	executive.MDirector.Wait() // None to wait if director has stoped
 	return 0, nil
