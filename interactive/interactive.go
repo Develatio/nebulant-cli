@@ -42,7 +42,7 @@ func Loop() error {
 		{Name: "Browse", Description: "Brwose and run the blueprints stored in your account", Cmd: "browse"},
 		{Name: "Path", Description: "Manually indicates the path to a blueprint", Cmd: "path"},
 		// {Name: "Config", Description: "Configuration stuff", Cmd: "noim"},
-		{Name: "Args  ", Description: "Print available commandline args", Cmd: "args"},
+		// {Name: "Args  ", Description: "Print available commandline args", Cmd: "args"},
 		{Name: "Exit  ", Description: "Exit Nebulant CLI", Cmd: "exit"},
 	}
 	templates := &promptui.SelectTemplates{
@@ -66,8 +66,8 @@ L:
 		input := menuItems[i].Cmd
 
 		switch input {
-		case "args":
-			util.PrintUsage(nil)
+		// case "args":
+		// 	util.PrintUsage(nil)
 		case "exit":
 			os.Exit(0)
 		case "serve":

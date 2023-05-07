@@ -18,9 +18,6 @@ package util
 
 import (
 	"encoding/json"
-	"flag"
-	"fmt"
-	"os"
 	"os/exec"
 	"runtime"
 
@@ -71,14 +68,4 @@ func OpenUrl(url string) error {
 type PanicData struct {
 	PanicValue interface{}
 	PanicTrace []byte
-}
-
-func PrintUsage(err error) {
-	if err != nil {
-		fmt.Println("nebulant:", err.Error())
-	}
-	fmt.Println("Usage: nebulant [-options] [file.json | nebulant://UUID]")
-	fmt.Println("Nebulant options:")
-	flag.PrintDefaults()
-	os.Exit(1)
 }

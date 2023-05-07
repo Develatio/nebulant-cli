@@ -56,7 +56,7 @@ func InitServerMode(ip, port string) {
 	go func() {
 		defer ServerWaiter.Done() // Append -1 waiter
 		srv := &Httpd{}
-		err := srv.Serve(&addr) // serve to address serverModeFlag
+		err := srv.Serve(&addr) // serve to address config.AddrFlag
 		if err != nil {
 			ServerError = err
 		}
