@@ -34,10 +34,12 @@ func parseServeFs() (*flag.FlagSet, error) {
 		fmt.Fprintf(fs.Output(), "\nOptions:\n")
 		PrintDefaults(fs)
 	}
-	fs.Parse(flag.Args()[1:])
+	err := fs.Parse(flag.Args()[1:])
+	if err != nil {
+		return fs, err
+	}
 
 	var tcpaddr *net.TCPAddr
-	var err error
 	if *config.Ipv6Flag {
 		tcpaddr, err = net.ResolveTCPAddr("tcp6", *config.AddrFlag)
 		if err != nil {

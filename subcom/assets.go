@@ -36,7 +36,10 @@ func parseAssetsFs() (*flag.FlagSet, error) {
 		fmt.Fprintf(fs.Output(), "  search\t\tSearch for data into assets\n")
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	fs.Parse(flag.Args()[1:])
+	err := fs.Parse(flag.Args()[1:])
+	if err != nil {
+		return fs, err
+	}
 	return fs, nil
 }
 
@@ -51,7 +54,10 @@ func parseAssetsUpgradeFs() (*flag.FlagSet, error) {
 		PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	fs.Parse(flag.Args()[2:])
+	err := fs.Parse(flag.Args()[2:])
+	if err != nil {
+		return fs, err
+	}
 	return fs, nil
 }
 
@@ -67,7 +73,10 @@ func parseAssetsBuildFs() (*flag.FlagSet, error) {
 		PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	fs.Parse(flag.Args()[2:])
+	err := fs.Parse(flag.Args()[2:])
+	if err != nil {
+		return fs, err
+	}
 	return fs, nil
 }
 
@@ -84,7 +93,10 @@ func parseAssetsSearchFs() (*flag.FlagSet, error) {
 		PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	fs.Parse(flag.Args()[2:])
+	err := fs.Parse(flag.Args()[2:])
+	if err != nil {
+		return fs, err
+	}
 	return fs, nil
 }
 

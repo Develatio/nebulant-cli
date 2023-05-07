@@ -31,7 +31,10 @@ func parseRunFs() (*flag.FlagSet, error) {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant run [path or nebulant:// protocol]\n")
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	fs.Parse(flag.Args()[1:])
+	err := fs.Parse(flag.Args()[1:])
+	if err != nil {
+		return fs, err
+	}
 	return fs, nil
 }
 
