@@ -158,7 +158,7 @@ func AssetsCmd() (int, error) {
 		}
 		srq := &assets.SearchRequest{
 			SearchTerm: fs.Lookup("t").Value.String(),
-			Sort:       fs.Lookup("t").Value.String(),
+			Sort:       fs.Lookup("s").Value.String(),
 		}
 		srq.Limit, err = strconv.Atoi(fs.Lookup("l").Value.String())
 		if err != nil {
