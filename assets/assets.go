@@ -150,6 +150,7 @@ type AssetDefinition struct {
 	IndexPath    string
 	SubIndexPath string
 	FilePath     string
+	Alias        [][]string
 }
 
 type SearchRequest struct {
@@ -179,6 +180,9 @@ var AssetsDefinition map[string]*AssetDefinition = make(map[string]*AssetDefinit
 var State *assetsState
 
 func (s *SearchRequest) Validate() (bool, error) {
+	if len(s.Sort) == 0 {
+		return true, nil
+	}
 	if !strings.HasPrefix(s.Sort, "-$") && !strings.HasPrefix(s.Sort, "$") {
 		return false, fmt.Errorf("please, use $ or -$ at the beginning of the sort attr " + (s.Sort))
 	}
@@ -351,7 +355,7 @@ func splitstring(aa string, size int) ([]string, error) {
 	if err != nil {
 		return r, err
 	}
-	bb := reg.ReplaceAllString(aa, "")
+	bb := reg.ReplaceAllString(aa, " ")
 
 	for _, cc := range strings.Split(bb, " ") {
 		t := strings.ToLower(strings.Trim(cc, " "))
@@ -763,17 +767,76 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 		return nil, err
 	}
 
+	var aliases map[string][]string = make(map[string][]string)
+	for _, alset := range assetdef.Alias {
+		for i := 0; i < len(alset); i++ {
+			trm := alset[i]
+			aliases[trm] = append(aliases[trm], alset[:i]...)
+			aliases[trm] = append(aliases[trm], alset[i+1:]...)
+		}
+	}
+
+	// if:
+	// aa bb cc
+	// and bb is alias of vv
+	// no_alias_term = aa cc
+	// alias_terms = [bb vv]
+	no_alias_term := term
+	var alias_terms []string
+
+	// valid tokens.
+	// Non-alias term count as 1
+	// Term with alias is grouped and
+	// all of them count as 1 (we
+	// should match ONLY one of
+	// the aliases)
+	minsrchtkn := 0
+
+	if assetdef.Alias != nil {
+		no_alias_term = ""
+		var no_alias_terms []string
+		for _, tt := range strings.Split(term, " ") {
+			tt = strings.TrimSpace(tt)
+			if _, has_alias := aliases[tt]; has_alias {
+				minsrchtkn++
+				// if tt = aa
+				// and aliases[tt] = [bb cc]
+				// alias_terms = [bb cc aa]
+				alias_terms = append(alias_terms, aliases[tt]...)
+				alias_terms = append(alias_terms, tt)
+				continue
+			}
+			no_alias_terms = append(no_alias_terms, tt)
+		}
+		no_alias_term = strings.Join(no_alias_terms, " ")
+	}
+
 	// Spit search term in parts of size 3
 	// searchterm -> sea rch ter erm
-	schtkns, err := splitstring(term, 3)
+	schtkns, err := splitstring(no_alias_term, 3)
 	if err != nil {
 		return nil, err
 	}
+	minsrchtkn = minsrchtkn + len(schtkns)
+	if len(alias_terms) > 0 {
+		for _, tt := range alias_terms {
+			stt, err := splitstring(tt, 3)
+			if err != nil {
+				return nil, err
+			}
+			schtkns = append(schtkns, stt...)
+		}
+	}
+
 	// with 5 search term the system can
 	// found the items eficiently. Adding
 	// more terms is innecesary and add
 	// ram/cpu consumption.
-	if len(schtkns) > 5 {
+	// Exception: if the search term has
+	// alias this should sear for all terms
+	// because we could filter a schtkns
+	// wich is an inexistent alias token
+	if len(alias_terms) <= 0 && len(schtkns) > 5 {
 		schtkns = schtkns[0:5]
 	}
 
@@ -803,6 +866,7 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 		return nil, fmt.Errorf("not enough alphanumeric characters. Min char needed: 2")
 	}
 
+	cast.LogDebug("found "+strconv.Itoa(len(idxpositions))+" idx positions", nil)
 	if len(idxpositions) <= 0 {
 		// None results found
 		return searchres, nil
@@ -891,12 +955,13 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 
 	cast.LogDebug("Search Tokens: "+fmt.Sprintf("%v", schtkns), nil)
 
-	schtknscount := len(schtkns)
 	count := 0
+	discardcount := 0
 	for position, minfo := range fpositions {
 		// position should match all
 		// search tokens discard if not.
-		if minfo.count != schtknscount {
+		if minfo.count < minsrchtkn {
+			discardcount++
 			continue
 		}
 
@@ -915,8 +980,20 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 		// The last validation. Search the terms inside
 		// the recovered data.
 		valid := true
+	L:
 		for _, bb := range strings.Split(term, " ") {
 			cc := strings.ToLower(strings.Trim(bb, " "))
+
+			// test if alias exists
+			if _, has_alias := aliases[cc]; has_alias {
+				for _, a_cc := range aliases[cc] {
+					if strings.Contains(text, a_cc) {
+						// alias found, next
+						continue L
+					}
+				}
+			}
+			// if no alias found, test original subterm
 			if !strings.Contains(text, cc) {
 				// All terms should be found inside the
 				// recovered data.
@@ -935,6 +1012,7 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 			break
 		}
 	}
+	cast.LogDebug("Discarded positions "+fmt.Sprintf("%v", discardcount), nil)
 	cast.LogDebug("Found items "+fmt.Sprintf("%v", len(searchres.Results)), nil)
 
 	if len(sr.Sort) > 1 {

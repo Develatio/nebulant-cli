@@ -39,6 +39,9 @@ func init() {
 			"$.InstanceType",
 			"$.Summary",
 		},
+		Alias: [][]string{
+			{"x64", "x86_64"},
+		},
 	}
 	AssetsDefinition["aws_images"] = &AssetDefinition{
 		Name:         "AWS Images",
@@ -55,6 +58,9 @@ func init() {
 			"$.ImageId",
 			"$.ImageLocation",
 			"$.OwnerId",
+		},
+		Alias: [][]string{
+			{"x64", "x86_64"},
 		},
 	}
 }
