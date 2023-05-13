@@ -85,6 +85,7 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"download_files":   {F: RemoteCopy, N: NextOKKO, R: true},
 	"condition":        {F: ConditionParse, N: NextOKKO, R: false},
 	"start":            {F: DefineVars, N: NextOKKO, R: false},
+	"group":            {F: DefineVars, N: NextOKKO, R: false},
 	"stop":             {F: Stop, N: NextOKKO, R: false},
 	"end":              {F: NOOP, N: NextOKKO, R: false},
 	"sleep":            {F: Sleep, N: NextOKKO, R: false},
