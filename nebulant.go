@@ -173,6 +173,13 @@ func main() {
 			cast.SBus.Close().Wait()
 			os.Exit(exitCode)
 		}
+	case "auth":
+		exitCode, err = subcom.AuthCmd()
+		if err != nil {
+			cast.LogErr(err.Error(), nil)
+			cast.SBus.Close().Wait()
+			os.Exit(exitCode)
+		}
 	case "", "interactive":
 		// Interactive mode
 		err := interactive.Loop()

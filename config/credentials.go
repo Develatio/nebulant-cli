@@ -20,11 +20,17 @@
 package config
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"time"
+
+	"github.com/pkg/browser"
 )
 
 //
@@ -65,4 +71,36 @@ func ReadCredential(credentialName string) (*Credential, error) {
 		return &credential, nil
 	}
 	return nil, fmt.Errorf("Credential not found")
+}
+
+func Login() error {
+	tr := &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    30 * time.Second,
+		DisableCompression: true,
+	}
+	c := http.Client{Transport: tr}
+	url := url.URL{
+		Scheme: BackendProto,
+		Host:   BackendURLDomain,
+		Path:   "/apiv1/authx/sso/",
+	}
+	resp, err := c.Get(url.String())
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	r := bufio.NewReader(resp.Body)
+	url_token, _, err := r.ReadLine()
+	if err != nil {
+		return err
+	}
+	fmt.Println("Url token", url_token)
+	auth_token, _, err := r.ReadLine()
+	if err != nil {
+		return err
+	}
+	browser.OpenURL("https://panel.nebulant.lc")
+	fmt.Println("Auth token", auth_token)
+	return nil
 }
