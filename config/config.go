@@ -42,6 +42,12 @@ var BackendProto string = "https"
 // BackendURLDomain var
 var BackendURLDomain string = "api.nebulant.io"
 
+// AccountURLDomain var
+var AccountURLDomain string = "account.nebulant.io"
+
+// PanelURLDomain var
+var PanelURLDomain string = "panel.nebulant.io"
+
 // FrontOrigin var
 var FrontOrigin string = "https://builder.nebulant.io"
 

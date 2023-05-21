@@ -25,6 +25,8 @@ LDFLAGS = -X github.com/develatio/nebulant-cli/config.Version=$(CLIVERSION)\
 LOCALLDFLAGS = -X github.com/develatio/nebulant-cli/config.WSScheme=ws\
 	-X github.com/develatio/nebulant-cli/config.BackendProto=https\
 	-X github.com/develatio/nebulant-cli/config.BackendURLDomain=api.nebulant.lc\
+	-X github.com/develatio/nebulant-cli/config.AccountURLDomain=account.nebulant.lc\
+	-X github.com/develatio/nebulant-cli/config.PanelURLDomain=panel.nebulant.lc\
 	-X github.com/develatio/nebulant-cli/config.FrontOrigin=*\
 	-X github.com/develatio/nebulant-cli/config.AssetDescriptorURL=https://builder-assets.nebulant.dev/assets.json
 

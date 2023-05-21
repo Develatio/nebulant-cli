@@ -20,7 +20,7 @@
 package config
 
 import (
-	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -80,27 +80,42 @@ func Login() error {
 		DisableCompression: true,
 	}
 	c := http.Client{Transport: tr}
-	url := url.URL{
+	sso_url := url.URL{
 		Scheme: BackendProto,
 		Host:   BackendURLDomain,
 		Path:   "/apiv1/authx/sso/",
 	}
-	resp, err := c.Get(url.String())
+	body := []byte(`{
+		"description": "cli test"
+	}`)
+	resp, err := c.Post(sso_url.String(), "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	r := bufio.NewReader(resp.Body)
-	url_token, _, err := r.ReadLine()
+	// r := bufio.NewReader(resp.Body)
+
+	fmt.Println("headers", resp.Header)
+
+	panel_url := url.URL{
+		Scheme: BackendProto,
+		Host:   PanelURLDomain,
+		Path:   "organization/tokens/sso/" + resp.Header.Get("url-token"),
+	}
+
+	account_url := url.URL{
+		Scheme:   BackendProto,
+		Host:     AccountURLDomain,
+		Path:     "/to/",
+		RawQuery: "path=" + panel_url.String(),
+	}
+	browser.OpenURL(account_url.String())
+
+	// WIP
+	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Url token", url_token)
-	auth_token, _, err := r.ReadLine()
-	if err != nil {
-		return err
-	}
-	browser.OpenURL("https://panel.nebulant.lc")
-	fmt.Println("Auth token", auth_token)
+
 	return nil
 }
