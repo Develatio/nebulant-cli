@@ -72,8 +72,8 @@ var BACKEND_AUTH_TOKEN = ""
 // ACTIVE_CONF_PROFILE
 var ACTIVE_CONF_PROFILE = "default"
 
-// CREDENTIALS
-var CREDENTIALS *Credential = &Credential{}
+// CREDENTIAL
+var CREDENTIAL *Credential = &Credential{}
 
 // Server addr
 var SERVER_ADDR = "localhost"
@@ -137,12 +137,12 @@ func init() {
 		log.Panic("Cannot read credentials from specified profile " + ACTIVE_CONF_PROFILE)
 	}
 	if credential != nil {
-		CREDENTIALS = credential
+		CREDENTIAL = credential
 	}
 
 	// Use credentials from env vars if exists
 	if os.Getenv("NEBULANT_TOKEN_ID") != "" && os.Getenv("NEBULANT_TOKEN_SECRET") != "" {
 		var data string = os.Getenv("NEBULANT_TOKEN_ID") + ":" + os.Getenv("NEBULANT_TOKEN_SECRET")
-		CREDENTIALS.AuthToken = &data
+		CREDENTIAL.AuthToken = &data
 	}
 }

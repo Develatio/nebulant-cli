@@ -213,7 +213,7 @@ func NewIRBFromAny(any string) (*IRBlueprint, error) {
 
 // NewFromBackend func
 func NewFromBackend(path string) (*Blueprint, error) {
-	if config.CREDENTIALS.AuthToken == nil {
+	if config.CREDENTIAL.AuthToken == nil {
 		return nil, fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET env vars")
 	}
 
@@ -226,7 +226,11 @@ func NewFromBackend(path string) (*Blueprint, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", *config.CREDENTIALS.AuthToken)
+	authToken, err := config.BackendAuthToken(nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", authToken)
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
