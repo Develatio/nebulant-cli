@@ -19,6 +19,8 @@ endif
 
 PKG_LIST := $(shell go list ./... | grep -v /vendor/)
 
+
+
 LDFLAGS = -X github.com/develatio/nebulant-cli/config.Version=$(CLIVERSION)\
 	-X github.com/develatio/nebulant-cli/config.VersionDate=$(DATE)
 
@@ -43,9 +45,24 @@ ifndef $(GOPATH)
     export GOPATH
 endif
 
+ifndef $(GOOS)
+    GOOS=$(shell go env GOOS)
+    export GOOS
+endif
+
+ifndef $(GOARCH)
+    GOARCH=$(shell go env GOARCH)
+    export GOARCH
+endif
+
+OUTNAME=nebulant
+ifeq ($(GOOS),windows)
+	OUTNAME=nebulant.exe
+endif
+
 .PHONY: runrace
 runrace:
-	go run -race -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" nebulant.go $(ARGS)
+	CGO_ENABLED=1 go run -race -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" nebulant.go $(ARGS)
 
 .PHONY: run
 run:
@@ -62,7 +79,7 @@ rundockerdev:
 
 .PHONY: build
 build:
-	GO111MODULE=on CGO_ENABLED=0 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant nebulant.go
+	GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/$(OUTNAME) nebulant.go
 
 builddebug:
 	GO111MODULE=on CGO_ENABLED=0 go build -a -trimpath -ldflags "$(LDFLAGS)" -o bin/nebulant-debug nebulant.go
