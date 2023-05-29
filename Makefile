@@ -55,10 +55,7 @@ ifndef $(GOARCH)
     export GOARCH
 endif
 
-OUTNAME=nebulant
-ifeq ($(GOOS),windows)
-	OUTNAME=nebulant.exe
-endif
+GOEXE=$(shell go env GOEXE)
 
 .PHONY: runrace
 runrace:
@@ -79,7 +76,7 @@ rundockerdev:
 
 .PHONY: build
 build:
-	GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/$(OUTNAME) nebulant.go
+	GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant$(GOEXE) nebulant.go
 
 builddebug:
 	GO111MODULE=on CGO_ENABLED=0 go build -a -trimpath -ldflags "$(LDFLAGS)" -o bin/nebulant-debug nebulant.go
