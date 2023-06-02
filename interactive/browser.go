@@ -87,11 +87,13 @@ func httpReq(method string, path string, body interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	req.Header.Set("Authorization", *config.CREDENTIALS.AuthToken)
+	jar, err := config.Login(nil)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{Jar: jar}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -109,7 +111,7 @@ func httpReq(method string, path string, body interface{}) ([]byte, error) {
 }
 
 func Browser() error {
-	if config.CREDENTIALS.AuthToken == nil {
+	if config.CREDENTIAL.AuthToken == nil {
 		return fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET env vars")
 	}
 
