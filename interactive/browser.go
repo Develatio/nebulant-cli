@@ -87,14 +87,13 @@ func httpReq(method string, path string, body interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	authToken, err := config.BackendAuthToken(nil)
+	jar, err := config.Login(nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", authToken)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{Jar: jar}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err

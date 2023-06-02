@@ -28,7 +28,8 @@ func parseAuthFs() (*flag.FlagSet, error) {
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant auth [command] [options]\n")
 		fmt.Fprintf(fs.Output(), "\nCommands:\n")
-		fmt.Fprintf(fs.Output(), "  login\t\tDo login\n")
+		fmt.Fprintf(fs.Output(), "  newtoken\t\tNegotiate and save new backend token\n")
+		// fmt.Fprintf(fs.Output(), "  login\t\tLogin\n")
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
 	err := fs.Parse(flag.Args()[1:])
@@ -47,11 +48,12 @@ func AuthCmd() (int, error) {
 	// subsubcmd := fs.Arg(0)
 	subsubcmd := flag.Arg(1)
 	switch subsubcmd {
-	case "login":
-		err := config.Login()
+	case "newtoken":
+		err := config.RequestToken()
 		if err != nil {
 			return 1, err
 		}
+	// case "login":
 	default:
 		fs.Usage()
 		return 1, fmt.Errorf("please provide some subcommand to auth")

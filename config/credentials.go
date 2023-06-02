@@ -29,10 +29,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -41,31 +41,36 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type credentialsV1 struct {
+var cachedjar *cookiejar.Jar
+
+type credentialsStoreV1 struct {
 	Version     int                   `json:"version"`
 	Credentials map[string]Credential `json:"credentials"`
 }
 
-//
 // Ej:
-// {
-// 	"default": {
-// 		"auth_token": "TOKENHASH"
-// 	}
-// }
+//
+//	{
+//		"default": {
+//			"auth_token": "TOKENHASH"
+//		}
+//	}
+//
 // Credentials struct
-type Credentials struct {
+type CredentialsStore struct {
 	Version     string                `json:"version"`
 	Credentials map[string]Credential `json:"credentials"`
 }
 
 // Credential struct
 type Credential struct {
-	Access    *string `json:"uuid"`
+	// AuthToken.uuid
+	Access *string `json:"uuid"`
+	// pwd:ssh-rsa
 	AuthToken *string `json:"auth_token"`
 }
 
-func readCredentialsFile() (*Credentials, error) {
+func readCredentialsFile() (*CredentialsStore, error) {
 	credentialsPath := filepath.Join(AppHomePath(), "credentials")
 
 	jsonFile, err := os.Open(credentialsPath) //#nosec G304 -- Not a file inclusion, just a json read
@@ -75,9 +80,9 @@ func readCredentialsFile() (*Credentials, error) {
 	defer jsonFile.Close()
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 
-	var crs Credentials
+	var crs CredentialsStore
 	if err := json.Unmarshal(byteValue, &crs); err != nil {
-		var crsv1 credentialsV1
+		var crsv1 credentialsStoreV1
 		if err2 := json.Unmarshal(byteValue, &crsv1); err2 != nil {
 			// use erros.Join() when go 1.20
 			return nil, err2
@@ -90,7 +95,7 @@ func readCredentialsFile() (*Credentials, error) {
 	return &crs, nil
 }
 
-func saveCredentialsFile(crs *Credentials) (int, error) {
+func saveCredentialsFile(crs *CredentialsStore) (int, error) {
 	credentialsPath := filepath.Join(AppHomePath(), "credentials")
 
 	file, err := os.OpenFile(credentialsPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) //#nosec G304-- file inclusion from var needed
@@ -117,7 +122,62 @@ func ReadCredential(credentialName string) (*Credential, error) {
 	return nil, fmt.Errorf("Credential not found")
 }
 
-func Login() error {
+func Login(credential *Credential) (*cookiejar.Jar, error) {
+	// TODO: test expiration and re-login
+	if cachedjar != nil {
+		return cachedjar, nil
+	}
+	if credential == nil {
+		credential = CREDENTIAL
+	}
+	tr := &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    30 * time.Second,
+		DisableCompression: true,
+	}
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, err
+	}
+	c := http.Client{
+		Transport: tr,
+		Jar:       jar,
+	}
+	sso_login_url := url.URL{
+		Scheme: BackendProto,
+		Host:   BackendURLDomain,
+		Path:   "/apiv1/authx/sso/login/",
+	}
+
+	pwd := strings.Split(*credential.AuthToken, ":")[0]
+	esecret, err := encrypt(credential, []byte(pwd))
+	if err != nil {
+		return nil, err
+	}
+	body := []byte(`{
+		"access": "` + *credential.Access + `",
+		"secret": "` + esecret + `"
+	}`)
+	resp, err := c.Post(sso_login_url.String(), "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("cannot login :(")
+		}
+		return nil, fmt.Errorf(string(b))
+	}
+
+	cachedjar = jar
+
+	return jar, nil
+}
+
+func RequestToken() error {
 	tr := &http.Transport{
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
@@ -185,7 +245,7 @@ func Login() error {
 	return nil
 }
 
-func BackendAuthToken(credential *Credential) (string, error) {
+func encrypt(credential *Credential, secret []byte) (string, error) {
 	if credential == nil {
 		credential = CREDENTIAL
 	}
@@ -201,22 +261,13 @@ func BackendAuthToken(credential *Credential) (string, error) {
 	_cpbk := _pbk.(ssh.CryptoPublicKey).CryptoPublicKey()
 	pubkey := _cpbk.(*rsa.PublicKey)
 
-	// pwd:timestamp
-	now := strconv.FormatInt(time.Now().Unix(), 10)
-	scretmsg := []byte(atk[0] + ":" + now)
-
-	rng := rand.Reader
-	ciphtxt, err := rsa.EncryptOAEP(sha256.New(), rng, pubkey, scretmsg, []byte("nebulant :)"))
+	random := rand.Reader
+	ciphtxt, err := rsa.EncryptOAEP(sha256.New(), random, pubkey, secret, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error from encryption: %s\n", err)
 		return "", err
 	}
 
-	var pb64 []byte
-	buf := bytes.NewBuffer(pb64)
-	encoder := base64.NewEncoder(base64.StdEncoding, buf)
-	encoder.Write(ciphtxt)
-	defer encoder.Close()
-
-	return *credential.Access + ":" + buf.String(), nil
+	encoded := base64.StdEncoding.EncodeToString(ciphtxt)
+	return encoded, nil
 }
