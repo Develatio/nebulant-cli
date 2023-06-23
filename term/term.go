@@ -49,17 +49,23 @@ var BGCyan string = "\033[46m"
 
 var Gray string = "\033[97m"
 
-var White string = "\033[97m"
+var White string = "\033[37m"
 
 var Bold string = "\033[1m"
 
 var CursorToColZero = "\033[0G"
-var CursorUp string = "\033[1F"
+var CursorUp string = "\033[1A"
+var CursorLeft string = "\033[1D"
+
+var SaveCursor string = "\033[s"
+var RestoreCursor string = "\033[u"
 
 var HideCursor string = "\033[?25l"
 var ShowCursor string = "\033[?25h"
 
 var EraseLine string = "\033[K"
+
+var EraseEntireLine string = "\033[2K"
 
 var mls *MultilineStdout = nil
 
@@ -152,8 +158,36 @@ func Print(a ...interface{}) (n int, err error) {
 	return fmt.Fprint(Stdout, a...)
 }
 
-func InitTerm() {
-	if *config.DisableColorFlag {
+func configEmojiSupport() {
+	width, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	fmt.Print("🔧")
+	fmt.Print("\b")
+	fmt.Print("🔧")
+	count := width - 3
+	for i := 0; i < count; i++ {
+		fmt.Print("*")
+	}
+	cpos, _, err := getCursorPosition()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	if cpos == 0 {
+		EmojiSet = noEmojiSupportSet
+		Print(CursorUp)
+	}
+	fmt.Print("\b\b\b")
+	Print(EraseEntireLine)
+	Print("\n")
+	Print(CursorUp)
+}
+
+func ConfigColors() {
+	if config.DisableColorFlag != nil && *config.DisableColorFlag {
 		Stdout = os.Stdout
 		Stderr = os.Stderr
 		// Reset = ""
@@ -174,14 +208,17 @@ func InitTerm() {
 		Gray = ""
 		White = ""
 		Bold = ""
-		// CursorUp = ""
-		// EraseLine = ""
-	} else {
-		log.SetOutput(Stdout)
 	}
+}
+
+func InitTerm() {
+	log.SetOutput(Stdout)
 	if !config.DEBUG {
 		log.SetFlags(0)
 	}
+	configEmojiSupport()
+	EnableColorSupport()
+	ConfigColors()
 	//
 	// uses Stdout (term.Stdout in os.go)
 	// it can be equal to readline.Stdout

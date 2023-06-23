@@ -47,7 +47,7 @@ func Loop() error {
 	}
 	templates := &promptui.SelectTemplates{
 		Label:    " ",
-		Active:   "\U0001F449 {{ .Name | magenta }} \t\t {{ .Description }}",
+		Active:   term.EmojiSet["BackhandIndexPointingRight"] + " {{ .Name | magenta }} \t\t {{ .Description }}",
 		Inactive: "   {{ .Name | cyan }} \t\t {{ .Description | faint }}",
 		Selected: "> {{ .Name | magenta }}",
 	}

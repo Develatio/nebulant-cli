@@ -148,9 +148,9 @@ func Browser() error {
 func promptProject(projects []*projectSerializer) error {
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}:",
-		Active:   "\U0001F449 {{ .Name | magenta }} {{if .UUID}} ({{ .BlueprintsCount | red }}) {{end}}",
+		Active:   term.EmojiSet["BackhandIndexPointingRight"] + " {{ .Name | magenta }} {{if .UUID}} ({{ .BlueprintsCount | red }}) {{end}}",
 		Inactive: "   {{ .Name | cyan }} {{if .UUID}} ({{ .BlueprintsCount | red }}) {{end}}",
-		Selected: "{{if .UUID}} \U0001F44D {{ .Name | magenta }} {{end}}",
+		Selected: "{{if .UUID}} " + term.EmojiSet["ThumbsUpSign"] + " {{ .Name | magenta }} {{end}}",
 		Details: `{{if .UUID}}
 -------------------- Project --------------------
 {{ "Name:" | faint }}	{{ .Name }}
@@ -219,9 +219,9 @@ func promptBlueprint(projects []*blueprintSerializer) error {
 
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}:",
-		Active:   "\U0001F449 {{ .Name | magenta }}",
+		Active:   term.EmojiSet["BackhandIndexPointingRight"] + " {{ .Name | magenta }}",
 		Inactive: "   {{ .Name | cyan }}",
-		Selected: "{{if .UUID}} \U0001F680 {{ .Name | red }} {{end}}",
+		Selected: "{{if .UUID}} " + term.EmojiSet["Rocket"] + " {{ .Name | red }} {{end}}",
 		Details: `{{if .UUID}}
 -------------------- Blueprint --------------------
 {{ "Name:" | faint }}	{{ .Name }}

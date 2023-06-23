@@ -1,7 +1,7 @@
-//go:build !js
+//go:build !windows
 
 // Nebulant
-// Copyright (C) 2022  Develatio Technologies S.L.
+// Copyright (C) 2023  Develatio Technologies S.L.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -20,19 +20,24 @@ package term
 
 import (
 	"fmt"
+	"os"
 
-	"github.com/chzyer/readline"
-	"github.com/manifoldco/promptui"
+	"golang.org/x/term"
 )
 
-// from readline.std_windows.go
-// Stdin = NewRawReader()
-// Stdout = NewANSIWriter(Stdout)
-// Stderr = NewANSIWriter(Stderr)
+func getCursorPosition() (width, height int, err error) {
+	oldState, err := term.MakeRaw(0)
+	if err != nil {
+		panic(err)
+	}
+	defer term.Restore(0, oldState)
+	if _, err = os.Stdout.Write([]byte("\033[6n")); err != nil {
+		return 0, 0, err
+	}
+	if _, err = fmt.Fscanf(os.Stdin, "\033[%d;%d", &width, &height); err != nil {
+		return 0, 0, err
+	}
+	return width, height, nil
+}
 
-var Stdout = readline.Stdout
-var Stderr = readline.Stderr
-var Stdin = readline.Stdin
-var CharBell = []byte(fmt.Sprintf("%c", readline.CharBell))[0]
-var ErrInterrupt = promptui.ErrInterrupt
-var ErrEOF = promptui.ErrEOF
+func EnableColorSupport() error { return nil }

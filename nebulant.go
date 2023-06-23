@@ -83,6 +83,9 @@ func main() {
 		os.Exit(exitCode)
 	}()
 
+	// Init Term
+	term.InitTerm()
+
 	config.VersionFlag = flag.Bool("v", false, "Show version and exit.")
 	config.DebugFlag = flag.Bool("x", false, "Enable debug.")
 	config.Ipv6Flag = flag.Bool("6", false, "Force ipv6")
@@ -94,17 +97,16 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), "\nGlobal options:\n")
 		subcom.PrintDefaults(flag.CommandLine)
 		fmt.Fprintf(flag.CommandLine.Output(), "\nCommands:\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "  serve\t\t\t\U0001F477 Start server mode\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "  run\t\t\t\U000026A1 Run blueprint form file or net\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "  assets\t\t\U0001F5C2  Handle cli assets\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "  interactive\t\t\U0001F6D7  Start interactive menu\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  serve\t\t\t"+term.EmojiSet["TridentEmblem"]+" Start server mode\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  run\t\t\t"+term.EmojiSet["RunningShoe"]+" Run blueprint form file or net\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  assets\t\t"+term.EmojiSet["Squid"]+" Handle cli assets\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  interactive\t\t"+term.EmojiSet["Television"]+" Start interactive menu\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\n\nrun nebulant [command] --help to show help for a command\n")
 	}
 
 	flag.Parse()
+	term.ConfigColors()
 
-	// Init Term
-	term.InitTerm()
 	_, err = term.Println(term.Magenta+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Blue+"develat.io"+term.Reset)
 	if err != nil {
 		fmt.Println("Nebulant CLI - A cloud builder by develat.io")
