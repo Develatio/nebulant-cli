@@ -227,12 +227,14 @@ func InitTerm() error {
 	if !config.DEBUG {
 		log.SetFlags(0)
 	}
-	err := configEmojiSupport()
-	if err != nil {
-		return err
-	}
 
-	err = EnableColorSupport()
+	if isTerminal() {
+		err := configEmojiSupport()
+		if err != nil {
+			return err
+		}
+	}
+	err := EnableColorSupport()
 	if err != nil {
 		return err
 	}
