@@ -88,7 +88,7 @@ func (n *noBellStdout) Close() error {
 var NoBellStdout = &noBellStdout{}
 
 func isTerminal() bool {
-	if *config.ForceTerm {
+	if config.ForceTerm != nil && *config.ForceTerm {
 		return true
 	}
 	return term.IsTerminal(int(os.Stdout.Fd()))
@@ -223,22 +223,23 @@ func ConfigColors() {
 }
 
 func InitTerm() error {
-	log.SetOutput(Stdout)
+	var err error
 	if !config.DEBUG {
 		log.SetFlags(0)
 	}
 
 	if isTerminal() {
-		err := configEmojiSupport()
+		err = configEmojiSupport()
 		if err != nil {
 			return err
 		}
 	}
-	err := EnableColorSupport()
+	err = EnableColorSupport()
 	if err != nil {
 		return err
 	}
 	ConfigColors()
+	log.SetOutput(Stdout)
 	//
 	// uses Stdout (term.Stdout in os.go)
 	// it can be equal to readline.Stdout
