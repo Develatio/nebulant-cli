@@ -14,18 +14,18 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/joho/godotenv v1.5.1
 	github.com/manifoldco/promptui v0.9.0
+	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/povsister/scp v0.0.0-20210427074412-33febfd9f13e
+	github.com/schollz/progressbar/v3 v3.13.1
 	golang.org/x/crypto v0.6.0
 	golang.org/x/mod v0.8.0
+	golang.org/x/term v0.9.0
 )
 
 require (
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
-	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
-	github.com/schollz/progressbar/v3 v3.13.1 // indirect
-	golang.org/x/term v0.6.0 // indirect
 )
 
 require (
@@ -35,6 +35,6 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	golang.org/x/net v0.8.0
-	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/sys v0.9.0
 	golang.org/x/text v0.8.0 // indirect
 )
