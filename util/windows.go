@@ -19,7 +19,11 @@
 package util
 
 import (
+	"errors"
+	"golang.org/x/sys/windows"
+	"os"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -39,4 +43,34 @@ func CommandLineToArgv(cmd string) ([]string, error) {
 		args[idx] = syscall.UTF16ToString(argv[idx][:])
 	}
 	return args, nil
+}
+
+// due to https://github.com/golang/go/issues/31247
+// and due to https://github.com/golang/go/issues/31247
+// and because robustio is available only from go 1.20.5
+// and we use go 1.19 (use robustio on go update)
+// https://pkg.go.dev/cmd/go/internal/robustio#Rename
+func RenameFile(oldpath, newpath string) error {
+	var errno syscall.Errno
+	var retries int
+	var maxRetries int = 1000
+	for {
+		retries++
+		err := os.Rename(oldpath, newpath)
+		if errors.As(err, &errno) {
+			if retries > maxRetries {
+				return err
+			}
+			switch errno {
+			case syscall.ERROR_ACCESS_DENIED,
+				syscall.ERROR_FILE_NOT_FOUND,
+				windows.ERROR_SHARING_VIOLATION:
+				time.Sleep(1 * time.Millisecond)
+			default:
+				return err
+			}
+		} else {
+			return err
+		}
+	}
 }

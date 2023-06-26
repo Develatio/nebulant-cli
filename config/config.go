@@ -113,6 +113,13 @@ func AppHomePath() string {
 // * Environment Variables
 // * Shared Credentials file
 func init() {
+	// ensure config dir
+	assetsdir := filepath.Join(AppHomePath(), "assets")
+	err := os.MkdirAll(assetsdir, os.ModePerm)
+	if err != nil {
+		log.Panic(err.Error())
+	}
+
 	if os.Getenv("NEBULANT_DEBUG") != "" {
 		var err error
 		DEBUG, err = strconv.ParseBool(os.Getenv("NEBULANT_DEBUG"))

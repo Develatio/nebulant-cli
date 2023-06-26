@@ -391,14 +391,15 @@ func logStats(prefix string) {
 	cast.LogDebug(fmt.Sprintf("%s: Alloc: %v MiB\tHeapInuse: %v MiB\tFrees: %v MiB\tSys: %v MiB\tNumGC: %v", prefix, m.Alloc/1024/1024, m.HeapInuse/1024/1024, m.Frees/1024/1024, m.Sys/1024/1024, m.NumGC), nil)
 }
 
-func b2unzipWithProgressBar(file string, msg string) error {
-	infile, err := os.OpenFile(file, os.O_RDONLY, 0600) // #nosec G304 -- Not a file inclusion, just a well know zipped file
+func b2unzipWithProgressBar(infilepath string, outfilepath string, msg string) error {
+
+	infile, err := os.OpenFile(infilepath, os.O_RDONLY, 0600) // #nosec G304 -- Not a file inclusion, just a well know zipped file
 	if err != nil {
 		return err
 	}
 	defer infile.Close()
 
-	outfile, err := os.OpenFile(file+"---.uztmp", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304 -- Not a file inclusion, just a well know otput file
+	outfile, err := os.OpenFile(outfilepath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304 -- Not a file inclusion, just a well know otput file
 	if err != nil {
 		return err
 	}
@@ -439,7 +440,7 @@ func b2unzipWithProgressBar(file string, msg string) error {
 		return err
 	}
 
-	err = os.Rename(file+"---.uztmp", file)
+	err = os.Remove(infilepath)
 	if err != nil {
 		return err
 	}
@@ -447,7 +448,9 @@ func b2unzipWithProgressBar(file string, msg string) error {
 	return nil
 }
 
-func downloadFileWithProgressBar(url string, outputfile string, msg string) error {
+func downloadFileWithProgressBar(url string, outfilepath string, msg string) error {
+	downloading_outfilepath := outfilepath + ".downloading"
+	cast.LogDebug("Downloading "+url, nil)
 	tr := &http.Transport{
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
@@ -464,7 +467,7 @@ func downloadFileWithProgressBar(url string, outputfile string, msg string) erro
 		return fmt.Errorf(http.StatusText(resp.StatusCode))
 	}
 
-	file, err := os.OpenFile(outputfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304 -- Not a file inclusion, just a well know otput file
+	file, err := os.OpenFile(downloading_outfilepath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304 -- Not a file inclusion, just a well know otput file
 	if err != nil {
 		return err
 	}
@@ -484,7 +487,16 @@ func downloadFileWithProgressBar(url string, outputfile string, msg string) erro
 	}
 
 	if mimedetector.MimeType != nil && *mimedetector.MimeType == "application/x-bzip2" {
-		return b2unzipWithProgressBar(outputfile, "Unzipping file "+filepath.Base(outputfile)+"...")
+		err := file.Close() // close outfilepath to allow unzip handle it
+		if err != nil {
+			return err
+		}
+		return b2unzipWithProgressBar(downloading_outfilepath, outfilepath, "Unzipping file "+filepath.Base(outfilepath)+"...")
+	} else {
+		err := util.RenameFile(downloading_outfilepath, outfilepath)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
