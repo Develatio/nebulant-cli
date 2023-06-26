@@ -158,11 +158,10 @@ func Print(a ...interface{}) (n int, err error) {
 	return fmt.Fprint(Stdout, a...)
 }
 
-func configEmojiSupport() {
+func configEmojiSupport() error {
 	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
 	fmt.Print("🔧")
 	fmt.Print("\b")
@@ -173,17 +172,29 @@ func configEmojiSupport() {
 	}
 	cpos, _, err := getCursorPosition()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
 	if cpos == 0 {
 		EmojiSet = noEmojiSupportSet
-		Print(CursorUp)
+		_, err := Print(CursorUp)
+		if err != nil {
+			return err
+		}
 	}
 	fmt.Print("\b\b\b")
-	Print(EraseEntireLine)
-	Print("\n")
-	Print(CursorUp)
+	_, err = Print(EraseEntireLine)
+	if err != nil {
+		return err
+	}
+	_, err = Print("\n")
+	if err != nil {
+		return err
+	}
+	_, err = Print(CursorUp)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func ConfigColors() {
@@ -211,13 +222,20 @@ func ConfigColors() {
 	}
 }
 
-func InitTerm() {
+func InitTerm() error {
 	log.SetOutput(Stdout)
 	if !config.DEBUG {
 		log.SetFlags(0)
 	}
-	configEmojiSupport()
-	EnableColorSupport()
+	err := configEmojiSupport()
+	if err != nil {
+		return err
+	}
+
+	err = EnableColorSupport()
+	if err != nil {
+		return err
+	}
 	ConfigColors()
 	//
 	// uses Stdout (term.Stdout in os.go)
@@ -226,4 +244,5 @@ func InitTerm() {
 	// os cannot support colors or if has
 	// been disabled manually.
 	OpenMultilineStdout()
+	return nil
 }

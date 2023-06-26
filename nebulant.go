@@ -84,7 +84,13 @@ func main() {
 	}()
 
 	// Init Term
-	term.InitTerm()
+	err = term.InitTerm()
+	if err != nil {
+		cast.SBus.Close().Wait()
+		fmt.Println("cannot init term :(")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 
 	config.VersionFlag = flag.Bool("v", false, "Show version and exit.")
 	config.DebugFlag = flag.Bool("x", false, "Enable debug.")

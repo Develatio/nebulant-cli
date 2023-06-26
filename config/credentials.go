@@ -211,7 +211,10 @@ func RequestToken() error {
 		Path:     "/to/",
 		RawQuery: "path=" + panel_url.String(),
 	}
-	browser.OpenURL(account_url.String())
+	err = browser.OpenURL(account_url.String())
+	if err != nil {
+		return err
+	}
 
 	// WIP
 	rawbody, err := ioutil.ReadAll(resp.Body)
