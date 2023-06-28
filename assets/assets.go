@@ -392,7 +392,7 @@ func logStats(prefix string) {
 }
 
 func b2unzipWithProgressBar(infilepath string, outfilepath string, msg string) error {
-
+	startTime := time.Now()
 	infile, err := os.OpenFile(infilepath, os.O_RDONLY, 0600) // #nosec G304 -- Not a file inclusion, just a well know zipped file
 	if err != nil {
 		return err
@@ -445,19 +445,22 @@ func b2unzipWithProgressBar(infilepath string, outfilepath string, msg string) e
 		return err
 	}
 
+	elapsedTime := time.Since(startTime).String()
+	cast.LogDebug("unzipped in "+elapsedTime, nil)
 	return nil
 }
 
 func downloadFileWithProgressBar(url string, outfilepath string, msg string) error {
+	startTime := time.Now()
 	downloading_outfilepath := outfilepath + ".downloading"
 	cast.LogDebug("Downloading "+url, nil)
-	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    30 * time.Second,
-		DisableCompression: false,
+	client := util.GetHttpClient()
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
 	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Get(url)
+	req.Header.Set("User-Agent", "nebulant")
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -486,6 +489,8 @@ func downloadFileWithProgressBar(url string, outfilepath string, msg string) err
 		return err
 	}
 
+	elapsedTime := time.Since(startTime).String()
+	cast.LogDebug("downloaded in "+elapsedTime, nil)
 	if mimedetector.MimeType != nil && *mimedetector.MimeType == "application/x-bzip2" {
 		err := file.Close() // close outfilepath to allow unzip handle it
 		if err != nil {
@@ -1165,41 +1170,7 @@ func updateDescriptor(descpath string) error {
 		return err
 	}
 
-	cast.LogInfo("Updating asset descriptor "+config.AssetDescriptorURL+"...", nil)
-	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    30 * time.Second,
-		DisableCompression: false,
-	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Get(config.AssetDescriptorURL)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(http.StatusText(resp.StatusCode))
-	}
-
-	file, err := os.OpenFile(descpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) //#nosec G304-- file inclusion from var needed
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	sb := term.OpenStatusBar()
-	bar, err := sb.GetProgressBar(resp.ContentLength, "Downloading asset descriptor", true)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(io.MultiWriter(file, bar), resp.Body)
-
-	if err != nil {
-		return err
-	}
-	return nil
+	return downloadFileWithProgressBar(config.AssetDescriptorURL, descpath, "Updating asset descriptor "+config.AssetDescriptorURL+"...")
 }
 
 func GenerateIndexFromFile(term string) error {
