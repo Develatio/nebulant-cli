@@ -107,6 +107,7 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), "  run\t\t\t"+term.EmojiSet["RunningShoe"]+" Run blueprint form file or net\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  assets\t\t"+term.EmojiSet["Squid"]+" Handle cli assets\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  interactive\t\t"+term.EmojiSet["Television"]+" Start interactive menu\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  auth\t\t\t"+term.EmojiSet["Key"]+" Server authentication\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\n\nrun nebulant [command] --help to show help for a command\n")
 	}
 
