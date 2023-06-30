@@ -62,7 +62,7 @@ func OpenUrl(url string) error {
 	case "darwin":
 		cmd = exec.Command("open", url)
 	case "windows":
-		cmd = exec.Command("start", url)
+		cmd = exec.Command("cmd", "/c", "start", url)
 	default:
 		exec.Command("xdg-open", url)
 	}
