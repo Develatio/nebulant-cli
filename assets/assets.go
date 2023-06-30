@@ -391,68 +391,8 @@ func logStats(prefix string) {
 	cast.LogDebug(fmt.Sprintf("%s: Alloc: %v MiB\tHeapInuse: %v MiB\tFrees: %v MiB\tSys: %v MiB\tNumGC: %v", prefix, m.Alloc/1024/1024, m.HeapInuse/1024/1024, m.Frees/1024/1024, m.Sys/1024/1024, m.NumGC), nil)
 }
 
-func b2unzipWithProgressBar(infilepath string, outfilepath string, msg string) error {
-	startTime := time.Now()
-	infile, err := os.OpenFile(infilepath, os.O_RDONLY, 0600) // #nosec G304 -- Not a file inclusion, just a well know zipped file
-	if err != nil {
-		return err
-	}
-	defer infile.Close()
-
-	outfile, err := os.OpenFile(outfilepath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304 -- Not a file inclusion, just a well know otput file
-	if err != nil {
-		return err
-	}
-	defer outfile.Close()
-
-	instats, err := infile.Stat()
-	if err != nil {
-		return err
-	}
-
-	if instats.Size() > maxZipFileSize {
-		return fmt.Errorf("the downloaded zip file is too big")
-	}
-
-	bz2dec := bzip2.NewReader(infile)
-	// limit bzip file size, LimitReader will launch
-	// EOF on read > maxZipFileSize
-	noZipBombReader := io.LimitReader(bz2dec, maxZipFileSize)
-
-	sb := term.OpenStatusBar()
-	bar, err := sb.GetProgressBar(instats.Size(), msg, false)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(io.MultiWriter(outfile, bar), noZipBombReader)
-	if err != nil {
-		return err
-	}
-
-	err = outfile.Close()
-	if err != nil {
-		return err
-	}
-
-	err = infile.Close()
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(infilepath)
-	if err != nil {
-		return err
-	}
-
-	elapsedTime := time.Since(startTime).String()
-	cast.LogDebug("unzipped in "+elapsedTime, nil)
-	return nil
-}
-
 func downloadFileWithProgressBar(url string, outfilepath string, msg string) error {
 	startTime := time.Now()
-	downloading_outfilepath := outfilepath + ".downloading"
 	cast.LogDebug("Downloading "+url, nil)
 	client := util.GetHttpClient()
 	req, err := http.NewRequest("GET", url, nil)
@@ -470,7 +410,7 @@ func downloadFileWithProgressBar(url string, outfilepath string, msg string) err
 		return fmt.Errorf(http.StatusText(resp.StatusCode))
 	}
 
-	file, err := os.OpenFile(downloading_outfilepath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304 -- Not a file inclusion, just a well know otput file
+	file, err := os.OpenFile(outfilepath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304 -- Not a file inclusion, just a well know otput file
 	if err != nil {
 		return err
 	}
@@ -482,27 +422,22 @@ func downloadFileWithProgressBar(url string, outfilepath string, msg string) err
 		return err
 	}
 
-	mimedetector := &util.MimeDetectorWriter{}
+	ioreader := resp.Body
+	if strings.ToLower(resp.Header.Get("Content-Type")) == "application/x-bzip2" {
+		bz2dec := bzip2.NewReader(resp.Body)
+		// limit bzip file size, LimitReader will launch
+		// EOF on read > maxZipFileSize
+		ioreader = io.NopCloser(io.LimitReader(bz2dec, maxZipFileSize))
+	}
 
-	_, err = io.Copy(io.MultiWriter(file, bar, mimedetector), resp.Body)
+	var buf []byte
+	_, err = io.CopyBuffer(io.MultiWriter(file, bar), ioreader, buf)
 	if err != nil {
 		return err
 	}
 
 	elapsedTime := time.Since(startTime).String()
 	cast.LogDebug("downloaded in "+elapsedTime, nil)
-	if mimedetector.MimeType != nil && *mimedetector.MimeType == "application/x-bzip2" {
-		err := file.Close() // close outfilepath to allow unzip handle it
-		if err != nil {
-			return err
-		}
-		return b2unzipWithProgressBar(downloading_outfilepath, outfilepath, "Unzipping file "+filepath.Base(outfilepath)+"...")
-	} else {
-		err := util.RenameFile(downloading_outfilepath, outfilepath)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -1169,8 +1104,8 @@ func updateDescriptor(descpath string) error {
 	if err != nil {
 		return err
 	}
-
-	return downloadFileWithProgressBar(config.AssetDescriptorURL, descpath, "Updating asset descriptor "+config.AssetDescriptorURL+"...")
+	cast.LogDebug("Downloading "+config.AssetDescriptorURL, nil)
+	return downloadFileWithProgressBar(config.AssetDescriptorURL, descpath, "Updating asset descriptor...")
 }
 
 func GenerateIndexFromFile(term string) error {
@@ -1345,7 +1280,8 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 		} else if errors.Is(err, os.ErrNotExist) {
 			err = nil
 			if !skipdownload {
-				cast.LogInfo("Downloading "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
+				cast.LogDebug("Downloading "+desc.URL, nil)
+				cast.LogInfo("Downloading "+desc.ID+" asset index in bg...", nil)
 				err = downloadIndex(desc, def)
 			}
 			if err != nil {
@@ -1353,7 +1289,8 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 				cast.LogWarn(desc.ID+": Since the index could not be downloaded, it will be built locally. This process is long and expensive.", nil)
 			}
 			if err != nil || skipdownload {
-				cast.LogInfo("Building "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
+				cast.LogDebug("Building "+desc.URL, nil)
+				cast.LogInfo("Building "+desc.ID+" index in bg...", nil)
 				_, err := makeIndex(def)
 				if err != nil {
 					State.setUpgradeState(UpgradeStateInProgressWithErr)
