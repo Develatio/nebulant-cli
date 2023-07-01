@@ -190,7 +190,7 @@ func RequestToken() error {
 		Path:   "/apiv1/authx/sso/",
 	}
 	body := []byte(`{
-		"description": "cli test"
+		"description": "Nebulant CLI"
 	}`)
 	resp, err := c.Post(sso_url.String(), "application/json", bytes.NewBuffer(body))
 	if err != nil {
