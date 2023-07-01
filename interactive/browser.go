@@ -48,16 +48,16 @@ type meSerializer struct {
 	Organization *organizationSerializer `json:"organization"`
 }
 
-type projectSerializer struct {
+type collectionSerializer struct {
 	Name            string `json:"name"`
 	UUID            string `json:"uuid"`
 	Description     string `json:"description"`
 	BlueprintsCount int    `json:"n_blueprints"`
 }
 
-type resultsProject struct {
-	Count   int                  `json:"count"`
-	Results []*projectSerializer `json:"results"`
+type resultsCollection struct {
+	Count   int                     `json:"count"`
+	Results []*collectionSerializer `json:"results"`
 }
 
 type blueprintSerializer struct {
@@ -112,10 +112,10 @@ func httpReq(method string, path string, body interface{}) ([]byte, error) {
 
 func Browser() error {
 	if config.CREDENTIAL.AuthToken == nil {
-		return fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET env vars")
+		return fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token.")
 	}
 
-	term.PrintInfo("Looking for projects...\n")
+	term.PrintInfo("Looking for collections...\n")
 	data, err := httpReq("GET", "authx/me/", nil)
 	if err != nil {
 		return err
@@ -128,31 +128,31 @@ func Browser() error {
 	// store org uuid
 	organizationUUID = me.Organization.UUID
 
-	data, err = httpReq("GET", "organization/"+organizationUUID+"/project/", nil)
+	data, err = httpReq("GET", "organization/"+organizationUUID+"/collection/", nil)
 	if err != nil {
 		return err
 	}
-	rp := &resultsProject{}
+	rp := &resultsCollection{}
 	if err := json.Unmarshal(data, rp); err != nil {
 		return err
 	}
-	rp.Results = append(rp.Results, &projectSerializer{Name: "Back"})
+	rp.Results = append(rp.Results, &collectionSerializer{Name: "Back"})
 	fmt.Printf("\r")
-	err = promptProject(rp.Results)
+	err = promptCollection(rp.Results)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func promptProject(projects []*projectSerializer) error {
+func promptCollection(collections []*collectionSerializer) error {
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}:",
 		Active:   term.EmojiSet["BackhandIndexPointingRight"] + " {{ .Name | magenta }} {{if .UUID}} ({{ .BlueprintsCount | red }}) {{end}}",
 		Inactive: "   {{ .Name | cyan }} {{if .UUID}} ({{ .BlueprintsCount | red }}) {{end}}",
 		Selected: "{{if .UUID}} " + term.EmojiSet["ThumbsUpSign"] + " {{ .Name | magenta }} {{end}}",
 		Details: `{{if .UUID}}
--------------------- Project --------------------
+-------------------- Collection --------------------
 {{ "Name:" | faint }}	{{ .Name }}
 {{ "Description:" | faint }}	{{ .Description }}
 {{ "Blueprint:" | faint }}	{{ .BlueprintsCount }}{{end}}`,
@@ -160,14 +160,14 @@ func promptProject(projects []*projectSerializer) error {
 L:
 	for {
 		prompt := promptui.Select{
-			Label:     "Select Project",
-			Items:     projects,
+			Label:     "Select collection",
+			Items:     collections,
 			Templates: templates,
 			Stdout:    term.NoBellStdout,
 			HideHelp:  true,
 		}
 		i, _, err := prompt.Run()
-		item := projects[i]
+		item := collections[i]
 
 		if err != nil {
 			return err
@@ -177,7 +177,7 @@ L:
 		}
 
 		term.PrintInfo("Looking for blueprints...\n")
-		data, err := httpReq("GET", "project/"+item.UUID+"/blueprint/", nil)
+		data, err := httpReq("GET", "collection/"+item.UUID+"/blueprint/", nil)
 		if err != nil {
 			return err
 		}
@@ -194,7 +194,7 @@ L:
 	return nil
 }
 
-func promptBlueprint(projects []*blueprintSerializer) error {
+func promptBlueprint(collections []*blueprintSerializer) error {
 	defer func() {
 		if r := recover(); r != nil {
 			cast.LogErr("Unrecoverable error found. Feel free to send us feedback", nil)
@@ -231,7 +231,7 @@ L:
 	for {
 		prompt := promptui.Select{
 			Label:     "Select Blueprint",
-			Items:     projects,
+			Items:     collections,
 			Templates: templates,
 			Stdout:    term.NoBellStdout,
 			HideHelp:  true,
@@ -241,7 +241,7 @@ L:
 			return err
 		}
 
-		item := projects[i]
+		item := collections[i]
 
 		if item.UUID == "" {
 			break L

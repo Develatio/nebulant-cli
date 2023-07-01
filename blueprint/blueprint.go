@@ -214,7 +214,7 @@ func NewIRBFromAny(any string) (*IRBlueprint, error) {
 // NewFromBackend func
 func NewFromBackend(path string) (*Blueprint, error) {
 	if config.CREDENTIAL.AuthToken == nil {
-		return nil, fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET env vars")
+		return nil, fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token.")
 	}
 
 	url := url.URL{Scheme: config.BackendProto, Host: config.BackendURLDomain, Path: "/apiv1/cli/" + path}
