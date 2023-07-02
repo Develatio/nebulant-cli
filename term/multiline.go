@@ -187,7 +187,7 @@ func (o *oneLineWriteCloser) Scanln(prompt string, a ...any) (n int, err error) 
 	// options at a time
 	tsi.mu.Lock()
 	defer tsi.mu.Unlock()
-	oldState, err := term.MakeRaw(0)
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		panic(err)
 	}
@@ -202,7 +202,7 @@ func (o *oneLineWriteCloser) Scanln(prompt string, a ...any) (n int, err error) 
 	eco := &stdinEcoWriter{stdout: o}
 	eco.Init()
 	defer eco.Stop()
-	_, err = eco.Write([]byte(prompt))
+	_, err = eco.Write([]byte(CursorToColZero + prompt))
 	if err != nil {
 		return -1, err
 	}
@@ -243,7 +243,7 @@ func (o *oneLineWriteCloser) Scanln(prompt string, a ...any) (n int, err error) 
 		// buff.Write(buf)
 
 	}
-	return 0, io.EOF
+	// return 0, io.EOF
 }
 
 type MultilineStdout struct {
