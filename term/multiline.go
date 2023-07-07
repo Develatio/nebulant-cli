@@ -151,7 +151,6 @@ func (o *oneLineWriteCloser) GetProgressBar(max int64, description string, showb
 			progressbar.OptionSetWidth(20),
 			progressbar.OptionThrottle(30*time.Second),
 			progressbar.OptionShowCount(),
-			progressbar.OptionUseANSICodes(true),
 			progressbar.OptionSpinnerCustom([]string{}),
 		), nil
 	}
@@ -166,6 +165,7 @@ func (o *oneLineWriteCloser) GetProgressBar(max int64, description string, showb
 		progressbar.OptionShowCount(),
 		progressbar.OptionSpinnerType(14),
 		progressbar.OptionSetRenderBlankState(true),
+		progressbar.OptionClearOnFinish(),
 	), nil
 }
 
