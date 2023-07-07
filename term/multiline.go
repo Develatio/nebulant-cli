@@ -60,7 +60,6 @@ func (s *stdinEcoWriter) Init() {
 		for {
 			select {
 			case <-s.close:
-				fmt.Println("eco close")
 				return
 			case <-ticker.C:
 				s.mu.Lock()
@@ -182,7 +181,7 @@ func (o *oneLineWriteCloser) Print(s string) {
 	}
 }
 
-func (o *oneLineWriteCloser) Scanln(prompt string, a ...any) (n int, err error) {
+func (o *oneLineWriteCloser) Scanln(prompt string, def []byte, a ...any) (n int, err error) {
 	// to prevent interactively ask many
 	// options at a time
 	tsi.mu.Lock()
@@ -207,6 +206,16 @@ func (o *oneLineWriteCloser) Scanln(prompt string, a ...any) (n int, err error) 
 		return -1, err
 	}
 	reader := bufio.NewReader(os.Stdin)
+	if def != nil {
+		_, err := buff.Write(def)
+		if err != nil {
+			return 0, err
+		}
+		_, err = eco.Write(def)
+		if err != nil {
+			return 0, err
+		}
+	}
 
 	for {
 		char, size, err := reader.ReadRune()

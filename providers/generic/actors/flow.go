@@ -61,25 +61,34 @@ func (d *defineVarsParametersVar) askForValue() error {
 	v := reflect.ValueOf(d.Value)
 	isEmpty := v.Kind() == reflect.Ptr && v.IsNil()
 	isNotValid := !v.IsValid()
-	if d.AskAtRuntime != nil && *d.AskAtRuntime && (isEmpty || isNotValid) {
+	if d.AskAtRuntime != nil && *d.AskAtRuntime {
 		lin := term.AppendLine()
 		var err error
 		switch *d.Type {
 		case VarTypeString:
 			var vv string
-			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", &vv)
+			var def []byte
+			if !isEmpty && !isNotValid {
+				def = []byte(d.Value.(string))
+			}
+			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", def, &vv)
 			if err != nil {
 				return err
 			}
 			d.Value = vv
 		case VarTypeInt:
 			var vv int
-			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", &vv)
+			if !isEmpty && !isNotValid {
+				vv = d.Value.(int)
+			}
+			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", nil, &vv)
 			if err != nil {
 				return err
 			}
 			d.Value = vv
 		case VarTypeSelectableStatic:
+			// TODO: test if there is value
+			// selected and mark option acordingly
 			var options []string
 			for _, obj := range d.Options {
 				options = append(options, obj.Label)
