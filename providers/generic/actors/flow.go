@@ -61,7 +61,7 @@ func (d *defineVarsParametersVar) askForValue() error {
 	v := reflect.ValueOf(d.Value)
 	isEmpty := v.Kind() == reflect.Ptr && v.IsNil()
 	isNotValid := !v.IsValid()
-	if d.AskAtRuntime != nil && *d.AskAtRuntime && (isEmpty || isNotValid) && d.Required {
+	if d.AskAtRuntime != nil && *d.AskAtRuntime && (isEmpty || isNotValid) {
 		lin := term.AppendLine()
 		var err error
 		switch *d.Type {
@@ -472,15 +472,14 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	// validate var type/value
 	for _, v := range params.Vars {
+		// dont care here preset value,
+		// it will be setted by user at runtime
+		if v.AskAtRuntime != nil && *v.AskAtRuntime {
+			continue
+		}
 		if v.Type == nil {
 			v.Type = new(VarType)
 			*v.Type = VarTypeString
-		}
-		if ctx.Rehearsal {
-			err := v.askForValue()
-			if err != nil {
-				return nil, err
-			}
 		}
 		// test type
 		switch *v.Type {
