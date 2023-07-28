@@ -110,7 +110,7 @@ func (d *defineVarsParametersVar) askForValue() error {
 		// if err != nil {
 		// 	return err
 		// }
-		err = term.DeleteLine(lin)
+		err = lin.Close()
 		if err != nil {
 			return err
 		}

@@ -238,8 +238,9 @@ func writeIndexFile(fpath string, list *index, name string) (int, error) {
 	nn = n + nn
 	partcount := 0
 	partlen := len(list.Parts)
-	sb := term.OpenStatusBar()
-	bar, err := sb.GetProgressBar(int64(partlen), "Writing "+name+" index file", false)
+	lin := term.AppendLine()
+	defer lin.Close()
+	bar, err := lin.GetProgressBar(int64(partlen), "Writing "+name+" index file", false)
 	if err != nil {
 		return 0, err
 	}
@@ -416,8 +417,9 @@ func downloadFileWithProgressBar(url string, outfilepath string, msg string) err
 	}
 	defer file.Close()
 
-	sb := term.OpenStatusBar()
-	bar, err := sb.GetProgressBar(resp.ContentLength, msg, true)
+	lin := term.AppendLine()
+	defer lin.Close()
+	bar, err := lin.GetProgressBar(resp.ContentLength, msg, true)
 	if err != nil {
 		return err
 	}
@@ -526,8 +528,8 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
 
-	sb := term.OpenStatusBar()
-	bar, err := sb.GetProgressBar(fi.Size(), "Reading asset items", false)
+	lin := term.AppendLine()
+	bar, err := lin.GetProgressBar(fi.Size(), "Reading asset items", false)
 	if err != nil {
 		return 0, err
 	}
@@ -623,8 +625,8 @@ func makeSubIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
 
-	sb := term.OpenStatusBar()
-	bar, err := sb.GetProgressBar(fi.Size(), "Optimizing "+assetdef.Name+" index", false)
+	lin := term.AppendLine()
+	bar, err := lin.GetProgressBar(fi.Size(), "Optimizing "+assetdef.Name+" index", false)
 	if err != nil {
 		return 0, err
 	}
@@ -1154,7 +1156,6 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 	}
 
 	defer descfile.Close()
-	defer term.CloseStatusBar()
 
 	byteValue, _ := io.ReadAll(descfile)
 	if err := json.Unmarshal(byteValue, &descriptor); err != nil {

@@ -55,6 +55,7 @@ var Bold string = "\033[1m"
 
 var CursorToColZero = "\033[0G"
 var CursorUp string = "\033[1A"
+var CursorDown string = "\033[1B"
 var CursorLeft string = "\033[1D"
 
 var SaveCursor string = "\033[s"
@@ -65,11 +66,10 @@ var ShowCursor string = "\033[?25h"
 
 var EraseLine string = "\033[K"
 
+var EraseLineFromCursor string = "\033[0K"
 var EraseEntireLine string = "\033[2K"
 
 var mls *MultilineStdout = nil
-
-var statusBarLine *oneLineWriteCloser = nil
 
 // https://github.com/manifoldco/promptui/issues/49
 type noBellStdout struct{}
@@ -94,14 +94,6 @@ func isTerminal() bool {
 	return term.IsTerminal(int(os.Stdout.Fd()))
 }
 
-func OpenStatusBar() *oneLineWriteCloser {
-	if statusBarLine != nil {
-		return statusBarLine
-	}
-	statusBarLine = mls.AppendLine()
-	return statusBarLine
-}
-
 func AppendLine() *oneLineWriteCloser {
 	return mls.AppendLine()
 }
@@ -110,29 +102,14 @@ func Selectable(prompt string, options []string) (int, error) {
 	return mls.SelectTest(prompt, options)
 }
 
-func DeleteLine(line *oneLineWriteCloser) error {
-	return mls.DeleteLine(line)
-}
-
 func OpenMultilineStdout() {
 	if mls == nil {
-		mls = &MultilineStdout{
-			// WARN: this sould be called AFTER InitTerm
-			MainStdout: Stdout,
-		}
+		mls = &MultilineStdout{}
+		// WARN: this sould be called AFTER InitTerm
+		mls.SetMainStdout(Stdout)
+		mls.Init()
 		log.SetOutput(mls)
 	}
-}
-
-func CloseStatusBar() error {
-	if statusBarLine != nil {
-		err := mls.DeleteLine(statusBarLine)
-		if err != nil {
-			return err
-		}
-		statusBarLine = nil
-	}
-	return nil
 }
 
 // PrintInfo func

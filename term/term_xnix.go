@@ -41,3 +41,7 @@ func getCursorPosition() (width, height int, err error) {
 }
 
 func EnableColorSupport() error { return nil }
+
+func SetHideCursor() error { return nil }
+
+func SetShowCursor() error { return nil }

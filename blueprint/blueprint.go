@@ -424,7 +424,7 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	// 	lin.Scanln("Enter value for var: ", &first)
 	// 	// fmt.Println("Var setted to: ", first)
 	// 	lin.Write([]byte("var setted to " + first))
-	// 	err = term.DeleteLine(lin)
+	// 	err = lin.Close()
 	// 	if err != nil {
 	// 		panic("there is a problem with the terminal")
 	// 	}

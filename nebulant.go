@@ -209,6 +209,13 @@ func main() {
 		}
 		cast.SBus.Close().Wait()
 		os.Exit(0)
+	case "debugterm":
+		exitCode, err = subcom.DebugtermCmd()
+		if err != nil {
+			cast.LogErr(err.Error(), nil)
+			cast.SBus.Close().Wait()
+			os.Exit(exitCode)
+		}
 	default:
 		flag.Usage()
 		cast.LogErr("Unknown command", nil)

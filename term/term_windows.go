@@ -21,6 +21,7 @@ package term
 import (
 	"os"
 
+	"github.com/Azure/go-ansiterm/winterm"
 	"golang.org/x/sys/windows"
 )
 
@@ -44,5 +45,37 @@ func EnableColorSupport() error {
 	// ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 	st &^= windows.ENABLE_VIRTUAL_TERMINAL_PROCESSING
 	windows.SetConsoleMode(windows.Handle(int(os.Stdin.Fd())), st)
+	return nil
+}
+
+func SetHideCursor() error {
+	var info winterm.CONSOLE_CURSOR_INFO
+	handle := uintptr(int(os.Stdout.Fd()))
+	err := winterm.GetConsoleCursorInfo(handle, &info)
+	if err != nil {
+		return err
+	}
+	info.Visible = 0
+
+	err = winterm.SetConsoleCursorInfo(handle, &info)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func SetShowCursor() error {
+	var info winterm.CONSOLE_CURSOR_INFO
+	handle := uintptr(int(os.Stdout.Fd()))
+	err := winterm.GetConsoleCursorInfo(handle, &info)
+	if err != nil {
+		return err
+	}
+	info.Visible = 1
+
+	err = winterm.SetConsoleCursorInfo(handle, &info)
+	if err != nil {
+		return err
+	}
 	return nil
 }

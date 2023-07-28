@@ -22,11 +22,11 @@ type threadSafeInput struct {
 var tsi = &threadSafeInput{}
 
 type stdinEcoWriter struct {
+	mu sync.Mutex
 	// where to write cumulated eco
 	stdout io.WriteCloser
 	p      []byte
 	close  chan bool
-	mu     sync.Mutex
 	tick   bool
 }
 
@@ -50,17 +50,21 @@ func (s *stdinEcoWriter) eco(tick bool) {
 	} else {
 		spc = append(s.p, []byte(Magenta+" "+Reset)...)
 	}
-	s.stdout.Write(spc) //#nosec G104 -- Unhandle is OK here
+	// write s.p + cursor to onelineWriteCloser
+	s.stdout.Write([]byte(EraseEntireLine)) //#nosec G104 -- Unhandle is OK here
+	s.stdout.Write(spc)                     //#nosec G104 -- Unhandle is OK here
 }
 
 func (s *stdinEcoWriter) Init() {
+	s.close = make(chan bool, 1)
 	go func() {
 		ticker := time.NewTicker((1 * time.Second) / 2)
 		tick := true
+	L:
 		for {
 			select {
 			case <-s.close:
-				return
+				break L
 			case <-ticker.C:
 				s.mu.Lock()
 				s.eco(tick)
@@ -68,6 +72,7 @@ func (s *stdinEcoWriter) Init() {
 				tick = !tick
 			}
 		}
+		ticker.Stop()
 	}()
 }
 
@@ -109,28 +114,41 @@ func (a *alwaysReturnWrapWritCloser) Close() error {
 }
 
 type oneLineWriteCloser struct {
-	MainStdout *MultilineStdout
-	P          []byte
+	mu       sync.Mutex
+	closed   bool
+	MLStdout *MultilineStdout
+	olP      []byte
 }
 
 func (o *oneLineWriteCloser) Write(p []byte) (int, error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
 	if !isTerminal() {
-		return o.MainStdout.Write(p)
+		return o.MLStdout.Write(p)
 	}
-	o.P = p
-	return o.MainStdout.RePaintLines()
+	o.olP = p
+	o.MLStdout.Repaint()
+	return 0, nil
+}
+
+func (o *oneLineWriteCloser) IsClosed() bool {
+	return o.closed
+}
+
+func (o *oneLineWriteCloser) Read() []byte {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.olP
 }
 
 func (o *oneLineWriteCloser) Close() error {
 	if !isTerminal() {
 		return nil
 	}
-	o.P = []byte("")
-	_, err := o.MainStdout.RePaintLines()
-	if err != nil {
-		return err
-	}
-	return o.MainStdout.DeleteLine(o)
+	o.olP = []byte(EraseEntireLine + Reset)
+	o.closed = true
+	o.MLStdout.Repaint()
+	return nil
 }
 
 func (o *oneLineWriteCloser) GetProgressBar(max int64, description string, showbytes bool) (*progressbar.ProgressBar, error) {
@@ -191,17 +209,26 @@ func (o *oneLineWriteCloser) Scanln(prompt string, def []byte, a ...any) (n int,
 		panic(err)
 	}
 	defer term.Restore(0, oldState)
-	n, err = o.MainStdout.Write([]byte(HideCursor))
+
+	// hide cursor, windows friendly
+	err = SetHideCursor()
 	if err != nil {
 		return n, err
 	}
-	defer o.MainStdout.Write([]byte(ShowCursor)) //#nosec G104 -- Unhandle is OK here
+	defer SetShowCursor()
+
+	// hide cursor, ANSI friendly
+	n, err = o.MLStdout.Write([]byte(HideCursor + "\r"))
+	if err != nil {
+		return n, err
+	}
+	defer o.MLStdout.Write([]byte(ShowCursor + "\r")) //#nosec G104 -- Unhandle is OK here
 
 	var buff bytes.Buffer
 	eco := &stdinEcoWriter{stdout: o}
 	eco.Init()
 	defer eco.Stop()
-	_, err = eco.Write([]byte(CursorToColZero + prompt))
+	_, err = eco.Write([]byte(EraseEntireLine + prompt))
 	if err != nil {
 		return -1, err
 	}
@@ -234,7 +261,7 @@ func (o *oneLineWriteCloser) Scanln(prompt string, def []byte, a ...any) (n int,
 			}
 			return 0, nil
 		}
-		if char == 127 {
+		if char == 127 || char == 8 {
 			if buff.Len() <= 0 {
 				continue
 			}
@@ -242,6 +269,7 @@ func (o *oneLineWriteCloser) Scanln(prompt string, def []byte, a ...any) (n int,
 			buff.Truncate(buff.Len() - 1)
 			continue
 		}
+
 		_, err = eco.Write([]byte(string(char)))
 		if err != nil {
 			return -1, err
@@ -256,115 +284,179 @@ func (o *oneLineWriteCloser) Scanln(prompt string, def []byte, a ...any) (n int,
 }
 
 type MultilineStdout struct {
-	MainStdout io.WriteCloser
-	Lines      []*oneLineWriteCloser
 	mu         sync.Mutex
+	mainStdout io.WriteCloser
+	Lines      []*oneLineWriteCloser
+	close      chan bool
+	repaint    chan bool
+}
+
+func (m *MultilineStdout) Init() {
+	m.repaint = make(chan bool, 1)
+	m.close = make(chan bool, 1)
+	go func() {
+		ticker := time.NewTicker((1 * time.Second) / 2)
+		for {
+			select {
+			case <-m.close:
+				return
+			case <-m.repaint:
+				m.rePaintLines(nil) //#nosec G104 -- Unhandle is OK here
+			case <-ticker.C:
+				m.rePaintLines(nil) //#nosec G104 -- Unhandle is OK here
+			}
+		}
+	}()
+}
+
+func (m *MultilineStdout) Stop() {
+	select {
+	case m.close <- true:
+	default:
+		// Hey developer!,  what a wonderful day!
+	}
+}
+
+func (m *MultilineStdout) SetMainStdout(mstdout io.WriteCloser) {
+	m.mainStdout = mstdout
+}
+
+func (m *MultilineStdout) Repaint() {
+	select {
+	case m.repaint <- true:
+	default:
+		// Hey developer!,  what a wonderful day!
+	}
 }
 
 func (m *MultilineStdout) Write(p []byte) (int, error) {
 	if !isTerminal() {
-		return m.MainStdout.Write(p)
+		return m.mainStdout.Write(p)
 	}
-	n, err := m.MainStdout.Write([]byte(EraseLine))
-	if err != nil {
-		return n, err
-	}
-	n, err = m.MainStdout.Write(p)
-	if err != nil {
-		return n, err
-	}
-	n, err2 := m.RePaintLines()
+	n, err2 := m.rePaintLines(p)
 	if err2 != nil {
 		return n, err2
 	}
-	return n, err
+	return n, err2
 }
 
 func (m *MultilineStdout) Close() error {
-	return m.MainStdout.Close()
+	m.close <- true
+	return m.mainStdout.Close()
 }
 
-func (m *MultilineStdout) RePaintLines() (int, error) {
+func (m *MultilineStdout) rePaintLines(p []byte) (int, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if !isTerminal() {
 		return 0, nil
 	}
+
+	lenlines := len(m.Lines)
 	// Make space for Lines
-	for i := 0; i < len(m.Lines); i++ {
-		_, err := m.MainStdout.Write([]byte("\n"))
-		if err != nil {
-			return i, err
-		}
-		_, err = m.MainStdout.Write([]byte(EraseLine))
+	for i := 0; i < lenlines; i++ {
+		// debug:
+		// time.Sleep(1 * time.Second)
+		//_, err := m.mainStdout.Write([]byte(CursorDown))
+		_, err := m.mainStdout.Write([]byte("\r\n"))
 		if err != nil {
 			return i, err
 		}
 	}
 
 	// Back
-	for i := 0; i < len(m.Lines); i++ {
-		_, err := m.MainStdout.Write([]byte(CursorUp))
+	for i := 0; i < lenlines; i++ {
+		// debug:
+		// time.Sleep(1 * time.Second)
+		_, err := m.mainStdout.Write([]byte(CursorUp))
 		if err != nil {
 			return i, err
+		}
+		// _, err = m.mainStdout.Write([]byte(CursorToColZero + "\r" + Reset))
+		// if err != nil {
+		// 	return i, err
+		// }
+	}
+
+	// write log line
+	if p != nil {
+		// debug:
+		// time.Sleep(1 * time.Second)
+		_, err := m.mainStdout.Write([]byte(EraseEntireLine + "\r" + Reset))
+		if err != nil {
+			return 0, nil
+		}
+		// debug:
+		// time.Sleep(1 * time.Second)
+		_, err = m.mainStdout.Write(p)
+		if err != nil {
+			return 0, nil
 		}
 	}
 
 	// Write lines
-	for i := 0; i < len(m.Lines); i++ {
+	for i := 0; i < lenlines; i++ {
+		// debug:
+		// time.Sleep(1 * time.Second)
 		// TODO: prevent carriage return \n
-		_, err := m.MainStdout.Write([]byte(EraseLine))
+		_, err := m.mainStdout.Write([]byte(EraseEntireLine + "\r" + Reset))
 		if err != nil {
 			return 0, nil
 		}
-		_, err = m.MainStdout.Write(m.Lines[i].P)
+
+		_, err = m.mainStdout.Write(m.Lines[i].Read())
 		if err != nil {
 			return i, nil
 		}
+
 		// Line down
-		_, err = m.MainStdout.Write([]byte("\n"))
+		_, err = m.mainStdout.Write([]byte("\n"))
 		if err != nil {
 			return i, err
 		}
 	}
 
 	// Back again
-	for i := 0; i < len(m.Lines); i++ {
-		_, err := m.MainStdout.Write([]byte(CursorUp))
+	for i := 0; i < lenlines; i++ {
+		// debug:
+		// time.Sleep(1 * time.Second)
+		_, err := m.mainStdout.Write([]byte(CursorUp + Reset))
 		if err != nil {
 			return i, err
 		}
+		// _, err = m.mainStdout.Write([]byte(CursorToColZero + "\r" + "zero2" + Reset))
+		// if err != nil {
+		// 	return i, err
+		// }
+
+		// debug
+		// _, err = m.mainStdout.Write([]byte("--" + strconv.Itoa(i) + "/" + strconv.Itoa(lenlines) + "--"))
+		// if err != nil {
+		// 	return i, err
+		// }
 	}
 
-	return len(m.Lines), nil
+	// Pop closed lines
+	var lines []*oneLineWriteCloser
+	for i := 0; i < lenlines; i++ {
+		if m.Lines[i].IsClosed() {
+			continue
+		}
+		lines = append(lines, m.Lines[i])
+	}
+	m.Lines = lines
+
+	return lenlines, nil
 }
 
 func (m *MultilineStdout) AppendLine() *oneLineWriteCloser {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	awc := &oneLineWriteCloser{
-		MainStdout: m,
+		MLStdout: m,
 	}
 	m.Lines = append(m.Lines, awc)
 	return awc
-}
-
-func (m *MultilineStdout) DeleteLine(line *oneLineWriteCloser) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	index := -1
-	for i := 0; i < len(m.Lines); i++ {
-		if m.Lines[i] == line {
-			index = i
-			break
-		}
-	}
-	if index < 0 {
-		return fmt.Errorf("unkown multi line")
-	}
-
-	m.Lines = append(m.Lines[:index], m.Lines[index+1:]...)
-	return nil
 }
 
 func (m *MultilineStdout) SelectTest(prompt string, options []string) (int, error) {
@@ -375,11 +467,11 @@ func (m *MultilineStdout) SelectTest(prompt string, options []string) (int, erro
 		panic(err)
 	}
 	defer term.Restore(0, oldState)
-	_, err = m.MainStdout.Write([]byte(HideCursor))
+	_, err = m.mainStdout.Write([]byte(HideCursor))
 	if err != nil {
 		return -1, err
 	}
-	defer m.MainStdout.Write([]byte(ShowCursor)) //#nosec G104 -- Unhandle is OK here
+	defer m.mainStdout.Write([]byte(ShowCursor)) //#nosec G104 -- Unhandle is OK here
 
 	var buff bytes.Buffer
 	reader := bufio.NewReader(os.Stdin)
@@ -388,18 +480,27 @@ func (m *MultilineStdout) SelectTest(prompt string, options []string) (int, erro
 
 	// prompt
 	nl := m.AppendLine()
-	defer m.DeleteLine(nl)
+	err = nl.Close()
+	if err != nil {
+		return 0, err
+	}
 	lines = append(lines, nl)
 
 	// helper text
 	nl = m.AppendLine()
-	defer m.DeleteLine(nl)
+	err = nl.Close()
+	if err != nil {
+		return 0, err
+	}
 	lines = append(lines, nl)
 
 	// options
 	for i := 0; i < len(options); i++ {
 		nl := m.AppendLine()
-		defer m.DeleteLine(nl)
+		err = nl.Close()
+		if err != nil {
+			return 0, err
+		}
 		lines = append(lines, nl)
 	}
 
@@ -491,5 +592,5 @@ func (m *MultilineStdout) SelectTest(prompt string, options []string) (int, erro
 		// skip else
 		buff.Reset()
 	}
-	return -1, io.EOF
+	// return -1, io.EOF
 }
