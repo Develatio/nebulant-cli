@@ -27,7 +27,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -68,6 +68,20 @@ type Credential struct {
 	Access *string `json:"uuid"`
 	// pwd:ssh-rsa
 	AuthToken *string `json:"auth_token"`
+	//
+	Denied bool `json:"denied"`
+}
+
+func createEmptyCredentialsFile() (int, error) {
+	credentialsPath := filepath.Join(AppHomePath(), "credentials")
+	_, err := os.Stat(credentialsPath)
+	if os.IsNotExist(err) {
+		crs := &CredentialsStore{
+			Credentials: map[string]Credential{},
+		}
+		return saveCredentialsFile(crs)
+	}
+	return 0, nil
 }
 
 func readCredentialsFile() (*CredentialsStore, error) {
@@ -78,7 +92,7 @@ func readCredentialsFile() (*CredentialsStore, error) {
 		return nil, err
 	}
 	defer jsonFile.Close()
-	byteValue, _ := ioutil.ReadAll(jsonFile)
+	byteValue, _ := io.ReadAll(jsonFile)
 
 	var crs CredentialsStore
 	if err := json.Unmarshal(byteValue, &crs); err != nil {
@@ -165,7 +179,7 @@ func Login(credential *Credential) (*cookiejar.Jar, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		b, err := ioutil.ReadAll(resp.Body)
+		b, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, fmt.Errorf("cannot login :(")
 		}
@@ -217,7 +231,7 @@ func RequestToken() error {
 	}
 
 	// WIP
-	rawbody, err := ioutil.ReadAll(resp.Body)
+	rawbody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -232,6 +246,9 @@ func RequestToken() error {
 	var credential Credential
 	if err := util.UnmarshalValidJSON(rawbody[offset:], &credential); err != nil {
 		return err
+	}
+	if credential.Denied {
+		return fmt.Errorf("token request denied")
 	}
 
 	crs, err := readCredentialsFile()

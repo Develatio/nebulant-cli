@@ -120,6 +120,9 @@ func init() {
 		log.Panic(err.Error())
 	}
 
+	// ensure credentials file
+	createEmptyCredentialsFile()
+
 	if os.Getenv("NEBULANT_DEBUG") != "" {
 		var err error
 		DEBUG, err = strconv.ParseBool(os.Getenv("NEBULANT_DEBUG"))

@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 )
 
@@ -53,6 +54,7 @@ func AuthCmd() (int, error) {
 		if err != nil {
 			return 1, err
 		}
+		cast.LogInfo("token sucefully saved", nil)
 	// case "login":
 	default:
 		fs.Usage()
