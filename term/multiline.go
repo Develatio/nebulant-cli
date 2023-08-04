@@ -3,9 +3,10 @@ package term
 import (
 	"bufio"
 	"bytes"
-	"fmt"
+	"errors"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -14,6 +15,8 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"golang.org/x/term"
 )
+
+var EOT = errors.New("EOT") // ^C
 
 type threadSafeInput struct {
 	mu sync.Mutex
@@ -199,7 +202,7 @@ func (o *oneLineWriteCloser) Print(s string) {
 	}
 }
 
-func (o *oneLineWriteCloser) Scanln(prompt string, def []byte, a ...any) (n int, err error) {
+func (o *oneLineWriteCloser) Scanln(prompt string, def []byte, a any) (n int, err error) {
 	// to prevent interactively ask many
 	// options at a time
 	tsi.mu.Lock()
@@ -254,13 +257,24 @@ func (o *oneLineWriteCloser) Scanln(prompt string, def []byte, a ...any) (n int,
 		// 127 for del
 		// 3 for ^C
 		// -1 for eof
+		// 13 carriage return
 		if char == 13 || char == -1 {
-			_, err := fmt.Fscan(bytes.NewReader(buff.Bytes()), a...)
-			if err != nil {
-				return -1, err
+			switch b := a.(type) {
+			case *string:
+				*b = buff.String()
+			case *int:
+				*b, err = strconv.Atoi(buff.String())
+				if err != nil {
+					return -1, err
+				}
 			}
-			return 0, nil
+			if buff.Len() <= 0 {
+				return 0, io.EOF
+			}
+			return buff.Len(), nil
 		}
+
+		// del
 		if char == 127 || char == 8 {
 			if buff.Len() <= 0 {
 				continue
@@ -270,15 +284,16 @@ func (o *oneLineWriteCloser) Scanln(prompt string, def []byte, a ...any) (n int,
 			continue
 		}
 
+		// ^C
+		if char == 3 {
+			return -1, EOT
+		}
+
 		_, err = eco.Write([]byte(string(char)))
 		if err != nil {
 			return -1, err
 		}
 		buff.WriteRune(char)
-		// var buf []byte
-		// utf8.EncodeRune(buf, char)
-		// buff.Write(buf)
-
 	}
 	// return 0, io.EOF
 }

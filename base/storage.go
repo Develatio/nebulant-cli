@@ -186,6 +186,15 @@ func (sr *StorageRecord) BuildInternals() error {
 		vof = vof.Elem()
 	}
 
+	switch sr.Value.(type) {
+	case nil:
+		cs := make(map[string]*AttrTreeValue)
+		sr.JSONValue = []byte(nil)
+		sr.IsString = false
+		sr.PlainValue = cs
+		return nil
+	}
+
 	if vof.Kind() == reflect.String {
 		cs := make(map[string]*AttrTreeValue)
 		sr.JSONValue = []byte(sr.Value.(string))

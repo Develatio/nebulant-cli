@@ -19,6 +19,7 @@ package actors
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -63,6 +64,7 @@ func (d *defineVarsParametersVar) askForValue() error {
 	isNotValid := !v.IsValid()
 	if d.AskAtRuntime != nil && *d.AskAtRuntime {
 		lin := term.AppendLine()
+		defer lin.Close()
 		var err error
 		switch *d.Type {
 		case VarTypeString:
@@ -72,20 +74,21 @@ func (d *defineVarsParametersVar) askForValue() error {
 				def = []byte(d.Value.(string))
 			}
 			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", def, &vv)
+			d.Value = vv
 			if err != nil {
 				return err
 			}
-			d.Value = vv
+
 		case VarTypeInt:
 			var vv int
 			if !isEmpty && !isNotValid {
 				vv = d.Value.(int)
 			}
 			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", nil, &vv)
+			d.Value = vv
 			if err != nil {
 				return err
 			}
-			d.Value = vv
 		case VarTypeSelectableStatic:
 			// TODO: test if there is value
 			// selected and mark option acordingly
@@ -520,27 +523,59 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	for _, v := range params.Vars {
 		// ask for value as needed
-		err := v.askForValue()
-		if err != nil {
-			return nil, err
+		for {
+			err := v.askForValue()
+			if err != nil && err == io.EOF {
+				if v.Required {
+					switch v.Value.(type) {
+					case nil:
+						ctx.Logger.LogWarn("var " + v.Key + " is required and cannot be null")
+						continue
+					case string:
+						if v.Value == "" {
+							ctx.Logger.LogWarn("var " + v.Key + " is required and cannot be empty")
+							continue
+						}
+					}
+				} else {
+					switch v.Value.(type) {
+					case nil:
+						ctx.Logger.LogWarn("var " + v.Key + " is null and NOT required. Be catious")
+					case string:
+						if v.Value == "" {
+							ctx.Logger.LogWarn("var " + v.Key + " is empty and NOT required. Be catious")
+						}
+					}
+					break
+				}
+			} else if err != nil {
+				return nil, err
+			}
+			break
 		}
 
 		var recordvalue interface{}
 		varname := v.Key
 		ctx.Logger.LogInfo("Setting var " + varname)
 
-		switch *v.Type {
-		case VarTypeString:
-			varvalue := v.Value.(string)
-			err := ctx.Store.Interpolate(&varvalue)
-			if err != nil {
-				return nil, err
+		switch v.Value.(type) {
+		case string:
+			switch *v.Type {
+			case VarTypeString:
+				varvalue := v.Value.(string)
+				err := ctx.Store.Interpolate(&varvalue)
+				if err != nil {
+					return nil, err
+				}
+				varvalue = strings.Replace(varvalue, "\\{", "{", -1)
+				varvalue = strings.Replace(varvalue, "\\}", "}", -1)
+				recordvalue = varvalue
+			default:
+				recordvalue = v.Value
 			}
-			varvalue = strings.Replace(varvalue, "\\{", "{", -1)
-			varvalue = strings.Replace(varvalue, "\\}", "}", -1)
-			recordvalue = varvalue
-		default:
-			recordvalue = v.Value
+		case nil:
+			recordvalue = nil
+			ctx.Logger.LogDebug("var " + v.Key + " is null and cannot be interpolated")
 		}
 
 		if v.Stack != nil && *v.Stack {
@@ -565,7 +600,7 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 			}
 		}
 
-		err = ctx.Store.Insert(&base.StorageRecord{
+		err := ctx.Store.Insert(&base.StorageRecord{
 			RefName: varname,
 			Aout:    nil,
 			Value:   recordvalue,
