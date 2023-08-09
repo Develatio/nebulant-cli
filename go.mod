@@ -1,10 +1,11 @@
 module github.com/develatio/nebulant-cli
 
-go 1.19
+go 1.21
 
 replace github.com/develatio/nebulant-cli => ./
 
 require (
+	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161
 	github.com/andybalholm/brotli v1.0.5
 	github.com/aws/aws-sdk-go v1.44.199
 	github.com/bhmj/jsonslice v1.1.2
@@ -23,7 +24,6 @@ require (
 )
 
 require (
-	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
