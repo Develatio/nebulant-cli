@@ -121,7 +121,10 @@ func init() {
 	}
 
 	// ensure credentials file
-	createEmptyCredentialsFile()
+	_, err = createEmptyCredentialsFile()
+	if err != nil {
+		log.Panic(err.Error())
+	}
 
 	if os.Getenv("NEBULANT_DEBUG") != "" {
 		var err error

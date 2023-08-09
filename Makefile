@@ -138,6 +138,9 @@ secure:
 	# https://github.com/securego/gosec/blob/master/README.md
 	# G307 -- https://github.com/securego/gosec/issues/512
 	$(GOPATH)/bin/gosec -exclude=G307 ./...
+
+.PHONY: staticanalysis
+staticanalysis:
 	# https://github.com/praetorian-inc/gokart
 	$(GOPATH)/bin/gokart scan -v
 

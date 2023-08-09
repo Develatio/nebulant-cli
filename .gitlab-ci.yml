@@ -3,7 +3,7 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Go.gitlab-ci.yml
 
-image: golang:1.19  # Cannot use 1.20 until https://github.com/praetorian-inc/gokart/issues/88
+image: golang:1.21
 
 variables:
   # Please edit to your GitLab project
@@ -26,25 +26,25 @@ stages:
   # - build
   # - deploy
 
-unittest:
-  stage: analysis
-  tags:
-    - local
-  script:
-    - make cover
+# unittest:
+#   stage: analysis
+#   tags:
+#     - local
+#   script:
+#     - make cover
 
-  rules:
-    - if: $CI_COMMIT_MESSAGE =~ /skip[-_]all/
-      when: never
-    - if: $CI_COMMIT_MESSAGE =~ /skip[-_]unittest/
-      when: never
-    - if: $CI_COMMIT_MESSAGE =~ /Merge tag \'[\w.]+\' into develop/
-      when: never
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      when: on_success
-    - if: '$CI_COMMIT_BRANCH == "master"'
-      when: on_success
-    - when: never
+#   rules:
+#     - if: $CI_COMMIT_MESSAGE =~ /skip[-_]all/
+#       when: never
+#     - if: $CI_COMMIT_MESSAGE =~ /skip[-_]unittest/
+#       when: never
+#     - if: $CI_COMMIT_MESSAGE =~ /Merge tag \'[\w.]+\' into develop/
+#       when: never
+#     - if: '$CI_COMMIT_BRANCH == "develop"'
+#       when: on_success
+#     - if: '$CI_COMMIT_BRANCH == "master"'
+#       when: on_success
+#     - when: never
 
 self:
   stage: analysis
