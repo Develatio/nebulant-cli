@@ -19,15 +19,9 @@
 package util
 
 import (
-	"os"
-
 	"github.com/google/shlex"
 )
 
 func CommandLineToArgv(cmd string) ([]string, error) {
 	return shlex.Split(cmd)
-}
-
-func RenameFile(oldpath, newpath string) error {
-	return os.Rename(oldpath, newpath)
 }
