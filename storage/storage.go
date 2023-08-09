@@ -19,6 +19,7 @@ package storage
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -543,14 +544,14 @@ func (s *Store) DumpValuesToShellFile() (*os.File, error) {
 	}
 	if _, err := f.Write([]byte("# nebulant shell vars\ndeclare -A NEBULANT\n")); err != nil {
 		if err2 := f.Close(); err2 != nil {
-			return nil, fmt.Errorf(err.Error() + " " + err2.Error())
+			return nil, errors.Join(err, err2)
 		}
 		return nil, err
 	}
 	for path, value := range vars {
 		if _, err := f.Write([]byte("NEBULANT[" + path + "]=$( cat <<EOF\n" + value + "\nEOF\n)\n")); err != nil {
 			if err2 := f.Close(); err2 != nil {
-				return nil, fmt.Errorf(err.Error() + " " + err2.Error())
+				return nil, errors.Join(err, err2)
 			}
 			return nil, err
 		}

@@ -348,11 +348,11 @@ func (m *MultilineStdout) Write(p []byte) (int, error) {
 	if !isTerminal() {
 		return m.mainStdout.Write(p)
 	}
-	n, err2 := m.rePaintLines(p)
-	if err2 != nil {
-		return n, err2
+	n, err := m.rePaintLines(p)
+	if err != nil {
+		return n, err
 	}
-	return n, err2
+	return n, err
 }
 
 func (m *MultilineStdout) Close() error {

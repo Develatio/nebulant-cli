@@ -19,6 +19,7 @@ package actors
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -89,7 +90,7 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		defer os.Remove(f.Name())
 		if _, err := f.Write([]byte(*p.ScriptText)); err != nil {
 			if err2 := f.Close(); err2 != nil {
-				return nil, fmt.Errorf(err.Error() + " " + err2.Error())
+				return nil, errors.Join(err, err2)
 			}
 			return nil, err
 		}

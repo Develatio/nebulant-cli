@@ -26,6 +26,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -98,8 +99,7 @@ func readCredentialsFile() (*CredentialsStore, error) {
 	if err := json.Unmarshal(byteValue, &crs); err != nil {
 		var crsv1 credentialsStoreV1
 		if err2 := json.Unmarshal(byteValue, &crsv1); err2 != nil {
-			// use erros.Join() when go 1.20
-			return nil, err2
+			return nil, errors.Join(err, err2)
 		}
 
 		crs.Version = "2"

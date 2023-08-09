@@ -1133,7 +1133,6 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 	State.setUpgradeState(UpgradeStateInProgress)
 	err := State.saveState()
 	if err != nil {
-		// use erros.Join() when go 1.20
 		return err
 	}
 	var descriptor []*AssetRemoteDescription
@@ -1143,8 +1142,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		err2 := State.saveState()
 		if err2 != nil {
-			// use erros.Join() when go 1.20
-			return err2
+			return errors.Join(err, err2)
 		}
 		return err
 	}
@@ -1162,8 +1160,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		err2 := State.saveState()
 		if err2 != nil {
-			// use erros.Join() when go 1.20
-			return err2
+			return errors.Join(err, err2)
 		}
 		return err
 	}
@@ -1188,8 +1185,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			if err != nil {
 				err2 := State.saveState()
 				if err2 != nil {
-					// use erros.Join() when go 1.20
-					return err2
+					return errors.Join(err, err2)
 				}
 				State.setUpgradeState(UpgradeStateEndWithErr)
 				return err
@@ -1243,8 +1239,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			State.setUpgradeState(UpgradeStateEndWithErr)
 			err2 := State.saveState()
 			if err2 != nil {
-				// use erros.Join() when go 1.20
-				return err2
+				return errors.Join(err, err2)
 			}
 			return err
 		}
@@ -1307,20 +1302,19 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 	}
 
 	if State.CurrentUpgradeState == UpgradeStateInProgressWithErr {
-		cast.LogErr("Asset process done. Some problems found.", nil)
+		err := fmt.Errorf("asset process done. Some problems found")
+		cast.LogErr(err.Error(), nil)
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		err2 := State.saveState()
 		if err2 != nil {
-			// use erros.Join() when go 1.20
-			return err2
+			return errors.Join(err, err2)
 		}
 	} else if State.CurrentUpgradeState == UpgradeStateInProgress {
 		cast.LogInfo("Asset process done. All is up to date", nil)
 		State.setUpgradeState(UpgradeStateEndOK)
-		err2 := State.saveState()
-		if err2 != nil {
-			// use erros.Join() when go 1.20
-			return err2
+		err := State.saveState()
+		if err != nil {
+			return err
 		}
 	}
 
