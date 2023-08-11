@@ -195,7 +195,7 @@ func (m *Manager) Run() error {
 	}
 
 	// conf ipcs server
-	ipcs, err := ipc.NewIPCServer(*m.ExecutionUUID + "_" + fmt.Sprintf("%d", rand.Int()))
+	ipcs, err := ipc.NewIPCServer(*m.ExecutionUUID + "_" + fmt.Sprintf("%d", rand.Int())) //#nosec G404 -- Weak random is OK here
 	if err != nil {
 		return err
 	}

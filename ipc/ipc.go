@@ -91,11 +91,18 @@ func (p *IPC) serve(con net.Conn) {
 		}
 		str := string(buf[:n])
 		ppd := &PipeData{c: con}
-		fmt.Sscanf(str, "%s %s %s %s", &ppd.IPCSID, &ppd.IPCCID, &ppd.COMMAND, &ppd.VARNAME)
+		_, err = fmt.Sscanf(str, "%s %s %s %s", &ppd.IPCSID, &ppd.IPCCID, &ppd.COMMAND, &ppd.VARNAME)
+		if err != nil {
+			p.Errors <- err
+			continue
+		}
 		if _, exists := p.consumers[ppd.IPCCID]; exists {
 			p.consumers[ppd.IPCCID].Stream <- ppd
 		} else {
-			ppd.Resp("")
+			err := ppd.Resp("")
+			if err != nil {
+				p.Errors <- err
+			}
 		}
 	}
 }
