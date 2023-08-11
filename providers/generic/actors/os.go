@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"os"
 	"os/exec"
@@ -31,6 +32,7 @@ import (
 	"strings"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/ipc"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/joho/godotenv"
 )
@@ -55,7 +57,7 @@ type runLocalParameters struct {
 	// Password       *string `json:"password"`
 	// Port           *string `json:"port"`
 	Vars               map[string]string `json:"vars"`
-	VarsTargets        []string          `json:"vars_targets"`
+	DumpJSON           *bool             `json:"dump_json"`
 	ScriptText         *string           `json:"script"`
 	ScriptParameters   *string           `json:"scriptParameters"`
 	ScriptName         string            `json:"scriptName"`
@@ -205,31 +207,53 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		envVars = append(envVars, varname+"="+varvalue)
 	}
 
-	for _, vt := range p.VarsTargets {
-		switch vt {
-		case "bash":
-			f, err := ctx.Store.DumpValuesToShellFile()
-			if err != nil {
-				return nil, err
-			}
-			defer os.Remove(f.Name())
-			envVars = append(envVars, "NEBULANT_BASH_VARIABLES_PATH="+f.Name())
-		case "zsh":
-			f, err := ctx.Store.DumpValuesToShellFile()
-			if err != nil {
-				return nil, err
-			}
-			defer os.Remove(f.Name())
-			envVars = append(envVars, "NEBULANT_ZSH_VARIABLES_PATH="+f.Name())
-		case "json":
-			f, err := ctx.Store.DumpValuesToJSONFile()
-			if err != nil {
-				return nil, err
-			}
-			defer os.Remove(f.Name())
-			envVars = append(envVars, "NEBULANT_JSON_VARIABLES_PATH="+f.Name())
+	if p.DumpJSON != nil && *p.DumpJSON {
+		f, err := ctx.Store.DumpValuesToJSONFile()
+		if err != nil {
+			return nil, err
 		}
+		defer os.Remove(f.Name())
+		envVars = append(envVars, "NEBULANT_JSON_VARIABLES_PATH="+f.Name())
 	}
+
+	execpath, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	envVars = append(envVars, "NEBULANT_CLI_PATH="+execpath)
+
+	// Conf IPCS Consumer
+	ipcs := ctx.Store.GetPrivateVar("IPCS").(*ipc.IPC)
+	envVars = append(envVars, "NEBULANT_IPCSID="+ipcs.GetUUID())
+	out := make(chan bool)
+	ipcc := &ipc.IPCConsumer{
+		ID:     fmt.Sprintf("%d", rand.Int()),
+		Stream: make(chan *ipc.PipeData),
+	}
+	ipcs.NewConsumer(ipcc)
+	envVars = append(envVars, "NEBULANT_IPCCID="+ipcc.ID)
+	go func() {
+	L:
+		for { // Infine loop until break L
+			select { // Loop until a case ocurrs.
+			case data := <-ipcc.Stream:
+				if data.COMMAND == "readvar" {
+					resp := "{{ " + data.VARNAME + " }}"
+					ctx.Store.Interpolate(&resp)
+					if resp == "{{ "+data.VARNAME+" }}" || resp == "" {
+						resp = "\x20"
+					}
+					data.Resp(resp)
+				}
+			case <-out:
+				break L
+			}
+		}
+	}()
+	defer func() {
+		out <- true
+		ipcs.OutConsumer(ipcc)
+	}()
 
 	cmd.Env = envVars
 	result := &runLocalScriptOutput{}

@@ -114,15 +114,6 @@ func main() {
 	flag.Parse()
 	term.ConfigColors()
 
-	_, err = term.Println(term.Magenta+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Blue+"develat.io"+term.Reset)
-	if err != nil {
-		fmt.Println("Nebulant CLI - A cloud builder by develat.io")
-	}
-	_, err = term.Println(term.Gray+" Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler, term.Reset)
-	if err != nil {
-		fmt.Println("Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler)
-	}
-
 	// Version and exit
 	if *config.VersionFlag {
 		os.Exit(0)
@@ -132,8 +123,6 @@ func main() {
 	if *config.DebugFlag {
 		config.DEBUG = true
 	}
-
-	term.PrintInfo(" Welcome :)\n")
 
 	// Init console logger
 	cast.InitConsoleLogger()
@@ -160,6 +149,29 @@ func main() {
 	blueprint.ActionValidators["genericsValidator"] = generic.ActionValidator
 
 	sc := flag.Arg(0)
+
+	// silent commands
+	switch sc {
+	case "readvar":
+		exitCode, err = subcom.ReadvarCmd()
+		if err != nil {
+			cast.LogErr(err.Error(), nil)
+			cast.SBus.Close().Wait()
+			os.Exit(exitCode)
+		}
+		os.Exit(0)
+	}
+
+	_, err = term.Println(term.Magenta+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Blue+"develat.io"+term.Reset)
+	if err != nil {
+		fmt.Println("Nebulant CLI - A cloud builder by develat.io")
+	}
+	_, err = term.Println(term.Gray+" Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler, term.Reset)
+	if err != nil {
+		fmt.Println("Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler)
+	}
+	term.PrintInfo(" Welcome :)\n")
+
 	switch sc {
 	case "serve":
 		exitCode, err = subcom.ServeCmd()

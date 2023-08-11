@@ -182,7 +182,6 @@ func NewFromBuilder(data []byte) (*Blueprint, error) {
 	}
 	bp.ExecutionUUID = wrap.ExecutionUUID
 	if bp.ExecutionUUID == nil || *bp.ExecutionUUID == "" {
-		rand.Seed(time.Now().UnixNano())
 		randIntString := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
 		bp.ExecutionUUID = &randIntString
 	}

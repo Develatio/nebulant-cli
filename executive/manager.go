@@ -19,6 +19,7 @@ package executive
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"runtime/debug"
 	"strconv"
 	"sync"
@@ -27,6 +28,7 @@ import (
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
+	"github.com/develatio/nebulant-cli/ipc"
 	"github.com/develatio/nebulant-cli/storage"
 	"github.com/develatio/nebulant-cli/util"
 )
@@ -191,7 +193,23 @@ func (m *Manager) Run() error {
 	if m.IRB.StartAction == nil {
 		return fmt.Errorf("[Manager] First action id not found")
 	}
-	m.RunStages([]*Stage{NewStage(m, storage.NewStore(), m.IRB.StartAction)})
+
+	// conf ipcs server
+	ipcs, err := ipc.NewIPCServer(*m.ExecutionUUID + "_" + fmt.Sprintf("%d", rand.Int()))
+	if err != nil {
+		return err
+	}
+	go func() {
+		err := ipcs.Accept()
+		if err != nil {
+			m.Logger.LogErr(err.Error())
+		}
+	}()
+	defer ipcs.Close()
+	st := storage.NewStore()
+	st.SetPrivateVar("IPCS", ipcs)
+
+	m.RunStages([]*Stage{NewStage(m, st, m.IRB.StartAction)})
 	cast.PushEvent(cast.EventManagerStarted, m.ExecutionUUID)
 	m.internalRegistry.SetManagerState(cast.EventManagerStarted)
 	m.ExternalRegistry.SetManagerState(cast.EventManagerStarted)
