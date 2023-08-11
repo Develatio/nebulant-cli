@@ -104,9 +104,6 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 			return nil, err
 		}
 		stin := f.Name()
-		if p.Entrypoint != nil {
-			stin = *p.Entrypoint + " " + stin
-		}
 		if p.ScriptParameters != nil {
 			stin = stin + " " + *p.ScriptParameters
 		}

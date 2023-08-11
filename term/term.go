@@ -17,6 +17,7 @@
 package term
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -208,12 +209,12 @@ func InitTerm() error {
 	if isTerminal() {
 		err = configEmojiSupport()
 		if err != nil {
-			return err
+			return errors.Join(fmt.Errorf("cannot configure emoji support"), err)
 		}
 	}
 	err = EnableColorSupport()
 	if err != nil {
-		return err
+		return errors.Join(fmt.Errorf("cannot enable colors"), err)
 	}
 	ConfigColors()
 	log.SetOutput(Stdout)

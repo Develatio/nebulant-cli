@@ -18,12 +18,40 @@
 
 package ipc
 
-import "net"
+import (
+	"net"
+
+	"github.com/Microsoft/go-winio"
+)
 
 func (p *IPC) Listen() (net.Listener, error) {
-	return nil, nil
+	path := `\\.\pipe\` + "ipc_" + p.uuid
+
+	l, err := winio.ListenPipe(path, nil)
+	if err != nil {
+		return nil, err
+	}
+	return l, nil
 }
 
 func Read(ipsid string, ipcid string, msg string) (string, error) {
-	return "", nil
+	path := `\\.\pipe\` + "ipc_" + ipsid
+	c, err := winio.DialPipe(path, nil)
+	if err != nil {
+		return "", err
+	}
+	defer c.Close()
+
+	_, err = c.Write([]byte(ipsid + " " + ipcid + " " + msg))
+	if err != nil {
+		return "", err
+	}
+
+	buf := make([]byte, 1024)
+
+	n, err := c.Read(buf[:])
+	if err != nil {
+		return "", err
+	}
+	return string(buf[0:n]), nil
 }
