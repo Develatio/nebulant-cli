@@ -26,6 +26,10 @@ import (
 
 func parseReadVar() (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("readvar", flag.ExitOnError)
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "\nUsage: nebulant readvar [variable name]\n")
+		PrintDefaults(fs)
+	}
 	err := fs.Parse(flag.Args()[1:])
 	if err != nil {
 		return fs, err
