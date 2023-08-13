@@ -17,6 +17,7 @@ var EmojiSet map[string]string = map[string]string{
 	"TridentEmblem":              "🔱",
 	"RunningShoe":                "👟",
 	"Key":                        "🔑",
+	"Eyes":                       "👀",
 }
 
 var noEmojiSupportSet map[string]string = map[string]string{
@@ -36,4 +37,5 @@ var noEmojiSupportSet map[string]string = map[string]string{
 	"TridentEmblem":              "  ",
 	"RunningShoe":                "  ",
 	"Key":                        "  ",
+	"Eyes":                       "  ",
 }

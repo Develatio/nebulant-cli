@@ -119,6 +119,7 @@ func main() {
 		subcom.PrintDefaults(flag.CommandLine)
 		fmt.Fprintf(flag.CommandLine.Output(), "\nCommands:\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  serve\t\t\t"+term.EmojiSet["TridentEmblem"]+" Start server mode\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  readvar\t\t"+term.EmojiSet["Eyes"]+" Read a variable's value from a currently running blueprint\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  run\t\t\t"+term.EmojiSet["RunningShoe"]+" Run blueprint form file or net\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  assets\t\t"+term.EmojiSet["Squid"]+" Handle cli assets\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  interactive\t\t"+term.EmojiSet["Television"]+" Start interactive menu\n")
