@@ -103,10 +103,10 @@ func Selectable(prompt string, options []string) (int, error) {
 	return mls.SelectTest(prompt, options)
 }
 
-func OpenMultilineStdout() {
+func openMultilineStdout() {
 	if mls == nil {
 		mls = &MultilineStdout{}
-		// WARN: this sould be called AFTER InitTerm
+
 		mls.SetMainStdout(Stdout)
 		mls.Init()
 		log.SetOutput(mls)
@@ -200,7 +200,9 @@ func ConfigColors() {
 	}
 }
 
-func InitTerm() error {
+// UpgradeTerm func sets advanced ANSI supoprt, colors and
+// multiline StdOut
+func UpgradeTerm() error {
 	var err error
 	if !config.DEBUG {
 		log.SetFlags(0)
@@ -224,6 +226,6 @@ func InitTerm() error {
 	// as default, or can be os.Stdout if
 	// os cannot support colors or if has
 	// been disabled manually.
-	OpenMultilineStdout()
+	openMultilineStdout()
 	return nil
 }

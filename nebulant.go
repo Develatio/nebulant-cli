@@ -22,6 +22,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
+	"sort"
 	"strconv"
 
 	// hey hacker:
@@ -41,6 +42,145 @@ import (
 	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 )
+
+type sctype int
+
+const (
+	secmain sctype = iota
+	secruntime
+	sechidden
+)
+
+type nbcommand struct {
+	upgradeTerm   bool
+	welcomeMsg    bool
+	initProviders bool
+	help          string
+	sec           sctype
+	run           func()
+}
+
+var commands map[string]*nbcommand = map[string]*nbcommand{
+	"serve": {
+		upgradeTerm:   true,
+		welcomeMsg:    true,
+		initProviders: true,
+		help:          "  serve\t\t\t" + term.EmojiSet["TridentEmblem"] + " Start server mode\n",
+		sec:           secmain,
+		run: func() {
+			exitCode, err := subcom.ServeCmd()
+			if err != nil {
+				cast.LogErr(err.Error(), nil)
+				cast.SBus.Close().Wait()
+				os.Exit(exitCode)
+			}
+		},
+	},
+	"run": {
+		upgradeTerm:   true,
+		welcomeMsg:    true,
+		initProviders: true,
+		help:          "  run\t\t\t" + term.EmojiSet["RunningShoe"] + " Run blueprint form file or net\n",
+		sec:           secmain,
+		run: func() {
+			exitCode, err := subcom.RunCmd()
+			if err != nil {
+				cast.LogErr(err.Error(), nil)
+				cast.SBus.Close().Wait()
+				os.Exit(exitCode)
+			}
+		},
+	},
+	"assets": {
+		upgradeTerm:   true,
+		welcomeMsg:    true,
+		initProviders: false,
+		help:          "  assets\t\t" + term.EmojiSet["Squid"] + " Handle cli assets\n",
+		sec:           secmain,
+		run: func() {
+			exitCode, err := subcom.AssetsCmd()
+			if err != nil {
+				cast.LogErr(err.Error(), nil)
+				cast.SBus.Close().Wait()
+				os.Exit(exitCode)
+			}
+		},
+	},
+	"interactive": {
+		upgradeTerm:   true,
+		welcomeMsg:    true,
+		initProviders: true,
+		help:          "  interactive\t\t" + term.EmojiSet["Television"] + " Start interactive menu\n",
+		sec:           secmain,
+		run: func() {
+			// Interactive mode
+			err := interactive.Loop()
+			if err != nil {
+				if err == term.ErrInterrupt {
+					fmt.Println("^C")
+					cast.SBus.Close().Wait()
+					os.Exit(0)
+				}
+				if err == term.ErrEOF {
+					fmt.Println("^D")
+					cast.SBus.Close().Wait()
+					os.Exit(0)
+				}
+				exitCode := 1
+				cast.LogErr(err.Error(), nil)
+				os.Exit(exitCode)
+			}
+			cast.SBus.Close().Wait()
+			os.Exit(0)
+		},
+	},
+	"auth": {
+		upgradeTerm:   true,
+		welcomeMsg:    true,
+		initProviders: false,
+		help:          "  auth\t\t\t" + term.EmojiSet["Key"] + " Server authentication\n",
+		sec:           secmain,
+		run: func() {
+			exitCode, err := subcom.AuthCmd()
+			if err != nil {
+				cast.LogErr(err.Error(), nil)
+				cast.SBus.Close().Wait()
+				os.Exit(exitCode)
+			}
+		},
+	},
+	"debugterm": {
+		upgradeTerm:   true,
+		welcomeMsg:    true,
+		initProviders: false,
+		help:          "",
+		sec:           sechidden,
+		run: func() {
+			exitCode, err := subcom.DebugtermCmd()
+			if err != nil {
+				cast.LogErr(err.Error(), nil)
+				cast.SBus.Close().Wait()
+				os.Exit(exitCode)
+			}
+		},
+	},
+	"readvar": {
+		upgradeTerm:   false,
+		welcomeMsg:    false,
+		initProviders: false,
+		help:          "  readvar\t\t" + term.EmojiSet["FaceWithMonocle"] + " Read blueprint variable value during runtime\n",
+		sec:           secruntime,
+		run: func() {
+			exitCode, err := subcom.ReadvarCmd()
+			if err != nil {
+				cast.LogErr(err.Error(), nil)
+				cast.SBus.Close().Wait()
+				os.Exit(exitCode)
+			}
+			os.Exit(0)
+		},
+	},
+}
 
 func main() {
 	var err error
@@ -83,30 +223,6 @@ func main() {
 		os.Exit(exitCode)
 	}()
 
-	flag.Parse()
-	sc := flag.Arg(0)
-
-	// silent commands
-	switch sc {
-	case "readvar":
-		exitCode, err = subcom.ReadvarCmd()
-		if err != nil {
-			cast.LogErr(err.Error(), nil)
-			cast.SBus.Close().Wait()
-			os.Exit(exitCode)
-		}
-		os.Exit(0)
-	}
-
-	// Init Term
-	err = term.InitTerm()
-	if err != nil {
-		cast.SBus.Close().Wait()
-		fmt.Println("cannot init term :(")
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-
 	config.VersionFlag = flag.Bool("v", false, "Show version and exit.")
 	config.DebugFlag = flag.Bool("x", false, "Enable debug.")
 	config.Ipv6Flag = flag.Bool("6", false, "Force ipv6")
@@ -114,33 +230,40 @@ func main() {
 	config.ForceTerm = flag.Bool("ft", false, "Force terminal. Bypass no-term detection.")
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "\nUsage: nebulant [options] [command]\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "\nGlobal options:\n")
+		var runtimecmds []string
+		var orderedcmdtxt []string
+		for cmdtxt, cmd := range commands {
+			if cmd.sec == sechidden {
+				continue
+			}
+			orderedcmdtxt = append(orderedcmdtxt, cmdtxt)
+		}
+		sort.Strings(orderedcmdtxt)
+		fmt.Fprint(flag.CommandLine.Output(), "\nUsage: nebulant [flags] [command]\n")
+		fmt.Fprint(flag.CommandLine.Output(), "\nFlags:\n")
 		subcom.PrintDefaults(flag.CommandLine)
-		fmt.Fprintf(flag.CommandLine.Output(), "\nCommands:\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "  serve\t\t\t"+term.EmojiSet["TridentEmblem"]+" Start server mode\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "  readvar\t\t"+term.EmojiSet["Eyes"]+" Read a variable's value from a currently running blueprint\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "  run\t\t\t"+term.EmojiSet["RunningShoe"]+" Run blueprint form file or net\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "  assets\t\t"+term.EmojiSet["Squid"]+" Handle cli assets\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "  interactive\t\t"+term.EmojiSet["Television"]+" Start interactive menu\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "  auth\t\t\t"+term.EmojiSet["Key"]+" Server authentication\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "\n\nrun nebulant [command] --help to show help for a command\n")
+		fmt.Fprint(flag.CommandLine.Output(), "\nCommands:\n")
+		for _, cmdtxt := range orderedcmdtxt {
+			cmd := commands[cmdtxt]
+			if cmd.sec == secruntime {
+				runtimecmds = append(runtimecmds, cmd.help)
+				continue
+			}
+			fmt.Fprint(flag.CommandLine.Output(), cmd.help)
+		}
+		fmt.Fprint(flag.CommandLine.Output(), "\n\nRuntime commands:\n")
+		for _, hh := range runtimecmds {
+			fmt.Fprint(flag.CommandLine.Output(), hh)
+		}
+		// fmt.Fprint(flag.CommandLine.Output(), "  readvar\t\t"+term.EmojiSet["Key"]+" Read blueprint variable value during runtime\n")
+		fmt.Fprint(flag.CommandLine.Output(), "\n\nrun nebulant [command] --help to show help for a command\n")
 	}
 
 	flag.Parse()
-	term.ConfigColors()
-
-	_, err = term.Println(term.Magenta+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Blue+"develat.io"+term.Reset)
-	if err != nil {
-		fmt.Println("Nebulant CLI - A cloud builder by develat.io")
-	}
-	_, err = term.Println(term.Gray+" Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler, term.Reset)
-	if err != nil {
-		fmt.Println("Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler)
-	}
 
 	// Version and exit
 	if *config.VersionFlag {
+		fmt.Println("v" + config.Version)
 		os.Exit(0)
 	}
 
@@ -149,106 +272,69 @@ func main() {
 		config.DEBUG = true
 	}
 
-	term.PrintInfo(" Welcome :)\n")
-
-	// Init console logger
-	cast.InitConsoleLogger()
-	if config.DEBUG {
-		cast.LogDebug("Debug mode activated. Testing message levels...", nil)
-		cast.LogInfo("Info message", nil)
-		cast.LogWarn("Warning message", nil)
-		cast.LogErr("Error message", nil)
-		cast.LogCritical("Critical message", nil)
+	sc := flag.Arg(0)
+	if sc == "" {
+		sc = "interactive"
 	}
-
-	// Init Providers
-	cast.SBus.RegisterProviderInitFunc("aws", aws.New)
-	cast.SBus.RegisterProviderInitFunc("azure", azure.New)
-	cast.SBus.RegisterProviderInitFunc("generic", generic.New)
-	blueprint.ActionValidators["providerValidator"] = func(action *blueprint.Action) error {
-		if _, err := cast.SBus.GetProviderInitFunc(action.Provider); err != nil {
-			return err
-		}
-		return nil
-	}
-	blueprint.ActionValidators["awsValidator"] = aws.ActionValidator
-	blueprint.ActionValidators["azureValidator"] = azure.ActionValidator
-	blueprint.ActionValidators["genericsValidator"] = generic.ActionValidator
-
-	sc = flag.Arg(0)
-
-	switch sc {
-	case "serve":
-		exitCode, err = subcom.ServeCmd()
-		if err != nil {
-			cast.LogErr(err.Error(), nil)
-			cast.SBus.Close().Wait()
-			os.Exit(exitCode)
-		}
-	case "run":
-		exitCode, err = subcom.RunCmd()
-		if err != nil {
-			cast.LogErr(err.Error(), nil)
-			cast.SBus.Close().Wait()
-			os.Exit(exitCode)
-		}
-	case "assets":
-		exitCode, err = subcom.AssetsCmd()
-		if err != nil {
-			cast.LogErr(err.Error(), nil)
-			cast.SBus.Close().Wait()
-			os.Exit(exitCode)
-		}
-	case "auth":
-		exitCode, err = subcom.AuthCmd()
-		if err != nil {
-			cast.LogErr(err.Error(), nil)
-			cast.SBus.Close().Wait()
-			os.Exit(exitCode)
-		}
-	case "", "interactive":
-		// Interactive mode
-		err := interactive.Loop()
-		if err != nil {
-			if err == term.ErrInterrupt {
-				fmt.Println("^C")
+	if cmd, exists := commands[sc]; exists {
+		if cmd.upgradeTerm {
+			// Init Term
+			err = term.UpgradeTerm()
+			if err != nil {
 				cast.SBus.Close().Wait()
-				os.Exit(0)
+				fmt.Println("cannot init term :(")
+				fmt.Println(err.Error())
+				os.Exit(1)
 			}
-			if err == term.ErrEOF {
-				fmt.Println("^D")
-				cast.SBus.Close().Wait()
-				os.Exit(0)
+			term.ConfigColors()
+		}
+
+		// Init console logger
+		cast.InitConsoleLogger()
+		if config.DEBUG {
+			cast.LogDebug("Debug mode activated. Testing message levels...", nil)
+			cast.LogInfo("Info message", nil)
+			cast.LogWarn("Warning message", nil)
+			cast.LogErr("Error message", nil)
+			cast.LogCritical("Critical message", nil)
+		}
+
+		if cmd.welcomeMsg {
+			_, err = term.Println(term.Magenta+"Nebulant CLI"+term.Reset, "- A cloud builder by", term.Blue+"develat.io"+term.Reset)
+			if err != nil {
+				fmt.Println("Nebulant CLI - A cloud builder by develat.io")
 			}
-			exitCode = 1
-			cast.LogErr(err.Error(), nil)
-			os.Exit(exitCode)
+			_, err = term.Println(term.Gray+" Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler, term.Reset)
+			if err != nil {
+				fmt.Println("Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler)
+			}
+			term.PrintInfo(" Welcome :)\n")
 		}
-		cast.SBus.Close().Wait()
-		os.Exit(0)
-	case "debugterm":
-		exitCode, err = subcom.DebugtermCmd()
-		if err != nil {
-			cast.LogErr(err.Error(), nil)
-			cast.SBus.Close().Wait()
-			os.Exit(exitCode)
+
+		// Init Providers
+		if cmd.initProviders {
+			cast.SBus.RegisterProviderInitFunc("aws", aws.New)
+			cast.SBus.RegisterProviderInitFunc("azure", azure.New)
+			cast.SBus.RegisterProviderInitFunc("generic", generic.New)
+			blueprint.ActionValidators["providerValidator"] = func(action *blueprint.Action) error {
+				if _, err := cast.SBus.GetProviderInitFunc(action.Provider); err != nil {
+					return err
+				}
+				return nil
+			}
+			blueprint.ActionValidators["awsValidator"] = aws.ActionValidator
+			blueprint.ActionValidators["azureValidator"] = azure.ActionValidator
+			blueprint.ActionValidators["genericsValidator"] = generic.ActionValidator
 		}
-	default:
+
+		// finally run command
+		cmd.run()
+	} else {
 		flag.Usage()
 		cast.LogErr("Unknown command", nil)
 		cast.SBus.Close().Wait()
 		os.Exit(1)
 	}
-
-	// hey hacker:
-	// uncomment for profiling
-	// if config.PROFILING {
-	// 	go func() {
-	// 		cast.LogInfo("Starting profiling at localhost:6060", nil)
-	// 		http.ListenAndServe("localhost:6060", nil)
-	// 	}()
-	// 	grmon.Start()
-	// }
 
 	// None to wait if director hasn't been started
 	if executive.MDirector != nil {
