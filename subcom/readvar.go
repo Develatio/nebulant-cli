@@ -24,10 +24,20 @@ import (
 	"github.com/develatio/nebulant-cli/ipc"
 )
 
+// strict *bool by default is false
+//
+// false: Hide err msgs and always return
+// empty string. The exitcode will be 0
+// or 1 on sucessful or error.
+//
+// true: all errors are printed
+var strict *bool
+
 func parseReadVar() (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("readvar", flag.ExitOnError)
+	strict = fs.Bool("strict", false, "Force err msg instead empty string")
 	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "\nUsage: nebulant readvar [variable name]\n")
+		fmt.Fprint(fs.Output(), "\nUsage: nebulant readvar [variable name] [flags]\n")
 		PrintDefaults(fs)
 	}
 	err := fs.Parse(flag.Args()[1:])
@@ -44,15 +54,27 @@ func ReadvarCmd() (int, error) {
 	}
 
 	ipcsid := os.Getenv("NEBULANT_IPCSID")
+	if *strict && ipcsid == "" {
+		return 1, fmt.Errorf("cannot found IPC server ID")
+	}
 	ipccid := os.Getenv("NEBULANT_IPCCID")
+	if *strict && ipccid == "" {
+		return 1, fmt.Errorf("cannot found IPC consumer ID")
+	}
 	varname := flag.Arg(1)
 	val, err := ipc.Read(ipcsid, ipccid, "readvar "+varname)
 	if err != nil {
-		return 1, err
+		if *strict {
+			return 1, err
+		}
+		return 1, nil
 	}
 	if val == "\x20" {
+		if *strict {
+			return 1, fmt.Errorf("undefined var")
+		}
 		fmt.Print()
-		return 0, nil
+		return 1, nil
 	}
 	fmt.Print(val)
 	return 0, nil

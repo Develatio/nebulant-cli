@@ -44,7 +44,7 @@ func Read(ipsid string, ipcid string, msg string) (string, error) {
 	basepath := filepath.Join("/tmp", ".nebulant")
 	c, err := net.Dial("unix", filepath.Join(basepath, "ipc_"+ipsid+".sock"))
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	defer c.Close()
 

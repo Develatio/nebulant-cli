@@ -175,9 +175,8 @@ var commands map[string]*nbcommand = map[string]*nbcommand{
 			if err != nil {
 				cast.LogErr(err.Error(), nil)
 				cast.SBus.Close().Wait()
-				os.Exit(exitCode)
 			}
-			os.Exit(0)
+			os.Exit(exitCode)
 		},
 	},
 }
