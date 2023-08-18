@@ -30,6 +30,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/ipc"
@@ -75,6 +76,15 @@ type writeFileParameters struct {
 	FilePath    *string `json:"file_path" validate:"required"`
 	Content     *string `json:"content" validate:"required"`
 	Interpolate bool    `json:"interpolate"`
+}
+
+type writeFileOutput struct {
+	Name    string
+	Size    int64
+	Mode    os.FileMode
+	ModTime time.Time
+	IsDir   bool
+	Sys     any
 }
 
 // RunLocalScript func
@@ -404,6 +414,15 @@ func WriteFile(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	aout := base.NewActionOutput(ctx.Action, finfo, nil)
+	result := &writeFileOutput{
+		Name:    finfo.Name(),
+		Size:    finfo.Size(),
+		Mode:    finfo.Mode(),
+		ModTime: finfo.ModTime(),
+		IsDir:   finfo.IsDir(),
+		Sys:     finfo.Sys(),
+	}
+
+	aout := base.NewActionOutput(ctx.Action, result, nil)
 	return aout, nil
 }
