@@ -66,6 +66,17 @@ type runLocalParameters struct {
 	Entrypoint         *string           `json:"entrypoint"`
 }
 
+type readFileParameters struct {
+	FilePath    *string `json:"file_path" validate:"required"`
+	Interpolate bool    `json:"interpolate"`
+}
+
+type writeFileParameters struct {
+	FilePath    *string `json:"file_path" validate:"required"`
+	Content     *string `json:"content" validate:"required"`
+	Interpolate bool    `json:"interpolate"`
+}
+
 // RunLocalScript func
 func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
@@ -330,4 +341,69 @@ func DefineEnvs(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 	return nil, nil
+}
+
+func ReadFile(ctx *ActionContext) (*base.ActionOutput, error) {
+	params := new(readFileParameters)
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	finfo, err := os.Stat(*params.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if finfo.Size() > 100*1024*1024 {
+		ctx.Logger.LogWarn("reading a file larger than 100MB, be carefully")
+	}
+
+	bcontent, err := os.ReadFile(*params.FilePath)
+	if err != nil {
+		return nil, err
+	}
+	scontent := string(bcontent)
+
+	if params.Interpolate {
+		err := ctx.Store.Interpolate(&scontent)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	aout := base.NewActionOutput(ctx.Action, scontent, nil)
+	return aout, nil
+}
+
+func WriteFile(ctx *ActionContext) (*base.ActionOutput, error) {
+	params := new(writeFileParameters)
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	var scontent = *params.Content
+	if params.Interpolate {
+		ctx.Store.Interpolate(&scontent)
+	}
+
+	err := os.WriteFile(*params.FilePath, []byte(scontent), 0600)
+	if err != nil {
+		return nil, err
+	}
+
+	finfo, err := os.Stat(*params.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	aout := base.NewActionOutput(ctx.Action, finfo, nil)
+	return aout, nil
 }

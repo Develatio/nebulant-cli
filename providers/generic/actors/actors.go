@@ -96,6 +96,8 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"send_mail":        {F: SendMail, N: NextOKKO, R: true},
 	"send_email":       {F: SendMail, N: NextOKKO, R: true},
 	"http_request":     {F: HttpRequest, N: NextOKKO, R: true},
+	"read_file":        {F: ReadFile, N: NextOKKO, R: false},
+	"write_file":       {F: WriteFile, N: NextOKKO, R: false},
 	// handled by core stage
 	"join_threads": {F: NOOP, N: NextOK, R: false},
 }
