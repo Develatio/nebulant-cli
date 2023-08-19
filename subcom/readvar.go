@@ -54,11 +54,11 @@ func ReadvarCmd() (int, error) {
 	}
 
 	ipcsid := os.Getenv("NEBULANT_IPCSID")
-	if *strict && ipcsid == "" {
+	if ipcsid == "" {
 		return 1, fmt.Errorf("cannot found IPC server ID")
 	}
 	ipccid := os.Getenv("NEBULANT_IPCCID")
-	if *strict && ipccid == "" {
+	if ipccid == "" {
 		return 1, fmt.Errorf("cannot found IPC consumer ID")
 	}
 	varname := flag.Arg(1)
