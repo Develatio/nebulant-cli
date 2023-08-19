@@ -28,7 +28,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -40,19 +39,24 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// type ConnConfig struct {
+// 	Target               *string `json:"target" validate:"required"`
+// 	Username             *string `json:"username" validate:"required"`
+// 	PrivateKey           *string `json:"privkey"`
+// 	PrivateKeyPath       *string `json:"privkeyPath"`
+// 	PrivateKeyPassphrase *string `json:"passphrase"`
+// 	Password             *string `json:"password"`
+// 	Port                 uint16  `json:"port"`
+// }
+
 type runRemoteParameters struct {
-	Target               *string           `json:"target" validate:"required"`
-	Username             *string           `json:"username" validate:"required"`
-	PrivateKey           *string           `json:"privkey"`
-	PrivateKeyPath       *string           `json:"privkeyPath"`
-	PrivateKeyPassphrase *string           `json:"passphrase"`
-	Password             *string           `json:"password"`
-	Port                 uint16            `json:"port"`
-	ScriptPath           *string           `json:"scriptPath"`
-	ScriptText           *string           `json:"script"`
-	Command              *string           `json:"command"`
-	Vars                 map[string]string `json:"vars"`
-	VarsTargets          []string          `json:"vars_targets"`
+	nebulantssh.ClientConfigParameters
+	Proxies     []*nebulantssh.ClientConfigParameters `json:"proxies"`
+	ScriptPath  *string                               `json:"scriptPath"`
+	ScriptText  *string                               `json:"script"`
+	Command     *string                               `json:"command"`
+	Vars        map[string]string                     `json:"vars"`
+	VarsTargets []string                              `json:"vars_targets"`
 }
 
 type runRemoteScriptOutput struct {
@@ -80,62 +84,39 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	var sshRunErr interface{}
 	combineOut := true
 
-	sshConfig := &ssh.ClientConfig{
-		User: *p.Username,
-		//#nosec G106 -- Allow config this? Hacker comunity feedback needed.
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	var connections []*nebulantssh.ClientConfigParameters
+	if len(p.Proxies) > 0 {
+		connections = append(connections, p.Proxies...)
 	}
+	// Last server to connect. If there is no proxies, this
+	// is the last and the unique server to connect.
+	connections = append(connections, &nebulantssh.ClientConfigParameters{
+		Target:               p.Target,
+		Port:                 p.Port,
+		Username:             p.Username,
+		PrivateKey:           p.PrivateKey,
+		PrivateKeyPath:       p.PrivateKeyPath,
+		PrivateKeyPassphrase: p.PrivateKeyPassphrase,
+		Password:             p.Password,
+	})
 
-	if p.PrivateKeyPath != nil {
-		key, err := ioutil.ReadFile(*p.PrivateKeyPath)
+	sshClient := nebulantssh.NewSSHClient()
+	for _, ccp := range connections {
+		port := "22"
+		if ccp.Port != 0 {
+			port = fmt.Sprintf("%d", p.Port)
+		}
+		addr := *ccp.Target + ":" + port
+		ctx.Logger.LogDebug("Connecting to addr " + addr + " ...")
+		sshClientConfig, err := nebulantssh.GetSSHClientConfig(ccp)
 		if err != nil {
 			return nil, err
 		}
-		// Create the Signer for this private key.
-		var signer ssh.Signer
-		if p.PrivateKeyPassphrase != nil {
-			signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(*p.PrivateKeyPassphrase))
-		} else {
-			signer, err = ssh.ParsePrivateKey(key)
-		}
+		sshClient, err = sshClient.Dial(addr, sshClientConfig)
 		if err != nil {
 			return nil, err
 		}
-		sshConfig.Auth = []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		}
-	} else if p.PrivateKey != nil {
-		// Create the Signer for this private key.
-		var signer ssh.Signer
-		if p.PrivateKeyPassphrase != nil {
-			signer, err = ssh.ParsePrivateKeyWithPassphrase([]byte(*p.PrivateKey), []byte(*p.PrivateKeyPassphrase))
-		} else {
-			signer, err = ssh.ParsePrivateKey([]byte(*p.PrivateKey))
-		}
-		if err != nil {
-			return nil, err
-		}
-		sshConfig.Auth = []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		}
-	} else if p.Password != nil {
-		sshConfig.Auth = []ssh.AuthMethod{
-			ssh.Password(*p.Password),
-		}
-	} else {
-		// Use ssh agent for auth
-		sshAgent, err := nebulantssh.GetSSHAgentClient()
-		if err != nil {
-			return nil, err
-		}
-		sshConfig.Auth = []ssh.AuthMethod{
-			ssh.PublicKeysCallback(sshAgent.Signers),
-		}
-	}
-
-	port := "22"
-	if p.Port != 0 {
-		port = fmt.Sprintf("%d", p.Port)
+		defer sshClient.Disconnect()
 	}
 
 	result := &runRemoteScriptOutput{}
@@ -157,16 +138,9 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		LogPrefix: []byte(*p.Target + ":ssh> "),
 	})
 
-	sshClient := nebulantssh.NewSSHClient(sshOut, sshErr)
+	sshClient.Stderr = sshErr
+	sshClient.Stdout = sshOut
 	sshClient.Env = p.Vars
-
-	addr := *p.Target + ":" + port
-	ctx.Logger.LogDebug("Connecting to addr " + addr)
-	connerr := sshClient.Connect(addr, sshConfig)
-	if connerr != nil {
-		return nil, connerr
-	}
-	defer sshClient.Disconnect()
 
 	for _, vt := range p.VarsTargets {
 		var f *os.File

@@ -22,11 +22,78 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
+
+type ClientConfigParameters struct {
+	Target *string `json:"target" validate:"required"`
+	Port   uint16  `json:"port"`
+	//
+	Username             *string `json:"username" validate:"required"`
+	PrivateKey           *string `json:"privkey"`
+	PrivateKeyPath       *string `json:"privkeyPath"`
+	PrivateKeyPassphrase *string `json:"passphrase"`
+	Password             *string `json:"password"`
+}
+
+func GetSSHClientConfig(cc *ClientConfigParameters) (*ssh.ClientConfig, error) {
+	var err error
+	sshConfig := &ssh.ClientConfig{
+		User: *cc.Username,
+		//#nosec G106 -- Allow config this? Hacker comunity feedback needed.
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	if cc.PrivateKeyPath != nil {
+		key, err := os.ReadFile(*cc.PrivateKeyPath)
+		if err != nil {
+			return nil, err
+		}
+		// Create the Signer for this private key.
+		var signer ssh.Signer
+		if cc.PrivateKeyPassphrase != nil {
+			signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(*cc.PrivateKeyPassphrase))
+		} else {
+			signer, err = ssh.ParsePrivateKey(key)
+		}
+		if err != nil {
+			return nil, err
+		}
+		sshConfig.Auth = []ssh.AuthMethod{
+			ssh.PublicKeys(signer),
+		}
+	} else if cc.PrivateKey != nil {
+		// Create the Signer for this private key.
+		var signer ssh.Signer
+		if cc.PrivateKeyPassphrase != nil {
+			signer, err = ssh.ParsePrivateKeyWithPassphrase([]byte(*cc.PrivateKey), []byte(*cc.PrivateKeyPassphrase))
+		} else {
+			signer, err = ssh.ParsePrivateKey([]byte(*cc.PrivateKey))
+		}
+		if err != nil {
+			return nil, err
+		}
+		sshConfig.Auth = []ssh.AuthMethod{
+			ssh.PublicKeys(signer),
+		}
+	} else if cc.Password != nil {
+		sshConfig.Auth = []ssh.AuthMethod{
+			ssh.Password(*cc.Password),
+		}
+	} else {
+		// Use ssh agent for auth
+		sshAgent, err := GetSSHAgentClient()
+		if err != nil {
+			return nil, err
+		}
+		sshConfig.Auth = []ssh.AuthMethod{
+			ssh.PublicKeysCallback(sshAgent.Signers),
+		}
+	}
+	return sshConfig, nil
+}
 
 func GetSSHAgentClient() (agent.ExtendedAgent, error) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
@@ -38,32 +105,8 @@ func GetSSHAgentClient() (agent.ExtendedAgent, error) {
 	return agentClient, nil
 }
 
-// singleWriter struct, copied from ssh.session
-type singleWriter struct {
-	b  bytes.Buffer
-	mu sync.Mutex
-}
-
-// Write func, copied from ssh.session
-func (w *singleWriter) Write(p []byte) (int, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	return w.b.Write(p)
-}
-
-func (w *singleWriter) String() string {
-	return w.b.String()
-}
-
-// NewSSHClient var
-// params grow
-var NewSSHClient = func(stdout io.Writer, stderr io.Writer) *sshClient {
-	sshc := &sshClient{
-		Stdout: stdout,
-		Stderr: stderr,
-	}
-	sshc.Env = make(map[string]string)
-	return sshc
+var NewSSHClient = func() *sshClient {
+	return &sshClient{}
 }
 
 // sshClient obj
@@ -77,7 +120,6 @@ type sshClient struct {
 // Connect func
 func (s *sshClient) Connect(addr string, config *ssh.ClientConfig) error {
 	// cast.LogInfo( "Connecting ssh to "+addr+" ...")
-
 	sshClient, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
 		return err
@@ -85,6 +127,34 @@ func (s *sshClient) Connect(addr string, config *ssh.ClientConfig) error {
 	s.client = sshClient
 	// cast.LogInfo( "Connected?")
 	return nil
+}
+
+func (s *sshClient) Dial(addr string, config *ssh.ClientConfig) (*sshClient, error) {
+	if s.client == nil {
+		// first connection, call Connect and return itself
+		err := s.Connect(addr, config)
+		if err != nil {
+			return nil, err
+		}
+		return s, nil
+		// return nil, fmt.Errorf("cannot tunnel: no client connection")
+	}
+
+	// start tcp connection from previos s.client
+	// connection
+	conn, err := s.client.Dial("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	// start handshake and ssh proto stuff
+	c, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
+	if err != nil {
+		return nil, err
+	}
+	client := ssh.NewClient(c, chans, reqs)
+	sshclient := &sshClient{client: client}
+	return sshclient, nil
 }
 
 // Disconnect func
