@@ -401,7 +401,10 @@ func WriteFile(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	var scontent = *params.Content
 	if params.Interpolate {
-		ctx.Store.Interpolate(&scontent)
+		err := ctx.Store.Interpolate(&scontent)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err := os.WriteFile(*params.FilePath, []byte(scontent), 0600)
