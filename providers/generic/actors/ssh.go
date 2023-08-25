@@ -188,7 +188,14 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	sshClient.Stderr = sshErr
 	sshClient.Stdout = sshOut
 	if p.Vars != nil {
-		sshClient.Env = p.Vars
+		for key, val := range p.Vars {
+			vv := val
+			err = ctx.Store.Interpolate(&vv)
+			if err != nil {
+				return nil, err
+			}
+			sshClient.Env[key] = vv
+		}
 	}
 
 	if p.DumpJSON != nil && *p.DumpJSON {

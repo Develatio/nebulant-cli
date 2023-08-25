@@ -147,7 +147,7 @@ type sshClient struct {
 	Stdout io.Writer
 	Stderr io.Writer
 	// store of those clients jumping
-	// fron self client
+	// from self client
 	subClients []*sshClient
 	// will be shared between clients
 	Events chan *SSHClientEvent
