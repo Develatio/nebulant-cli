@@ -32,10 +32,12 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 	nebulantssh "github.com/develatio/nebulant-cli/netproto/ssh"
+	"github.com/povsister/scp"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -51,12 +53,13 @@ import (
 
 type runRemoteParameters struct {
 	nebulantssh.ClientConfigParameters
-	Proxies     []*nebulantssh.ClientConfigParameters `json:"proxies"`
-	ScriptPath  *string                               `json:"scriptPath"`
-	ScriptText  *string                               `json:"script"`
-	Command     *string                               `json:"command"`
-	Vars        map[string]string                     `json:"vars"`
-	VarsTargets []string                              `json:"vars_targets"`
+	// Proxies     []*nebulantssh.ClientConfigParameters `json:"proxies"`
+	ScriptPath *string           `json:"scriptPath"`
+	ScriptText *string           `json:"script"`
+	Command    *string           `json:"command"`
+	Vars       map[string]string `json:"vars"`
+	// VarsTargets []string          `json:"vars_targets"`
+	DumpJSON *bool `json:"dump_json"`
 }
 
 type runRemoteScriptOutput struct {
@@ -84,39 +87,83 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	var sshRunErr interface{}
 	combineOut := true
 
-	var connections []*nebulantssh.ClientConfigParameters
-	if len(p.Proxies) > 0 {
-		connections = append(connections, p.Proxies...)
+	remoteAddress := p.Target
+	err = ctx.Store.Interpolate(remoteAddress)
+	if err != nil {
+		return nil, err
 	}
-	// Last server to connect. If there is no proxies, this
-	// is the last and the unique server to connect.
-	connections = append(connections, &nebulantssh.ClientConfigParameters{
-		Target:               p.Target,
+	if strings.Trim(*remoteAddress, " ") == "" {
+		return nil, fmt.Errorf("the target addr is empty. Please provide one")
+	}
+	var proxies []*nebulantssh.ClientConfigParameters
+	for _, prx := range p.Proxies {
+		raddr := prx.Target
+		err = ctx.Store.Interpolate(raddr)
+		if err != nil {
+			return nil, err
+		}
+		if strings.Trim(*raddr, " ") == "" {
+			return nil, fmt.Errorf("the proxy target addr is empty. Please provide one")
+		}
+		proxies = append(proxies, &nebulantssh.ClientConfigParameters{
+			Target:               raddr,
+			Port:                 prx.Port,
+			Username:             prx.Username,
+			PrivateKey:           prx.PrivateKey,
+			PrivateKeyPath:       prx.PrivateKeyPath,
+			PrivateKeyPassphrase: prx.PrivateKeyPassphrase,
+			Password:             prx.Password,
+			Proxies:              prx.Proxies,
+		})
+	}
+
+	sshClient := nebulantssh.NewSSHClient()
+	mainclient := sshClient
+	out := make(chan bool)
+	defer func() {
+		err := mainclient.Disconnect()
+		if err != nil {
+			ctx.Logger.LogWarn(err.Error())
+		}
+		out <- true
+	}()
+	mainClientEvents := sshClient.Events
+	go func() {
+	L1:
+		for {
+			select {
+			case evt := <-mainClientEvents:
+				addr := evt.SSHClient.DialAddr
+				if evt.Type == nebulantssh.SSHClientEventMasterClosed {
+					ctx.Logger.LogDebug(fmt.Sprintf("SSH Closing %v...", addr))
+					break L1
+				}
+				if evt.Type == nebulantssh.SSHClientEventDialing {
+					ctx.Logger.LogDebug(fmt.Sprintf("SSH Dialing %v...", addr))
+				}
+				if evt.Type == nebulantssh.SSHClientEventClosed {
+					ctx.Logger.LogDebug(fmt.Sprintf("SSH Closing %v...", addr))
+				}
+			case <-out:
+				break L1
+			default:
+				ctx.Logger.LogDebug("Waiting ssh event...")
+				time.Sleep(200000 * time.Microsecond)
+			}
+		}
+	}()
+	sshClient, err = sshClient.DialWithProxies(&nebulantssh.ClientConfigParameters{
+		Target:               remoteAddress,
 		Port:                 p.Port,
 		Username:             p.Username,
 		PrivateKey:           p.PrivateKey,
 		PrivateKeyPath:       p.PrivateKeyPath,
 		PrivateKeyPassphrase: p.PrivateKeyPassphrase,
 		Password:             p.Password,
+		Proxies:              proxies,
 	})
-
-	sshClient := nebulantssh.NewSSHClient()
-	for _, ccp := range connections {
-		port := "22"
-		if ccp.Port != 0 {
-			port = fmt.Sprintf("%d", p.Port)
-		}
-		addr := *ccp.Target + ":" + port
-		ctx.Logger.LogDebug("Connecting to addr " + addr + " ...")
-		sshClientConfig, err := nebulantssh.GetSSHClientConfig(ccp)
-		if err != nil {
-			return nil, err
-		}
-		sshClient, err = sshClient.Dial(addr, sshClientConfig)
-		if err != nil {
-			return nil, err
-		}
-		defer sshClient.Disconnect()
+	if err != nil {
+		return nil, err
 	}
 
 	result := &runRemoteScriptOutput{}
@@ -140,62 +187,25 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	sshClient.Stderr = sshErr
 	sshClient.Stdout = sshOut
-	sshClient.Env = p.Vars
+	if p.Vars != nil {
+		sshClient.Env = p.Vars
+	}
 
-	for _, vt := range p.VarsTargets {
-		var f *os.File
-		var dst string
-		switch vt {
-		case "bash", "zsh":
-			f, err = ctx.Store.DumpValuesToShellFile()
-			if err != nil {
-				return nil, err
-			}
-			dst = "/tmp/" + vt + filepath.Base(f.Name())
-			if vt == "zsh" {
-				sshClient.Env["NEBULANT_BASH_VARIABLES_PATH"] = dst
-			} else {
-				sshClient.Env["NEBULANT_ZSH_VARIABLES_PATH"] = dst
-			}
-		case "json":
-			f, err = ctx.Store.DumpValuesToJSONFile()
-			if err != nil {
-				return nil, err
-			}
-			dst = "/tmp/" + vt + filepath.Base(f.Name())
-			sshClient.Env["NEBULANT_JSON_VARIABLES_PATH"] = dst
-		default:
-			return nil, fmt.Errorf("unknown var dump type")
-		}
-		defer os.Remove(f.Name())
-		src := f.Name()
-		params := scpCopyParameters{
-			Target:               p.Target,
-			Username:             p.Username,
-			Port:                 p.Port,
-			PrivateKey:           p.PrivateKey,
-			PrivateKeyPath:       p.PrivateKeyPath,
-			PrivateKeyPassphrase: p.PrivateKeyPassphrase,
-			Password:             p.Password,
-			Paths: []scpCopyParametersPath{
-				{
-					Dst: &dst,
-					Src: &src,
-				},
-			},
-		}
-		d, err := json.Marshal(params)
+	if p.DumpJSON != nil && *p.DumpJSON {
+		f, err := ctx.Store.DumpValuesToJSONFile()
 		if err != nil {
 			return nil, err
 		}
-		ac := &ActionContext{
-			Action: &blueprint.Action{
-				Parameters: d,
-			},
-			Store:  ctx.Store,
-			Logger: ctx.Logger,
+		dst := "/tmp/json" + filepath.Base(f.Name())
+
+		sshClient.Env["NEBULANT_JSON_VARIABLES_PATH"] = dst
+		defer os.Remove(f.Name())
+		src := f.Name()
+		scpClient, err := sshClient.NewSCPClientFromExistingSSH()
+		if err != nil {
+			return nil, err
 		}
-		_, err = ScpCopy(ac)
+		err = scpClient.CopyFileToRemote(src, dst, &scp.FileTransferOption{})
 		if err != nil {
 			return nil, err
 		}

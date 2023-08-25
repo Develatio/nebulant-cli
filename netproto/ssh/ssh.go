@@ -18,11 +18,14 @@ package ssh
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
 	"strings"
 
+	"github.com/povsister/scp"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
@@ -36,10 +39,19 @@ type ClientConfigParameters struct {
 	PrivateKeyPath       *string `json:"privkeyPath"`
 	PrivateKeyPassphrase *string `json:"passphrase"`
 	Password             *string `json:"password"`
+	//
+	Proxies []*ClientConfigParameters `json:"proxies"`
 }
 
 func GetSSHClientConfig(cc *ClientConfigParameters) (*ssh.ClientConfig, error) {
 	var err error
+
+	if cc.Username == nil {
+		if cc.Target == nil {
+			return nil, fmt.Errorf("please, provide username")
+		}
+		return nil, fmt.Errorf("please, provide username for %v", *cc.Target)
+	}
 	sshConfig := &ssh.ClientConfig{
 		User: *cc.Username,
 		//#nosec G106 -- Allow config this? Hacker comunity feedback needed.
@@ -105,46 +117,73 @@ func GetSSHAgentClient() (agent.ExtendedAgent, error) {
 	return agentClient, nil
 }
 
+type SSHClientEventType int
+
+const (
+	SSHClientEventDialing = iota
+	SSHClientEventConnected
+	SSHClientEventMasterClosed
+	SSHClientEventClosed
+)
+
+type SSHClientEvent struct {
+	Type      SSHClientEventType
+	SSHClient *sshClient
+}
+
 var NewSSHClient = func() *sshClient {
-	return &sshClient{}
+	c := &sshClient{}
+	c.Events = make(chan *SSHClientEvent, 10)
+	c.Env = make(map[string]string)
+	return c
 }
 
 // sshClient obj
 type sshClient struct {
-	client *ssh.Client
+	DialAddr string
+	// conn
+	clientConn *ssh.Client
+	//
 	Stdout io.Writer
 	Stderr io.Writer
+	// store of those clients jumping
+	// fron self client
+	subClients []*sshClient
+	// will be shared between clients
+	Events chan *SSHClientEvent
 	Env    map[string]string
 }
 
 // Connect func
 func (s *sshClient) Connect(addr string, config *ssh.ClientConfig) error {
-	// cast.LogInfo( "Connecting ssh to "+addr+" ...")
 	sshClient, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
 		return err
 	}
-	s.client = sshClient
-	// cast.LogInfo( "Connected?")
+	s.clientConn = sshClient
 	return nil
 }
 
+func (s *sshClient) GetConn() *ssh.Client {
+	return s.clientConn
+}
+
 func (s *sshClient) Dial(addr string, config *ssh.ClientConfig) (*sshClient, error) {
-	if s.client == nil {
+	s.DialAddr = addr
+	s.Events <- &SSHClientEvent{Type: SSHClientEventDialing, SSHClient: s}
+	if s.clientConn == nil {
 		// first connection, call Connect and return itself
 		err := s.Connect(addr, config)
 		if err != nil {
-			return nil, err
+			return nil, errors.Join(fmt.Errorf("cannot connect to %v", addr), err)
 		}
 		return s, nil
-		// return nil, fmt.Errorf("cannot tunnel: no client connection")
 	}
 
-	// start tcp connection from previos s.client
-	// connection
-	conn, err := s.client.Dial("tcp", addr)
+	// start tcp connection from previos s.clientConn
+	conn, err := s.clientConn.Dial("tcp", addr)
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(fmt.Errorf("cannot connect to %v", addr), err)
 	}
 
 	// start handshake and ssh proto stuff
@@ -152,19 +191,77 @@ func (s *sshClient) Dial(addr string, config *ssh.ClientConfig) (*sshClient, err
 	if err != nil {
 		return nil, err
 	}
-	client := ssh.NewClient(c, chans, reqs)
-	sshclient := &sshClient{client: client}
+	cc := ssh.NewClient(c, chans, reqs)
+	sshclient := &sshClient{
+		clientConn: cc,
+		Env:        s.Env,
+		Stdout:     s.Stdout,
+		Stderr:     s.Stderr,
+		Events:     s.Events,
+	}
+	s.subClients = append(s.subClients, sshclient)
 	return sshclient, nil
+}
+
+func (s *sshClient) DialWithProxies(ccp *ClientConfigParameters) (*sshClient, error) {
+	var connections []*ClientConfigParameters
+	if len(ccp.Proxies) > 0 {
+		connections = append(connections, ccp.Proxies...)
+	}
+
+	// Last server to connect. If there is no proxies, this
+	// is the last and the unique server to connect.
+	connections = append(connections, &ClientConfigParameters{
+		Target:               ccp.Target,
+		Port:                 ccp.Port,
+		Username:             ccp.Username,
+		PrivateKey:           ccp.PrivateKey,
+		PrivateKeyPath:       ccp.PrivateKeyPath,
+		PrivateKeyPassphrase: ccp.PrivateKeyPassphrase,
+		Password:             ccp.Password,
+	})
+
+	sshClient := s
+	for _, ccp := range connections {
+		// ctx.Logger.LogDebug("Connecting to addr " + addr + " ...")
+		sshClientConfig, err := GetSSHClientConfig(ccp)
+		if err != nil {
+			return nil, err
+		}
+		addr := fmt.Sprintf("%v:22", *ccp.Target)
+		if ccp.Port != 0 {
+			addr = fmt.Sprintf("%v:%d", *ccp.Target, ccp.Port)
+		}
+		sshClient, err = sshClient.Dial(addr, sshClientConfig)
+		if err != nil {
+			return nil, err
+		}
+		// defer sshClient.Disconnect()
+	}
+	return sshClient, nil
 }
 
 // Disconnect func
 func (s *sshClient) Disconnect() error {
-	return s.client.Close()
+	var errs []error
+	for _, sc := range s.subClients {
+		err := sc.Disconnect()
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	s.Events <- &SSHClientEvent{Type: SSHClientEventClosed, SSHClient: s}
+	if s.clientConn != nil {
+		err := s.clientConn.Close()
+		errs = append(errs, err)
+	}
+	// from doc: "Join returns nil if every value in errs is nil."
+	return errors.Join(errs...)
 }
 
 // RunCmd func
 func (s *sshClient) RunCmd(cmd string) error { // stdout, stderr, error
-	session, sesserr := s.client.NewSession()
+	session, sesserr := s.clientConn.NewSession()
 	if sesserr != nil {
 		return sesserr
 	}
@@ -210,7 +307,7 @@ func (s *sshClient) RunScriptFromLocalPath(localPath string) error { // stdout, 
 	}
 	defer file.Close()
 
-	session, sesserr := s.client.NewSession()
+	session, sesserr := s.clientConn.NewSession()
 	if sesserr != nil {
 		return sesserr
 	}
@@ -260,7 +357,7 @@ func (s *sshClient) RunScriptFromText(txt *string) error {
 	var stdin bytes.Buffer
 	scriptTxt := *txt
 
-	session, sesserr := s.client.NewSession()
+	session, sesserr := s.clientConn.NewSession()
 	if sesserr != nil {
 		return sesserr
 	}
@@ -294,4 +391,11 @@ func (s *sshClient) RunScriptFromText(txt *string) error {
 		return err
 	}
 	return nil
+}
+
+func (s *sshClient) NewSCPClientFromExistingSSH() (*scp.Client, error) {
+	if s.clientConn == nil {
+		return nil, fmt.Errorf("cannot get scp client: ssh not connected")
+	}
+	return scp.NewClientFromExistingSSH(s.clientConn, &scp.ClientOption{})
 }
