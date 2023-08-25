@@ -19,6 +19,7 @@ package executive
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -346,11 +347,16 @@ L:
 				log.Panic(err.Error())
 			}
 
+			// var actionErr error
 			// Run action
 			actionOutput, actionErr := provider.HandleAction(s.CurrentAction)
 			// On HandleAction panic, the execution ends here and instead
 			// calling PostAction here, a PostAction is called at start
 			// of this block during recover
+			if actionErr != nil {
+				errm := fmt.Errorf("[%v] [%v] failed", s.CurrentAction.ActionName, s.CurrentAction.ActionID)
+				actionErr = errors.Join(errm, actionErr)
+			}
 			if next := s.PostAction(actionOutput, actionErr); !next {
 				break L
 			}
