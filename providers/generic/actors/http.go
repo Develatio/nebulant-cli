@@ -30,7 +30,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -255,7 +254,7 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 			return nil, err
 		}
 		defer file.Close()
-		fcontent, err := ioutil.ReadAll(file)
+		fcontent, err := io.ReadAll(file)
 		if err != nil {
 			return nil, err
 		}
