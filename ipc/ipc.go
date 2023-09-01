@@ -70,10 +70,10 @@ func (c *IPCConsumer) ExposeStoreVars(store base.IStore) chan bool {
 					resp := "{{ " + data.VARNAME + " }}"
 					err := store.Interpolate(&resp)
 					if err != nil {
-						resp = "\x20"
+						resp = "\x10"
 					}
 					if resp == "{{ "+data.VARNAME+" }}" || resp == "" {
-						resp = "\x20"
+						resp = "\x10"
 					}
 					err = data.RespClose(resp)
 					if err != nil {
@@ -204,5 +204,5 @@ func NewListenerIPCServer(l net.Listener, id string) (*IPC, error) {
 }
 
 func NewIPCServer() (*IPC, error) {
-	return NewListenerIPCServer(nil, fmt.Sprintf("%d", rand.Int()))
+	return NewListenerIPCServer(nil, fmt.Sprintf("%d", rand.Int())) //#nosec G404 -- Weak random is OK here
 }

@@ -69,7 +69,7 @@ func ReadvarCmd() (int, error) {
 		}
 		return 1, nil
 	}
-	if val == "\x20" {
+	if val == "\x10" {
 		if *strict {
 			return 1, fmt.Errorf("undefined var")
 		}

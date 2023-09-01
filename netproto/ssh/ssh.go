@@ -34,6 +34,62 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
+var injecfuncs = `nebulant_inline_helper () {
+	READVARSTRICT=0
+	NULL=$(echo -e "\x10")
+
+	if [ "$1" = "readvar" ]; then
+		VARNAME=$2
+
+		if [ "$VARNAME" = "-strict" ]; then
+			READVARSTRICT=1
+			VARNAME=$3
+		fi
+		if [ "$VARNAME" = "--strict" ]; then
+			READVARSTRICT=1
+			VARNAME=$3
+		fi
+
+		if [ "$NEBULANT_IPCSID" = "" ]; then
+			if [ $READVARSTRICT -eq 1 ]; then
+				echo "cannot found IPC server ID" >&2
+			fi
+			return 1
+		fi
+
+		if [ "$NEBULANT_IPCCID" = "" ]; then
+			if [ $READVARSTRICT -eq 1 ]; then
+				echo "cannot found IPC consumer ID" >&2
+			fi
+			return 1
+		fi
+
+		RES=$(echo -e "$NEBULANT_IPCSID $NEBULANT_IPCCID readvar $VARNAME" | socat -,ignoreeof unix-connect:/tmp/ipc_$NEBULANT_IPCSID.sock)
+		if [ $? -gt 0 ]; then
+			if [ $READVARSTRICT -eq 1 ]; then
+				echo "connot connect to IPC server" >&2
+			fi
+			return 1
+		fi
+		if [ "$RES" = "$NULL" ]; then
+			if [ $READVARSTRICT -eq 1 ]; then
+				echo "undefined var" >&2
+			fi
+			return 1
+		fi
+		echo -e "$RES"
+		return 0
+	fi
+
+	echo "nebulant-cli inline helper"
+	echo "Unknow command"
+	echo ""
+	echo "Available commands:"
+	echo "Usage: nebulant readvar [variable name] [flags]"
+	echo -e "\t-strict\t\t\tForce err msg instead empty string"
+	return 1
+} && export -f nebulant_inline_helper`
+
 type ClientConfigParameters struct {
 	Target *string `json:"target" validate:"required"`
 	Port   uint16  `json:"port"`
@@ -217,7 +273,7 @@ func (s *sshClient) Listen(network string, address string) (net.Listener, error)
 }
 
 func (s *sshClient) StartIPC() (*ipc.IPCConsumer, error) {
-	lid := fmt.Sprintf("%d", rand.Int())
+	lid := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
 	fullpath := filepath.Join("/tmp", "ipc_"+lid+".sock")
 	l, err := s.Listen("unix", fullpath)
 	if err != nil {
@@ -241,6 +297,7 @@ func (s *sshClient) StartIPC() (*ipc.IPCConsumer, error) {
 
 	s.Env["NEBULANT_IPCSID"] = ipcs.GetUUID()
 	s.Env["NEBULANT_IPCCID"] = ipcc.ID
+	s.Env["NEBULANT_CLI_PATH"] = "nebulant_inline_helper"
 
 	go func() {
 		err := ipcs.Accept()
@@ -367,7 +424,7 @@ func (s *sshClient) RunCmd(cmd string) error { // stdout, stderr, error
 	// unsuccessfully or is interrupted by a signal, the error is of type
 	// *ExitError. Other error types may be returned for I/O problems.
 	// cast.LogInfo( "ssh> "+cmd)
-	cmd = inlineEnv + cmd
+	cmd = inlineEnv + injecfuncs + " && " + cmd
 	runerr := session.Run(cmd)
 	// This freezes the execution of the command as we want. Do not use:
 	// if err := session.Wait(); err != nil {
@@ -405,6 +462,7 @@ func (s *sshClient) RunScriptFromLocalPath(localPath string) error { // stdout, 
 			inlineEnv = inlineEnv + n + "=$( cat <<EOF\n" + v + "\nEOF\n)\n"
 		}
 	}
+	inlineEnv = inlineEnv + "\n" + injecfuncs + "\n"
 	envr := strings.NewReader(inlineEnv)
 	r := io.MultiReader(envr, file)
 
@@ -455,7 +513,7 @@ func (s *sshClient) RunScriptFromText(txt *string) error {
 			inlineEnv = inlineEnv + n + "=$( cat <<EOF\n" + v + "\nEOF\n)\n"
 		}
 	}
-	scriptTxt = inlineEnv + scriptTxt
+	scriptTxt = inlineEnv + "\n" + injecfuncs + "\n" + scriptTxt
 	r := strings.NewReader(scriptTxt)
 	_, err := io.Copy(&stdin, r)
 	if err != nil {
