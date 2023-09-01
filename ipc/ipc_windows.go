@@ -24,7 +24,7 @@ import (
 	"github.com/Microsoft/go-winio"
 )
 
-func (p *IPC) Listen() (net.Listener, error) {
+func (p *IPC) listen() (net.Listener, error) {
 	path := `\\.\pipe\` + "ipc_" + p.uuid
 
 	l, err := winio.ListenPipe(path, nil)

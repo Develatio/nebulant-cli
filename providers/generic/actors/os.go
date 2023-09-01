@@ -243,38 +243,15 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	// Conf IPCS Consumer
 	ipcs := ctx.Store.GetPrivateVar("IPCS").(*ipc.IPC)
 	envVars = append(envVars, "NEBULANT_IPCSID="+ipcs.GetUUID())
-	out := make(chan bool)
+	// out := make(chan bool)
 	ipccid := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
 	ipcc := &ipc.IPCConsumer{
 		ID:     ipccid,
 		Stream: make(chan *ipc.PipeData),
 	}
-	ipcs.NewConsumer(ipcc)
+	ipcs.AppendConsumer(ipcc)
 	envVars = append(envVars, "NEBULANT_IPCCID="+ipcc.ID)
-	go func() {
-	L:
-		for { // Infine loop until break L
-			select { // Loop until a case ocurrs.
-			case data := <-ipcc.Stream:
-				if data.COMMAND == "readvar" {
-					resp := "{{ " + data.VARNAME + " }}"
-					err := ctx.Store.Interpolate(&resp)
-					if err != nil {
-						resp = "\x20"
-					}
-					if resp == "{{ "+data.VARNAME+" }}" || resp == "" {
-						resp = "\x20"
-					}
-					err = data.Resp(resp)
-					if err != nil {
-						break L
-					}
-				}
-			case <-out:
-				break L
-			}
-		}
-	}()
+	out := ipcc.ExposeStoreVars(ctx.Store)
 	defer func() {
 		out <- true
 		ipcs.OutConsumer(ipcc)

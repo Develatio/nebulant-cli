@@ -20,20 +20,12 @@ package ipc
 
 import (
 	"net"
-	"os"
 	"path/filepath"
 )
 
 // Listen func
-func (p *IPC) Listen() (net.Listener, error) {
-	basepath := filepath.Join("/tmp", ".nebulant")
-
-	err := os.MkdirAll(basepath, os.ModePerm)
-	if err != nil {
-		return nil, err
-	}
-
-	l, err := net.Listen("unix", filepath.Join(basepath, "ipc_"+p.uuid+".sock"))
+func (p *IPC) listen() (net.Listener, error) {
+	l, err := net.Listen("unix", filepath.Join("/tmp", "ipc_"+p.uuid+".sock"))
 	if err != nil {
 		return nil, err
 	}
@@ -41,8 +33,7 @@ func (p *IPC) Listen() (net.Listener, error) {
 }
 
 func Read(ipsid string, ipcid string, msg string) (string, error) {
-	basepath := filepath.Join("/tmp", ".nebulant")
-	c, err := net.Dial("unix", filepath.Join(basepath, "ipc_"+ipsid+".sock"))
+	c, err := net.Dial("unix", filepath.Join("/tmp", "ipc_"+ipsid+".sock"))
 	if err != nil {
 		return "", err
 	}

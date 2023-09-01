@@ -19,7 +19,11 @@ package ipc
 import (
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
+	"time"
+
+	"github.com/develatio/nebulant-cli/base"
 )
 
 type PipeData struct {
@@ -38,9 +42,54 @@ func (d *PipeData) Resp(r string) error {
 	return nil
 }
 
+func (d *PipeData) Close() error {
+	return d.c.Close()
+}
+
+func (d *PipeData) RespClose(r string) error {
+	err := d.Resp(r)
+	if err != nil {
+		return err
+	}
+	return d.Close()
+}
+
 type IPCConsumer struct {
 	ID     string
 	Stream chan *PipeData
+}
+
+func (c *IPCConsumer) ExposeStoreVars(store base.IStore) chan bool {
+	out := make(chan bool)
+	go func() {
+	L:
+		for { // Infine loop until break L
+			select { // Loop until a case ocurrs.
+			case data := <-c.Stream:
+				if data.COMMAND == "readvar" {
+					resp := "{{ " + data.VARNAME + " }}"
+					err := store.Interpolate(&resp)
+					if err != nil {
+						resp = "\x20"
+					}
+					if resp == "{{ "+data.VARNAME+" }}" || resp == "" {
+						resp = "\x20"
+					}
+					err = data.RespClose(resp)
+					if err != nil {
+						if err != io.EOF {
+							break L
+						}
+					}
+				}
+			case <-out:
+				break L
+			default:
+				time.Sleep(200000 * time.Microsecond)
+			}
+		}
+	}()
+	return out
 }
 
 type IPC struct {
@@ -48,9 +97,18 @@ type IPC struct {
 	consumers map[string]*IPCConsumer
 	l         net.Listener
 	Errors    chan error
+	closed    bool
 }
 
-func (p *IPC) NewConsumer(ipcc *IPCConsumer) {
+func (p *IPC) IsClosed() bool {
+	return p.closed
+}
+
+func (p *IPC) SetListener(l net.Listener) {
+	p.l = l
+}
+
+func (p *IPC) AppendConsumer(ipcc *IPCConsumer) {
 	p.consumers[ipcc.ID] = ipcc
 }
 
@@ -63,22 +121,43 @@ func (p *IPC) GetUUID() string {
 }
 
 func (p *IPC) Close() error {
-	return p.l.Close()
+	if p.l == nil {
+		return nil
+	}
+	err := p.l.Close()
+	p.l = nil
+	p.closed = true
+	return err
 }
 
 func (p *IPC) Accept() error {
-	defer p.l.Close()
-	for {
-		con, err := p.l.Accept()
+	p.closed = false
+	defer func() {
+		err := p.Close()
 		if err != nil {
 			p.Errors <- err
 		}
+	}()
+	for {
+		if p.l == nil {
+			break
+		}
+		con, err := p.l.Accept()
+		if err != nil {
+			p.Errors <- err
+			continue
+		}
 		go p.serve(con)
 	}
+	return nil
 }
 
 func (p *IPC) serve(con net.Conn) {
-	defer con.Close()
+	defer func() {
+		if con != nil {
+			con.Close()
+		}
+	}()
 	buf := make([]byte, 512)
 	// var buff bytes.Buffer
 	for {
@@ -107,16 +186,23 @@ func (p *IPC) serve(con net.Conn) {
 	}
 }
 
-func NewIPCServer(euuid string) (*IPC, error) {
+func NewListenerIPCServer(l net.Listener, id string) (*IPC, error) {
+	var err error
 	ipc := &IPC{
-		uuid:      euuid,
+		uuid:      id,
 		consumers: make(map[string]*IPCConsumer),
 		Errors:    make(chan error),
 	}
-	l, err := ipc.Listen()
-	if err != nil {
-		return nil, err
+	if l == nil {
+		l, err = ipc.listen()
+		if err != nil {
+			return nil, err
+		}
 	}
 	ipc.l = l
 	return ipc, nil
+}
+
+func NewIPCServer() (*IPC, error) {
+	return NewListenerIPCServer(nil, fmt.Sprintf("%d", rand.Int()))
 }

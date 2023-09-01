@@ -26,6 +26,7 @@ package actors
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -121,6 +122,8 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	mainclient := sshClient
 	out := make(chan bool)
 	defer func() {
+		// closing main client
+		// will close subclients
 		err := mainclient.Disconnect()
 		if err != nil {
 			ctx.Logger.LogWarn(err.Error())
@@ -139,10 +142,15 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 					break L1
 				}
 				if evt.Type == nebulantssh.SSHClientEventDialing {
-					ctx.Logger.LogDebug(fmt.Sprintf("SSH Dialing %v...", addr))
+					ctx.Logger.LogInfo(fmt.Sprintf("SSH Dialing %v...", addr))
 				}
 				if evt.Type == nebulantssh.SSHClientEventClosed {
 					ctx.Logger.LogDebug(fmt.Sprintf("SSH Closing %v...", addr))
+				}
+				if evt.Type == nebulantssh.SSHClientEventError {
+					if evt.Error != io.EOF {
+						ctx.Logger.LogWarn(evt.Error.Error())
+					}
 				}
 			case <-out:
 				break L1
@@ -165,6 +173,19 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// the remote ipc server will be closed
+	// automaticallly on sshClient.Close()
+	ipcc, err := sshClient.StartIPC()
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("start of remote IPC fail"), err)
+	}
+	ctx.Logger.LogDebug("Exposing vars to remote unix socket...")
+	outexpose := ipcc.ExposeStoreVars(ctx.Store)
+	defer func() {
+		// close the unix sock requests dispatcher
+		outexpose <- true
+	}()
 
 	result := &runRemoteScriptOutput{}
 	var sshOut io.Writer
@@ -227,6 +248,7 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	} else {
 		return nil, fmt.Errorf("no script provided")
 	}
+	ctx.Logger.ByteLogInfo([]byte("\n----------\n"))
 
 	if sshRunErr == nil {
 		result.ExitCode = "0"

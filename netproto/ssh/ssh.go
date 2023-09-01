@@ -21,10 +21,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/develatio/nebulant-cli/ipc"
 	"github.com/povsister/scp"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -56,6 +60,7 @@ func GetSSHClientConfig(cc *ClientConfigParameters) (*ssh.ClientConfig, error) {
 		User: *cc.Username,
 		//#nosec G106 -- Allow config this? Hacker comunity feedback needed.
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         20 * time.Second,
 	}
 
 	if cc.PrivateKeyPath != nil {
@@ -124,10 +129,12 @@ const (
 	SSHClientEventConnected
 	SSHClientEventMasterClosed
 	SSHClientEventClosed
+	SSHClientEventError
 )
 
 type SSHClientEvent struct {
 	Type      SSHClientEventType
+	Error     error
 	SSHClient *sshClient
 }
 
@@ -152,6 +159,8 @@ type sshClient struct {
 	// will be shared between clients
 	Events chan *SSHClientEvent
 	Env    map[string]string
+	//
+	ipcs *ipc.IPC
 }
 
 // Connect func
@@ -203,6 +212,64 @@ func (s *sshClient) Dial(addr string, config *ssh.ClientConfig) (*sshClient, err
 	return sshclient, nil
 }
 
+func (s *sshClient) Listen(network string, address string) (net.Listener, error) {
+	return s.clientConn.Listen(network, address)
+}
+
+func (s *sshClient) StartIPC() (*ipc.IPCConsumer, error) {
+	lid := fmt.Sprintf("%d", rand.Int())
+	fullpath := filepath.Join("/tmp", "ipc_"+lid+".sock")
+	l, err := s.Listen("unix", fullpath)
+	if err != nil {
+		err0 := fmt.Errorf("cannot listen in remote file %v", fullpath)
+		return nil, errors.Join(err0, err)
+	}
+	ipcs, err := ipc.NewListenerIPCServer(l, lid)
+	if err != nil {
+		return nil, err
+	}
+
+	ipcc := &ipc.IPCConsumer{
+		ID:     fmt.Sprintf("%v-c", lid),
+		Stream: make(chan *ipc.PipeData),
+	}
+
+	ipcs.AppendConsumer(ipcc)
+	if s.Env == nil {
+		s.Env = make(map[string]string)
+	}
+
+	s.Env["NEBULANT_IPCSID"] = ipcs.GetUUID()
+	s.Env["NEBULANT_IPCCID"] = ipcc.ID
+
+	go func() {
+		err := ipcs.Accept()
+		if err != nil {
+			ipcs.Errors <- err
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case err := <-ipcs.Errors:
+				s.Events <- &SSHClientEvent{Type: SSHClientEventError, SSHClient: s, Error: err}
+			default:
+				if len(ipcs.Errors) > 0 {
+					continue
+				}
+				if ipcs.IsClosed() {
+					break
+				}
+				time.Sleep(200000 * time.Microsecond)
+			}
+		}
+	}()
+
+	s.ipcs = ipcs
+	return ipcc, nil
+}
+
 func (s *sshClient) DialWithProxies(ccp *ClientConfigParameters) (*sshClient, error) {
 	var connections []*ClientConfigParameters
 	if len(ccp.Proxies) > 0 {
@@ -244,6 +311,16 @@ func (s *sshClient) DialWithProxies(ccp *ClientConfigParameters) (*sshClient, er
 // Disconnect func
 func (s *sshClient) Disconnect() error {
 	var errs []error
+	// close IPCS listener
+	if s.ipcs != nil {
+		// this should rm sock file
+		// https://cs.opensource.google/go/x/crypto/+/refs/tags/v0.12.0:ssh/streamlocal.go;l=99
+		err := s.ipcs.Close()
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	// close sublcients
 	for _, sc := range s.subClients {
 		err := sc.Disconnect()
 		if err != nil {
@@ -251,6 +328,7 @@ func (s *sshClient) Disconnect() error {
 		}
 	}
 	s.Events <- &SSHClientEvent{Type: SSHClientEventClosed, SSHClient: s}
+	// close itself
 	if s.clientConn != nil {
 		err := s.clientConn.Close()
 		errs = append(errs, err)
