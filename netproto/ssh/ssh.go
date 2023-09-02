@@ -51,24 +51,18 @@ var injecfuncs = `nebulant_inline_helper () {
 		fi
 
 		if [ "$NEBULANT_IPCSID" = "" ]; then
-			if [ $READVARSTRICT -eq 1 ]; then
-				echo "cannot found IPC server ID" >&2
-			fi
+			echo "cannot find IPC server ID" >&2
 			return 1
 		fi
 
 		if [ "$NEBULANT_IPCCID" = "" ]; then
-			if [ $READVARSTRICT -eq 1 ]; then
-				echo "cannot found IPC consumer ID" >&2
-			fi
+			echo "cannot find IPC consumer ID" >&2
 			return 1
 		fi
 
 		RES=$(echo -e "$NEBULANT_IPCSID $NEBULANT_IPCCID readvar $VARNAME" | socat -,ignoreeof unix-connect:/tmp/ipc_$NEBULANT_IPCSID.sock)
 		if [ $? -gt 0 ]; then
-			if [ $READVARSTRICT -eq 1 ]; then
-				echo "connot connect to IPC server" >&2
-			fi
+			echo "cannot connect to IPC server" >&2
 			return 1
 		fi
 		if [ "$RES" = "$NULL" ]; then
@@ -85,7 +79,7 @@ var injecfuncs = `nebulant_inline_helper () {
 	echo "Unknow command"
 	echo ""
 	echo "Available commands:"
-	echo "Usage: nebulant readvar [variable name] [flags]"
+	echo "Usage: nebulant readvar [flags] [variable name]"
 	echo -e "\t-strict\t\t\tForce err msg instead empty string"
 	return 1
 } && export -f nebulant_inline_helper`
