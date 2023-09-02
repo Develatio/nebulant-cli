@@ -60,6 +60,11 @@ var injecfuncs = `nebulant_inline_helper () {
 			return 1
 		fi
 
+		if [ ! command -v socat &> /dev/null]; then
+			echo "socat is required, please install it" >&2
+			return 1
+		fi
+
 		RES=$(echo -e "$NEBULANT_IPCSID $NEBULANT_IPCCID readvar $VARNAME" | socat -,ignoreeof unix-connect:/tmp/ipc_$NEBULANT_IPCSID.sock)
 		if [ $? -gt 0 ]; then
 			echo "cannot connect to IPC server" >&2
