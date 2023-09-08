@@ -64,10 +64,7 @@ func ReadvarCmd() (int, error) {
 	varname := flag.Arg(1)
 	val, err := ipc.Read(ipcsid, ipccid, "readvar "+varname)
 	if err != nil {
-		if *strict {
-			return 1, err
-		}
-		return 1, nil
+		return 1, err
 	}
 	if val == "\x10" {
 		if *strict {
