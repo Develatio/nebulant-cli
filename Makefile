@@ -4,13 +4,13 @@
 VERSION = 0
 PATCHLEVEL = 2
 SUBLEVEL = 0
-EXTRAVERSION = -beta
+EXTRAVERSION := -beta-git-$(shell git log -1 --format=%h)
 NAME =
 
 ######
 
 CLIVERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(SUBLEVEL)))$(EXTRAVERSION)
-DATE = `date +'%Y%m%d'`
+DATE = $(shell git log -1 --date=format:'%Y%m%d' --format=%cd)
 
 PRERELEASE = true
 ifeq ($(shell expr $(PATCHLEVEL) % 2), 0)
@@ -80,58 +80,64 @@ rundockerdev:
 
 .PHONY: build
 build:
-	GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant$(GOEXE) nebulant.go
+	mkdir -p dist/$(CLIVERSION)
+	GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/nebulant$(GOEXE) nebulant.go
+	shasum dist/nebulant$(GOEXE) > dist/nebulant.shasum
 
 builddebug:
-	GO111MODULE=on CGO_ENABLED=0 go build -a -trimpath -ldflags "$(LDFLAGS)" -o bin/nebulant-debug nebulant.go
+	GO111MODULE=on CGO_ENABLED=0 go build -a -trimpath -ldflags "$(LDFLAGS)" -o dist/nebulant-debug nebulant.go
 
 .PHONY: buildlocal
 buildlocal:
-	go build -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" -trimpath -o bin/nebulant-dev-NOPROD nebulant.go
+	go build -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" -trimpath -o dist/nebulant-dev-NOPROD nebulant.go
 
 .PHONY: builddev
 builddev:
-	go build -ldflags "$(LDFLAGS) $(DEVLDFLAGS)" -trimpath -o bin/nebulant-dev-NOPROD nebulant.go
+	go build -ldflags "$(LDFLAGS) $(DEVLDFLAGS)" -trimpath -o dist/nebulant-dev-NOPROD nebulant.go
 
 .PHONY: buildall
 buildall:
 	@echo "Building..."
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-linux-arm nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-linux-arm64 nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-linux-386 nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-linux-amd64 nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=freebsd GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-freebsd-386 nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-freebsd-amd64 nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=freebsd GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-freebsd-arm64 nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=freebsd GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-freebsd-arm nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-openbsd-386 nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-openbsd-amd64 nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-openbsd-arm64 nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-openbsd-arm nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-windows-386.exe nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-windows-amd64.exe nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-windows-arm64.exe nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-windows-arm.exe nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-darwin-amd64 nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-darwin-arm64 nebulant.go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=js GOARCH=wasm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o bin/nebulant-$(CLIVERSION)-$(DATE)-js-wasm nebulant.go
-	@echo "Check bin/ for builds"
-
-.PHONY: prepare_reproducible_buildall
-prepare_reproducible_buildall:
-	@echo "This build needs go version $(GOVERSION) to be reproducible"
-	go version | grep $(GOVERSION) || exit 1
-	@echo "WARNING: This will override /tmp/nebulant-cli. Build will start after 10s..." && sleep 5
-	@ echo "5..." && sleep 1
-	@ echo "4..." && sleep 1
-	@ echo "3..." && sleep 1
-	@ echo "2..." && sleep 1
-	@ echo "1..." && sleep 1
-	ln -snf $(CLIPATH) /tmp/nebulant-cli && cd /tmp/nebulant-cli
-	cd /tmp/nebulant-cli
-
-.PHONY: reproducible_buildall
-reproducible_buildall: prepare_reproducible_buildall buildall shasum
+	mkdir -p dist/$(CLIVERSION)
+	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-linux-arm nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-linux-arm > dist/$(CLIVERSION)/nebulant-linux-arm.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-linux-arm64 nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-linux-arm64 > dist/$(CLIVERSION)/nebulant-linux-arm64.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-linux-386 nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-linux-386 > dist/$(CLIVERSION)/nebulant-linux-386.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-linux-amd64 nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-linux-amd64 > dist/$(CLIVERSION)/nebulant-linux-amd64.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=freebsd GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-freebsd-386 nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-freebsd-386 > dist/$(CLIVERSION)/nebulant-freebsd-386.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-freebsd-amd64 nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-freebsd-amd64 > dist/$(CLIVERSION)/nebulant-freebsd-amd64.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=freebsd GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-freebsd-arm64 nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-freebsd-arm64 > dist/$(CLIVERSION)/nebulant-freebsd-arm64.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=freebsd GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-freebsd-arm nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-freebsd-arm > dist/$(CLIVERSION)/nebulant-freebsd-arm.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-openbsd-386 nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-openbsd-386 > dist/$(CLIVERSION)/nebulant-openbsd-386.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-openbsd-amd64 nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-openbsd-amd64 > dist/$(CLIVERSION)/nebulant-openbsd-amd64.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-openbsd-arm64 nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-openbsd-arm64 > dist/$(CLIVERSION)/nebulant-openbsd-arm64.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-openbsd-arm nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-openbsd-arm > dist/$(CLIVERSION)/nebulant-openbsd-arm.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-windows-386.exe nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-windows-386.exe > dist/$(CLIVERSION)/nebulant-windows-386.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-windows-amd64.exe nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-windows-amd64.exe > dist/$(CLIVERSION)/nebulant-windows-amd64.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-windows-arm64.exe nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-windows-arm64.exe > dist/$(CLIVERSION)/nebulant-windows-arm64.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-windows-arm.exe nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-windows-arm.exe > dist/$(CLIVERSION)/nebulant-windows-arm.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-darwin-amd64 nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-darwin-amd64 > dist/$(CLIVERSION)/nebulant-darwin-amd64.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-darwin-arm64 nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-darwin-arm64 > dist/$(CLIVERSION)/nebulant-darwin-arm64.shasum
+	GO111MODULE=on CGO_ENABLED=0 GOOS=js GOARCH=wasm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-js-wasm nebulant.go
+	shasum dist/$(CLIVERSION)/nebulant-js-wasm > dist/$(CLIVERSION)/nebulant-js-wasm.shasum
+	@echo "Check dist/ for builds"
 
 .PHONY: secure
 secure:

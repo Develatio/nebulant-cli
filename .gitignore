@@ -1,5 +1,5 @@
 /nebulant
-/bin
+/dist
 /localhost.crt
 /localhost.key
 .DS_Store
