@@ -83,7 +83,6 @@ rundockerdev:
 
 .PHONY: build
 build:
-	mkdir -p dist/$(CLIVERSION)
 	GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/nebulant$(GOEXE) nebulant.go
 	shasum dist/nebulant$(GOEXE) > dist/nebulant.shasum
 
