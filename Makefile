@@ -12,7 +12,7 @@ NAME =
 CLIVERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(SUBLEVEL)))$(EXTRAVERSION)
 DATE = $(shell git log -1 --date=format:'%Y%m%d' --format=%cd)
 COMMIT = $(shell git log -1 --format=%h)
-GOVERSION = $(shell go version)
+GOVERSION = $(shell go env GOVERSION)
 
 PRERELEASE = true
 ifeq ($(shell expr $(PATCHLEVEL) % 2), 0)
