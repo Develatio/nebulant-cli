@@ -33,6 +33,12 @@ var Version = "DEV build"
 // VersionDate var
 var VersionDate = ""
 
+// VersionCommit var
+var VersionCommit = ""
+
+// VersionGo var
+var VersionGo = ""
+
 // WSScheme var
 var WSScheme string = "wss"
 

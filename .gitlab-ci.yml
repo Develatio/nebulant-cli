@@ -53,7 +53,7 @@ self:
   script:
     - make builddebug
     - echo $BLUEPRINT >/tmp/blueprint.json
-    - ./bin/nebulant-debug run /tmp/blueprint.json
+    - ./dist/nebulant-debug run /tmp/blueprint.json
 
   rules:
     - if: $CI_COMMIT_MESSAGE =~ /skip[-_]all/

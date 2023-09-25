@@ -11,6 +11,8 @@ NAME =
 
 CLIVERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(SUBLEVEL)))$(EXTRAVERSION)
 DATE = $(shell git log -1 --date=format:'%Y%m%d' --format=%cd)
+COMMIT = $(shell git log -1 --format=%h)
+GOVERSION = $(shell go version)
 
 PRERELEASE = true
 ifeq ($(shell expr $(PATCHLEVEL) % 2), 0)
@@ -20,9 +22,10 @@ endif
 PKG_LIST := $(shell go list ./... | grep -v /vendor/)
 
 
-
 LDFLAGS = -X github.com/develatio/nebulant-cli/config.Version=$(CLIVERSION)\
-	-X github.com/develatio/nebulant-cli/config.VersionDate=$(DATE)
+	-X github.com/develatio/nebulant-cli/config.VersionDate=$(DATE)\
+	-X github.com/develatio/nebulant-cli/config.VersionCommit=$(COMMIT)\
+	-X 'github.com/develatio/nebulant-cli/config.VersionGo=$(GOVERSION)'
 
 LOCALLDFLAGS = -X github.com/develatio/nebulant-cli/config.WSScheme=ws\
 	-X github.com/develatio/nebulant-cli/config.BackendProto=https\
@@ -42,7 +45,7 @@ DEVLDFLAGS = -X github.com/develatio/nebulant-cli/config.WSScheme=wss\
 
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 CLIPATH := $(realpath $(dir $(MAKEFILE_PATH)))
-GOVERSION = 1.21.0
+MINGOVERSION = 1.21.0
 
 ifndef $(GOPATH)
     GOPATH=$(shell go env GOPATH)
@@ -76,7 +79,7 @@ rundev:
 .PHONY: rundockerdev
 rundockerdev:
 	# ej: make rundockerdev ARGS="-x -s -b 0.0.0.0:15678"
-	docker run --rm -v "$(PWD)":/usr/src/myapp -w /usr/src/myapp -p 15678:15678 golang:$(GOVERSION) go run -race -ldflags "$(LDFLAGS) $(DEVLDFLAGS)" nebulant.go $(ARGS)
+	docker run --rm -v "$(PWD)":/usr/src/myapp -w /usr/src/myapp -p 15678:15678 golang:$(MINGOVERSION) go run -race -ldflags "$(LDFLAGS) $(DEVLDFLAGS)" nebulant.go $(ARGS)
 
 .PHONY: build
 build:
@@ -177,7 +180,7 @@ versiondate:
 
 .PHONY: goversion
 goversion:
-	@echo $(GOVERSION)
+	@echo $(MINGOVERSION)
 
 .PHONY: shasum
 shasum:

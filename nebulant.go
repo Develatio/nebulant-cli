@@ -263,6 +263,9 @@ func main() {
 	// Version and exit
 	if *config.VersionFlag {
 		fmt.Println("v" + config.Version)
+		fmt.Println("Build date: " + config.VersionDate)
+		fmt.Println("Build commit: " + config.VersionCommit)
+		fmt.Println("Compiler version: " + config.VersionGo)
 		os.Exit(0)
 	}
 
