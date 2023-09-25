@@ -307,6 +307,7 @@ func (s *sshClient) StartIPC() (*ipc.IPCConsumer, error) {
 	}()
 
 	go func() {
+	L:
 		for {
 			select {
 			case err := <-ipcs.Errors:
@@ -316,7 +317,7 @@ func (s *sshClient) StartIPC() (*ipc.IPCConsumer, error) {
 					continue
 				}
 				if ipcs.IsClosed() {
-					break
+					break L
 				}
 				time.Sleep(200000 * time.Microsecond)
 			}
