@@ -27,14 +27,17 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
+	"encoding"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -42,6 +45,7 @@ import (
 	"golang.org/x/net/html/charset"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 )
 
@@ -104,10 +108,19 @@ type httpRequestParametersBinaryBody struct {
 }
 
 type httpRequestOutput struct {
-	Status     string `json:"status"`
-	StatusCode int    `json:"status_code"`
-	Headers    string `json:"headers"`
-	Body       string `json:"body"`
+	Status     string                 `json:"status"`
+	StatusCode int                    `json:"status_code"`
+	Headers    string                 `json:"headers"`
+	Body       encoding.TextMarshaler `json:"body"`
+	FilePath   string                 `json:"filepath"`
+}
+
+type httpRequestOutputMarshalerBody struct {
+	filepath string
+}
+
+func (h *httpRequestOutputMarshalerBody) MarshalText() ([]byte, error) {
+	return os.ReadFile(h.filepath)
 }
 
 // RunRemoteScript func
@@ -121,6 +134,10 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 	if p.Url == nil {
 		return nil, fmt.Errorf("http endpoint parameter of HTTP request cannot be empty")
+	}
+	u, err := url.Parse(*p.Url)
+	if err != nil {
+		return nil, err
 	}
 
 	if ctx.Rehearsal {
@@ -354,13 +371,42 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err != nil {
 		return nil, err
 	}
-	swb := new(strings.Builder)
-	_, err = io.Copy(swb, dcr) //#nosec G110 -- The user is free to get decompression bomb
+
+	f, err := os.CreateTemp("", "nbl*")
+	if err != nil {
+		log.Fatal(err)
+	}
+	result.FilePath = f.Name()
+	defer f.Close()
+
+	ctx.Logger.LogDebug("Storing http response into tmp file " + f.Name())
+
+	lin := term.AppendLine()
+	defer lin.Close()
+	bar, err := lin.GetProgressBar(resp.ContentLength, path.Base(u.Path), true)
 	if err != nil {
 		return nil, err
 	}
-	ctx.Logger.LogDebug("Body: " + swb.String())
-	result.Body = swb.String()
+
+	// swb := new(strings.Builder)
+	written, err := io.Copy(io.MultiWriter(f, bar), dcr) //#nosec G110 -- The user is free to get decompression bomb
+	if err != nil {
+		return nil, err
+	}
+
+	swb := make([]byte, 5000)
+	n, err := f.ReadAt(swb, 0)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+	ctx.Logger.LogDebug("Body: " + string(swb))
+	if written > int64(n) {
+		ctx.Logger.LogDebug("...[Truncated]")
+	}
+
+	result.Body = &httpRequestOutputMarshalerBody{
+		filepath: f.Name(),
+	}
 
 	aout := base.NewActionOutput(ctx.Action, result, nil)
 	return aout, err

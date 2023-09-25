@@ -17,6 +17,7 @@
 package ipc
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -24,6 +25,7 @@ import (
 	"time"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/cast"
 )
 
 type PipeData struct {
@@ -155,7 +157,10 @@ func (p *IPC) Accept() error {
 func (p *IPC) serve(con net.Conn) {
 	defer func() {
 		if con != nil {
-			con.Close()
+			err := con.Close()
+			if err != nil {
+				cast.LogWarn(errors.Join(fmt.Errorf("ipc server connection close err"), err).Error(), nil)
+			}
 		}
 	}()
 	buf := make([]byte, 512)
