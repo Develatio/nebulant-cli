@@ -18,6 +18,7 @@ package actors
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -40,7 +41,7 @@ type sendMailParameters struct {
 	Server           *string                 `json:"server" validate:"required"`
 	Port             *int                    `json:"port"`
 	IgnoreInvalidSSL bool                    `json:"ignore_invalid_ssl"`
-	SSL              bool                    `json:"ssl"`
+	ForceSSL         bool                    `json:"force_ssl"`
 	Subject          *string                 `json:"subject"`
 	Body             *sendMailParametersBody `json:"body"`
 	From             *string                 `json:"from" validate:"required"`
@@ -172,7 +173,8 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
-	host := net.JoinHostPort(*params.Server, strconv.Itoa(*params.Port))
+	hostport := net.JoinHostPort(*params.Server, strconv.Itoa(*params.Port))
+	ctx.Logger.LogDebug("smtp: " + hostport)
 
 	// Sending "Bcc" messages is accomplished by including an email address in
 	// the to parameter but not including it in the msg headers.
@@ -189,27 +191,37 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 	var conn net.Conn
 	var err error
 
-	if params.SSL { // #nosec G402 -- Leave to user the choose to be insecure
+	tlsconfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		// either InsecureSkipVerify or ServerName should be setted
+		InsecureSkipVerify: params.IgnoreInvalidSSL,
+		ServerName:         *params.Server,
+	}
+
+	if params.ForceSSL { // #nosec G402 -- Leave to user the choose to be insecure
 		// Use SSL at beginning
-		conn, err = tls.Dial("tcp", host, &tls.Config{
-			MinVersion:         tls.VersionTLS12,
-			InsecureSkipVerify: params.IgnoreInvalidSSL,
-			ServerName:         host,
-		})
+		conn, err = tls.Dial("tcp", hostport, tlsconfig)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		// Use regular tcp for startls
-		conn, err = net.Dial("tcp", host)
+		conn, err = net.Dial("tcp", hostport)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	err = smtp.SendMail(conn, auth, *params.From, to, msg)
+	smctx := &smtp.SendMailCTX{
+		Host:      *params.Server,
+		Port:      *params.Port,
+		Conn:      conn,
+		Auth:      auth,
+		TLSConfig: tlsconfig,
+	}
+	err = smtp.SendMail(smctx, *params.From, to, msg)
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(fmt.Errorf("cannot send email"), err)
 	}
 	return nil, nil
 }
