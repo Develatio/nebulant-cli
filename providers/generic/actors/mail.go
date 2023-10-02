@@ -18,9 +18,14 @@ package actors
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 
@@ -44,6 +49,7 @@ type sendMailParameters struct {
 	ForceSSL         bool                    `json:"force_ssl"`
 	Subject          *string                 `json:"subject"`
 	Body             *sendMailParametersBody `json:"body"`
+	Attachments      []string                `json:"attachments"`
 	From             *string                 `json:"from" validate:"required"`
 	To               []string                `json:"to" validate:"required"`
 	CC               []string                `json:"cc"`
@@ -96,6 +102,17 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	// BCC are excluded from headers
 
+	// always mime 1.0
+	msg = append(msg, []byte("MIME-Version: 1.0\r\n")...)
+	mixed := false
+	related := false
+
+	if len(params.Attachments) > 0 {
+		mixed = true
+		msg = append(msg, []byte("Content-Type: multipart/mixed; boundary=mixedBoundary\r\n")...)
+		msg = append(msg, []byte("\r\n")...)
+	}
+
 	if params.Body != nil {
 		// Multipart body? if yes, switch to rfc2046
 		// https://datatracker.ietf.org/doc/html/rfc2046
@@ -110,11 +127,51 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 		// rfc2046
 		// https://datatracker.ietf.org/doc/html/rfc2046#section-5.1
 		if params.Body.HTML != nil && len(*params.Body.HTML) > 0 && params.Body.Plain != nil && len(*params.Body.Plain) > 0 {
-			msg = append(msg, []byte("MIME-Version: 1.0\r\n")...)
+			// if mixed, there is attachment file, so we add related boundary
+			// into mixed boundary and alternative boundary into related boundary
+			//
+			// something like:
+			//
+			// mixed(
+			// 	related(
+			//  	alternative(
+			// 			plain,
+			// 			html
+			// 		),
+			// 		logo.jpg,
+			// 		img2.png,
+			// 		...
+			// 	),
+			// 	attach1,
+			// 	attach2,
+			// 	...
+			// )
+			//
+			// something like:
+			//
+			// --mixed
+			// 	--related
+			// 		--alternative
+			// 		--alternative--
+			// 	--related--
+			// --mixed
+			// 	...
+			// --mixed
+			// 	...
+			// --mixed--
+			//
+			if mixed {
+				related = true
+				msg = append(msg, []byte("--mixedBoundary\r\n")...)
+				msg = append(msg, []byte("Content-Type: multipart/related; boundary=\"relatedBoundary\"\r\n")...)
+				msg = append(msg, []byte("\r\n")...)
+				msg = append(msg, []byte("--relatedBoundary\r\n")...)
+			}
+
 			// alternative subtype for same data
 			// rfc2046 5.1.4.
 			// https://datatracker.ietf.org/doc/html/rfc2046#section-5.1.4
-			msg = append(msg, []byte("Content-Type: multipart/alternative; boundary=boundary42\r\n")...)
+			msg = append(msg, []byte("Content-Type: multipart/alternative; boundary=alternativeBoundary\r\n")...)
 
 			// The  body  is simply a sequence of lines containing ASCII charac-
 			// ters.  It is separated from the headers by a null line  (i.e.,  a
@@ -128,49 +185,117 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 			// https://datatracker.ietf.org/doc/html/rfc2046#section-5.1.4
 
 			// text plain boundary
-			msg = append(msg, []byte("--boundary42\r\n")...)
+			msg = append(msg, []byte("--alternativeBoundary\r\n")...)
 			msg = append(msg, []byte("Content-Type: text/plain; charset=utf-8\r\n")...)
 			msg = append(msg, []byte("\r\n")...)
 			msg = append(msg, []byte(*params.Body.Plain)...)
+			// end of data
+			msg = append(msg, []byte("\r\n")...)
+			// line break
 			msg = append(msg, []byte("\r\n")...)
 
 			// html boundary
-			msg = append(msg, []byte("--boundary42\r\n")...)
+			msg = append(msg, []byte("--alternativeBoundary\r\n")...)
 			msg = append(msg, []byte("Content-Type: text/html; charset=utf-8\r\n")...)
 			msg = append(msg, []byte("\r\n")...)
 			msg = append(msg, []byte(*params.Body.HTML)...)
+			// end of data
+			msg = append(msg, []byte("\r\n")...)
+			// line break
 			msg = append(msg, []byte("\r\n")...)
 
 			// finish boundary
-			msg = append(msg, []byte("--boundary42--\r\n")...)
+			msg = append(msg, []byte("--alternativeBoundary--\r\n")...)
 			msg = append(msg, []byte("\r\n")...)
 
 		} else if params.Body.HTML != nil && len(*params.Body.HTML) > 0 {
 			// html body
-			msg = append(msg, []byte("MIME-Version: 1.0\r\n")...)
 			msg = append(msg, []byte("Content-Type: text/html; charset=utf-8\r\n")...)
 			// line break to start body
 			msg = append(msg, []byte("\r\n")...)
 			// body
 			msg = append(msg, []byte(*params.Body.HTML)...)
+			// end of data
+			msg = append(msg, []byte("\r\n")...)
+			// line break
 			msg = append(msg, []byte("\r\n")...)
 		} else if params.Body.Plain != nil && len(*params.Body.Plain) > 0 {
-			msg = append(msg, []byte("MIME-Version: 1.0\r\n")...)
+			if mixed {
+				msg = append(msg, []byte("--mixedBoundary\r\n")...)
+			}
 			msg = append(msg, []byte("Content-Type: text/plain; charset=utf-8\r\n")...)
 			// line break to start body
 			msg = append(msg, []byte("\r\n")...)
 			// body
 			msg = append(msg, []byte(*params.Body.Plain)...)
+			// end of data
+			msg = append(msg, []byte("\r\n")...)
+			// line break
 			msg = append(msg, []byte("\r\n")...)
 		} else {
+			if mixed {
+				msg = append(msg, []byte("--mixedBoundary\r\n")...)
+			}
 			// empty body
-			msg = append(msg, []byte("MIME-Version: 1.0\r\n")...)
 			msg = append(msg, []byte("Content-Type: text/plain; charset=utf-8\r\n")...)
 			// line break to start body
 			msg = append(msg, []byte("\r\n")...)
 			// empty body
 			msg = append(msg, []byte("\r\n")...)
 		}
+	}
+
+	if related {
+		// finish related(alternative) boundary
+		msg = append(msg, []byte("--relatedBoundary--\r\n")...)
+		msg = append(msg, []byte("\r\n")...)
+	}
+
+	if mixed {
+		for _, filepath := range params.Attachments {
+			// start header
+			msg = append(msg, []byte("--mixedBoundary\r\n")...)
+
+			// read file
+			ff, err := os.Open(filepath) //#nosec G304 -- File inclusion is necesary
+			if err != nil {
+				return nil, errors.Join(fmt.Errorf("cannot open file for mail attachment"), err)
+			}
+			defer ff.Close()
+			data, err := io.ReadAll(ff)
+			if err != nil {
+				return nil, errors.Join(fmt.Errorf("cannot read file for mail attachment"), err)
+			}
+			mimeType := http.DetectContentType(data)
+			name := path.Base(filepath)
+
+			// continue header
+			msg = append(msg, []byte("Content-Disposition: attachment; filename="+name+"\r\n")...)
+			msg = append(msg, []byte("Content-Type: "+mimeType+"; x-unix-mode=0644; name=\""+name+"\"\r\n")...)
+			msg = append(msg, []byte("Content-Transfer-Encoding: base64\r\n")...)
+			msg = append(msg, []byte("\r\n")...)
+
+			// encode file
+			dst := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
+			base64.StdEncoding.Encode(dst, data)
+
+			// write enconding to mail msg
+			msg = append(msg, dst...)
+			msg = append(msg, []byte("\r\n")...)
+			// line break
+			msg = append(msg, []byte("\r\n")...)
+
+			// close ff even if we have defer ff.Close()
+			// because we are in a loop
+			err = ff.Close()
+			if err != nil {
+				return nil, errors.Join(fmt.Errorf("error after fiel reading for mail attachment"), err)
+			}
+		}
+
+		// finish related(alternative) boundary
+		msg = append(msg, []byte("--mixedBoundary--\r\n")...)
+		msg = append(msg, []byte("\r\n")...)
 	}
 
 	hostport := net.JoinHostPort(*params.Server, strconv.Itoa(*params.Port))
@@ -191,6 +316,7 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 	var conn net.Conn
 	var err error
 
+	// #nosec G402 -- Leave to user the choose to be insecure
 	tlsconfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,
 		// either InsecureSkipVerify or ServerName should be setted

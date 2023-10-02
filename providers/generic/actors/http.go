@@ -315,6 +315,7 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		IdleConnTimeout:       30 * time.Second,
 		DisableCompression:    false,
 		ResponseHeaderTimeout: 30 * time.Second,
+		// #nosec G402 -- Leave to user the choose to be insecure
 		TLSClientConfig: &tls.Config{
 			MinVersion:         tls.VersionTLS12,
 			InsecureSkipVerify: p.IgnoreInvalidSSL,
