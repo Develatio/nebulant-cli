@@ -27,6 +27,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
+	"crypto/tls"
 	"encoding"
 	"encoding/json"
 	"fmt"
@@ -85,10 +86,11 @@ type httpHeader struct {
 
 // issue #11
 type httpRequestParameters struct {
-	Method   *string       `json:"http_verb" validate:"required"`
-	Url      *string       `json:"endpoint" validate:"required"`
-	Headers  []*httpHeader `json:"headers"`
-	BodyType BodyType      `json:"body_type" validate:"required"`
+	Method           *string       `json:"http_verb" validate:"required"`
+	Url              *string       `json:"endpoint" validate:"required"`
+	Headers          []*httpHeader `json:"headers"`
+	BodyType         BodyType      `json:"body_type" validate:"required"`
+	IgnoreInvalidSSL bool          `json:"ignore_invalid_certs"`
 }
 
 type httpRequestParametersMultiPartBody struct {
@@ -313,6 +315,10 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		IdleConnTimeout:       30 * time.Second,
 		DisableCompression:    false,
 		ResponseHeaderTimeout: 30 * time.Second,
+		TLSClientConfig: &tls.Config{
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: p.IgnoreInvalidSSL,
+		},
 	}
 	client := &http.Client{Transport: tr}
 	resp, err := client.Do(req)
