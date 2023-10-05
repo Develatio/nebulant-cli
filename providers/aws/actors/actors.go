@@ -166,6 +166,8 @@ type ActionContext struct {
 }
 
 // CleanInput func
+// reads from action.Parameters and Unmarshall to input
+// calls .Validate() as needed
 func CleanInput(action *blueprint.Action, awsinput interface{}) error {
 	err := util.UnmarshalValidJSON(action.Parameters, awsinput)
 	if err != nil {

@@ -40,11 +40,11 @@ func ActionValidator(action *blueprint.Action) error {
 		return fmt.Errorf("aws: invalid action name " + action.ActionName)
 	}
 	if al.N == actors.NextOK && len(action.NextAction.NextKo) > 0 {
-		return fmt.Errorf("generic: action " + action.ActionName + " has no KO port")
+		return fmt.Errorf("aws: action " + action.ActionName + " has no KO port")
 	}
 
 	if al.N == actors.NextKO && len(action.NextAction.NextOk) > 0 {
-		return fmt.Errorf("generic: action " + action.ActionName + " has no OK port")
+		return fmt.Errorf("aws: action " + action.ActionName + " has no OK port")
 	}
 
 	ac := &actors.ActionContext{

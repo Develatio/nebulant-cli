@@ -6,6 +6,7 @@ replace github.com/develatio/nebulant-cli => ./
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161
+	github.com/Microsoft/go-winio v0.6.1
 	github.com/andybalholm/brotli v1.0.5
 	github.com/aws/aws-sdk-go v1.44.199
 	github.com/bhmj/jsonslice v1.1.2
@@ -18,26 +19,36 @@ require (
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/povsister/scp v0.0.0-20210427074412-33febfd9f13e
 	github.com/schollz/progressbar/v3 v3.13.1
-	golang.org/x/crypto v0.6.0
+	golang.org/x/crypto v0.11.0
 	golang.org/x/mod v0.8.0
-	golang.org/x/term v0.9.0
+	golang.org/x/term v0.10.0
 )
 
 require (
-	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/hetznercloud/hcloud-go v1.50.0 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
+	github.com/prometheus/client_golang v1.16.0 // indirect
+	github.com/prometheus/client_model v0.3.0 // indirect
+	github.com/prometheus/common v0.42.0 // indirect
+	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	golang.org/x/tools v0.6.0 // indirect
+	google.golang.org/protobuf v1.30.0 // indirect
 )
 
 require (
 	github.com/bhmj/xpression v0.9.4 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/hetznercloud/hcloud-go/v2 v2.2.0
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
-	golang.org/x/net v0.8.0
-	golang.org/x/sys v0.9.0
-	golang.org/x/text v0.8.0 // indirect
+	golang.org/x/net v0.12.0
+	golang.org/x/sys v0.10.0
+	golang.org/x/text v0.11.0 // indirect
 )
