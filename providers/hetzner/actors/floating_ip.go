@@ -29,6 +29,18 @@ type findOneFloatingIPParameters struct {
 	IdOrName *string `json:"id_or_name" validate:"required"`
 }
 
+type assignFloatingIPParameters struct {
+	// Only FloatingIP.ID is really ussed
+	FloatingIP *hcloud.FloatingIP `json:"floating_ip" validate:"required"`
+	// only Server.ID is really ussed
+	Server *hcloud.Server `json:"server" validate:"required"`
+}
+
+type unassignFloatingIPParameters struct {
+	// Only FloatingIP.ID is really ussed
+	FloatingIP *hcloud.FloatingIP `json:"floating_ip" validate:"required"`
+}
+
 // CreateFloatingIP func
 func CreateFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
@@ -113,6 +125,70 @@ func FindOneFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	result := &schema.FloatingIPGetResponse{}
+	err = UnmarshallHCloudToSchema(response, result)
+	if err != nil {
+		return nil, err
+	}
+
+	aout := base.NewActionOutput(ctx.Action, nil, nil)
+	return aout, nil
+}
+
+func AssignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
+	input := &assignFloatingIPParameters{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.FloatingIP.Assign(context.Background(), input.FloatingIP, input.Server)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &schema.FloatingIPActionAssignResponse{}
+	err = UnmarshallHCloudToSchema(response, result)
+	if err != nil {
+		return nil, err
+	}
+
+	aout := base.NewActionOutput(ctx.Action, nil, nil)
+	return aout, nil
+}
+
+func UnassignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
+	input := &unassignFloatingIPParameters{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.FloatingIP.Unassign(context.Background(), input.FloatingIP)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &schema.FloatingIPActionUnassignRequest{}
 	err = UnmarshallHCloudToSchema(response, result)
 	if err != nil {
 		return nil, err
