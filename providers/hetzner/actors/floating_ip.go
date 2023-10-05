@@ -57,3 +57,31 @@ func CreateFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	aout := base.NewActionOutput(ctx.Action, result, nil)
 	return aout, nil
 }
+
+func DeleteFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
+	// only FloatingIP.ID attr are really used
+	// https://github.com/hetznercloud/hcloud-go/blob/v2.3.0/hcloud/floating_ip.go#L279
+	input := &hcloud.FloatingIP{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = ctx.HClient.FloatingIP.Delete(context.Background(), input)
+	if err != nil {
+		return nil, err
+	}
+
+	aout := base.NewActionOutput(ctx.Action, nil, nil)
+	return aout, nil
+}
