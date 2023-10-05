@@ -24,13 +24,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
+	"github.com/develatio/nebulant-cli/util"
 )
 
 // RunInstance func
 func RunInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.RunInstancesInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
@@ -102,7 +103,7 @@ func RunInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.TerminateInstancesInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
@@ -151,7 +152,7 @@ func DeleteInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 func StopInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.StopInstancesInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
@@ -200,7 +201,7 @@ func StopInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 func StartInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.StartInstancesInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
@@ -258,7 +259,7 @@ func StartInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 func FindInstances(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DescribeInstancesInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {

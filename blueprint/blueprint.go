@@ -20,14 +20,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/util"
@@ -133,7 +132,7 @@ func NewFromFile(path string) (*Blueprint, error) {
 		return nil, err
 	}
 	defer jsonFile.Close()
-	byteValue, _ := ioutil.ReadAll(jsonFile)
+	byteValue, _ := io.ReadAll(jsonFile)
 	wrap := &wrappedBlueprint{}
 	if err := json.Unmarshal(byteValue, wrap); err != nil {
 		return nil, err
@@ -146,7 +145,8 @@ func NewFromFile(path string) (*Blueprint, error) {
 		return nil, err
 	}
 	if bp.ExecutionUUID == nil || *bp.ExecutionUUID == "" {
-		rand.Seed(time.Now().UnixNano())
+		// rand.Seed is deprecated: As of Go 1.20 there is no reason to call Seed with a random value
+		// rand.Seed(time.Now().UnixNano())
 		randIntString := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
 		bp.ExecutionUUID = &randIntString
 	}
@@ -213,7 +213,7 @@ func NewIRBFromAny(any string) (*IRBlueprint, error) {
 // NewFromBackend func
 func NewFromBackend(path string) (*Blueprint, error) {
 	if config.CREDENTIAL.AuthToken == nil {
-		return nil, fmt.Errorf("Auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token")
+		return nil, fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token")
 	}
 
 	url := url.URL{Scheme: config.BackendProto, Host: config.BackendURLDomain, Path: "/apiv1/cli/" + path}
@@ -237,7 +237,7 @@ func NewFromBackend(path string) (*Blueprint, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	rawbody, _ := ioutil.ReadAll(resp.Body)
+	rawbody, _ := io.ReadAll(resp.Body)
 	body := &wrappedBlueprint{}
 	if resp.StatusCode != http.StatusOK {
 		if body.Detail != "" {

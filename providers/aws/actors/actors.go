@@ -17,141 +17,12 @@
 package actors
 
 import (
-	"reflect"
-
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
-	"github.com/develatio/nebulant-cli/util"
 )
-
-// ActionCreateVolume const
-const ActionCreateVolume = "create_volume"
-
-// ActionDeleteVolume const
-const ActionDeleteVolume = "delete_volume"
-
-// ActionFindVolumes const
-const ActionFindVolumes = "find_volumes"
-
-// ActionFindOneVolume const
-const ActionFindOneVolume = "findone_volume"
-
-// ActionAttachVolume const
-const ActionAttachVolume = "attach_volume"
-
-// ActionDetachVolume const
-const ActionDetachVolume = "detach_volume"
-
-// ActionFindInstances const
-const ActionFindInstances = "find_instances"
-
-// ActionFindOneInstance const
-const ActionFindOneInstance = "findone_instance"
-
-// ActionRunInstance const
-const ActionRunInstance = "run_instance"
-
-// ActionDeleteInstance const
-const ActionDeleteInstance = "delete_instance"
-
-// ActionStopInstance const
-const ActionStopInstance = "stop_instance"
-
-// ActionStartInstance const
-const ActionStartInstance = "start_instance"
-
-// ActionFindImages const
-const ActionFindImages = "find_images"
-
-// ActionFindOneImage const
-const ActionFindOneImage = "findone_image"
-
-// ActionFindNetworkInterfaces const
-const ActionFindNetworkInterfaces = "find_ifaces"
-
-// ActionFindOneNetworkInterface const
-const ActionFindOneNetworkInterface = "findone_iface"
-
-// ActionDeleteNetworkInterface func
-const ActionDeleteNetworkInterface = "delete_iface"
-
-// ActionCreateDatabase const
-const ActionCreateDatabase = "create_db"
-
-// ActionDeleteDatabase const
-const ActionDeleteDatabase = "delete_db"
-
-// ActionFindDatabases const
-const ActionFindDatabases = "find_databases"
-
-// ActionFindOneDatabase const
-const ActionFindOneDatabase = "findone_database"
-
-// ActionCreateDatabaseSnapshot const
-const ActionCreateDatabaseSnapshot = "database_snapshot"
-
-// ActionRestoreDatabaseSnapshot const
-const ActionRestoreDatabaseSnapshot = "restore_snapshot"
-
-// ActionAllocateAddress const
-const ActionAllocateAddress = "allocate_address"
-
-// ActionReleaseAddress const
-const ActionReleaseAddress = "release_address"
-
-// ActionFindAddresses const
-const ActionFindAddresses = "find_addresses"
-
-// ActionFindOneAddress const
-const ActionFindOneAddress = "findone_address"
-
-// ActionAttachAddress const
-const ActionAttachAddress = "attach_address"
-
-// ActionDetachAddress const
-const ActionDetachAddress = "detach_address"
-
-// ActionFindVpcs const
-const ActionFindVpcs = "find_vpcs"
-
-// ActionFindOneVpc const
-const ActionFindOneVpc = "findone_vpc"
-
-// ActionDeleteVpc const
-const ActionDeleteVpc = "delete_vpc"
-
-// ActionFindSubnets const
-const ActionFindSubnets = "find_subnets"
-
-// ActionFindOneSubnet const
-const ActionFindOneSubnet = "findone_subnet"
-
-// ActionDeleteSubnet const
-const ActionDeleteSubnet = "delete_subnet"
-
-// ActionSetRegion const
-const ActionSetRegion = "set_region"
-
-// ActionFindSecurityGroups const
-const ActionFindSecurityGroups = "find_securitygroups"
-
-// ActionFindOneSecurityGroup const
-const ActionFindOneSecurityGroup = "findone_securitygroup"
-
-// ActionDeleteSecurityGroup const
-const ActionDeleteSecurityGroup = "delete_securitygroup"
-
-// ActionFindKeyPairs const
-const ActionFindKeyPairs = "find_keypairs"
-
-// ActionFindOneKeyPair const
-const ActionFindOneKeyPair = "findone_keypair"
-
-// ActionDeleteKeyPair const
-const ActionDeleteKeyPair = "delete_keypair"
 
 type ec2Client func() ec2iface.EC2API
 
@@ -163,26 +34,6 @@ type ActionContext struct {
 	Store        base.IStore
 	Logger       base.ILogger
 	NewEC2Client ec2Client
-}
-
-// CleanInput func
-// reads from action.Parameters and Unmarshall to input
-// calls .Validate() as needed
-func CleanInput(action *blueprint.Action, awsinput interface{}) error {
-	err := util.UnmarshalValidJSON(action.Parameters, awsinput)
-	if err != nil {
-		return err
-	}
-	awsit := reflect.TypeOf(awsinput)
-	_, validable := awsit.MethodByName("Validate")
-	if validable {
-		ret := reflect.ValueOf(awsinput).MethodByName("Validate").Call([]reflect.Value{})
-		switch ret[0].Interface().(type) {
-		case error:
-			return ret[0].Interface().(error)
-		}
-	}
-	return nil
 }
 
 var NewActionContext = func(awsSess *session.Session, action *blueprint.Action, store base.IStore, logger base.ILogger) *ActionContext {
@@ -220,57 +71,57 @@ type ActionLayout struct {
 
 // ActionFuncMap map
 var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
-	ActionAttachVolume:  {F: AttachVolume, N: NextOKKO},
-	ActionCreateVolume:  {F: CreateVolume, N: NextOKKO},
-	ActionDeleteVolume:  {F: DeleteVolume, N: NextOKKO},
-	ActionFindVolumes:   {F: FindVolumes, N: NextOKKO},
-	ActionFindOneVolume: {F: FindOneVolume, N: NextOKKO},
-	ActionDetachVolume:  {F: DetachVolume, N: NextOKKO},
+	"attach_volume":  {F: AttachVolume, N: NextOKKO},
+	"create_volume":  {F: CreateVolume, N: NextOKKO},
+	"delete_volume":  {F: DeleteVolume, N: NextOKKO},
+	"find_volumes":   {F: FindVolumes, N: NextOKKO},
+	"findone_volume": {F: FindOneVolume, N: NextOKKO},
+	"detach_volume":  {F: DetachVolume, N: NextOKKO},
 
-	ActionRunInstance:     {F: RunInstance, N: NextOKKO},
-	ActionDeleteInstance:  {F: DeleteInstance, N: NextOKKO},
-	ActionFindInstances:   {F: FindInstances, N: NextOKKO},
-	ActionFindOneInstance: {F: FindOneInstance, N: NextOKKO},
-	ActionStopInstance:    {F: StopInstance, N: NextOKKO},
-	ActionStartInstance:   {F: StartInstance, N: NextOKKO},
+	"run_instance":     {F: RunInstance, N: NextOKKO},
+	"delete_instance":  {F: DeleteInstance, N: NextOKKO},
+	"find_instances":   {F: FindInstances, N: NextOKKO},
+	"findone_instance": {F: FindOneInstance, N: NextOKKO},
+	"stop_instance":    {F: StopInstance, N: NextOKKO},
+	"start_instance":   {F: StartInstance, N: NextOKKO},
 
-	ActionFindImages:   {F: FindImages, N: NextOKKO},
-	ActionFindOneImage: {F: FindOneImage, N: NextOKKO},
+	"find_images":   {F: FindImages, N: NextOKKO},
+	"findone_image": {F: FindOneImage, N: NextOKKO},
 
-	ActionFindNetworkInterfaces:   {F: FindNetworkInterfaces, N: NextOKKO},
-	ActionFindOneNetworkInterface: {F: FindNetworkInterface, N: NextOKKO},
-	ActionDeleteNetworkInterface:  {F: DeleteNetworkInterface, N: NextOKKO},
+	"find_ifaces":   {F: FindNetworkInterfaces, N: NextOKKO},
+	"findone_iface": {F: FindNetworkInterface, N: NextOKKO},
+	"delete_iface":  {F: DeleteNetworkInterface, N: NextOKKO},
 
-	ActionFindDatabases:           {F: FindDatabases, N: NextOKKO},
-	ActionFindOneDatabase:         {F: FindOneDatabase, N: NextOKKO},
-	ActionCreateDatabase:          {F: CreateDatabase, N: NextOKKO},
-	ActionDeleteDatabase:          {F: DeleteDatabase, N: NextOKKO},
-	ActionCreateDatabaseSnapshot:  {F: CreateDatabase, N: NextOKKO},
-	ActionRestoreDatabaseSnapshot: {F: RestoreSnapshotDatabase, N: NextOKKO},
+	"find_databases":    {F: FindDatabases, N: NextOKKO},
+	"findone_database":  {F: FindOneDatabase, N: NextOKKO},
+	"create_db":         {F: CreateDatabase, N: NextOKKO},
+	"delete_db":         {F: DeleteDatabase, N: NextOKKO},
+	"database_snapshot": {F: CreateDatabase, N: NextOKKO},
+	"restore_snapshot":  {F: RestoreSnapshotDatabase, N: NextOKKO},
 
-	ActionAllocateAddress: {F: AllocateAddress, N: NextOKKO},
-	ActionFindAddresses:   {F: FindAddresses, N: NextOKKO},
-	ActionFindOneAddress:  {F: FindOneAddress, N: NextOKKO},
+	"allocate_address": {F: AllocateAddress, N: NextOKKO},
+	"find_addresses":   {F: FindAddresses, N: NextOKKO},
+	"findone_address":  {F: FindOneAddress, N: NextOKKO},
 
-	ActionAttachAddress:  {F: AttachAddress, N: NextOKKO},
-	ActionReleaseAddress: {F: ReleaseAddress, N: NextOKKO},
-	ActionDetachAddress:  {F: DetachAddress, N: NextOKKO},
+	"attach_address":  {F: AttachAddress, N: NextOKKO},
+	"release_address": {F: ReleaseAddress, N: NextOKKO},
+	"detach_address":  {F: DetachAddress, N: NextOKKO},
 
-	ActionSetRegion: {F: SetRegion, N: NextOKKO},
+	"set_region": {F: SetRegion, N: NextOKKO},
 
-	ActionFindVpcs:   {F: FindVpcs, N: NextOKKO},
-	ActionFindOneVpc: {F: FindOneVpc, N: NextOKKO},
-	ActionDeleteVpc:  {F: DeleteVpc, N: NextOKKO},
+	"find_vpcs":   {F: FindVpcs, N: NextOKKO},
+	"findone_vpc": {F: FindOneVpc, N: NextOKKO},
+	"delete_vpc":  {F: DeleteVpc, N: NextOKKO},
 
-	ActionFindSubnets:   {F: FindSubnets, N: NextOKKO},
-	ActionFindOneSubnet: {F: FindOneSubnet, N: NextOKKO},
-	ActionDeleteSubnet:  {F: DeleteSubnet, N: NextOKKO},
+	"find_subnets":   {F: FindSubnets, N: NextOKKO},
+	"findone_subnet": {F: FindOneSubnet, N: NextOKKO},
+	"delete_subnet":  {F: DeleteSubnet, N: NextOKKO},
 
-	ActionFindSecurityGroups:   {F: FindSecurityGroups, N: NextOKKO},
-	ActionFindOneSecurityGroup: {F: FindOneSecurityGroup, N: NextOKKO},
-	ActionDeleteSecurityGroup:  {F: DeleteSecurityGroup, N: NextOKKO},
+	"find_securitygroups":   {F: FindSecurityGroups, N: NextOKKO},
+	"findone_securitygroup": {F: FindOneSecurityGroup, N: NextOKKO},
+	"delete_securitygroup":  {F: DeleteSecurityGroup, N: NextOKKO},
 
-	ActionFindKeyPairs:   {F: FindKeyPairs, N: NextOKKO},
-	ActionFindOneKeyPair: {F: FindOneKeyPair, N: NextOKKO},
-	ActionDeleteKeyPair:  {F: DeleteKeyPair, N: NextOKKO},
+	"find_keypairs":   {F: FindKeyPairs, N: NextOKKO},
+	"findone_keypair": {F: FindOneKeyPair, N: NextOKKO},
+	"delete_keypair":  {F: DeleteKeyPair, N: NextOKKO},
 }

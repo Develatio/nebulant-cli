@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os/exec"
+	"reflect"
 	"runtime"
 
 	"github.com/go-playground/validator/v10"
@@ -39,11 +40,25 @@ func UnmarshalValidJSON(data []byte, v interface{}) error {
 	if jsonErr != nil {
 		return jsonErr
 	}
+
+	// json tag validator
 	validate := validator.New()
 	vErr := validate.Struct(v)
 	if vErr != nil {
 		return vErr
 	}
+
+	// Validate()
+	vvv := reflect.TypeOf(v)
+	_, validable := vvv.MethodByName("Validate")
+	if validable {
+		ret := reflect.ValueOf(v).MethodByName("Validate").Call([]reflect.Value{})
+		switch ret[0].Interface().(type) {
+		case error:
+			return ret[0].Interface().(error)
+		}
+	}
+
 	return nil
 }
 

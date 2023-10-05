@@ -18,7 +18,6 @@ package actors
 
 import (
 	"io"
-	"reflect"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
@@ -33,25 +32,6 @@ type ActionContext struct {
 	Action    *blueprint.Action
 	Store     base.IStore
 	Logger    base.ILogger
-}
-
-// CleanInput func unmarshall action.Parameters into input interface{}
-// and calls input.Validate() methods if exists
-func CleanInput(action *blueprint.Action, input interface{}) error {
-	err := util.UnmarshalValidJSON(action.Parameters, input)
-	if err != nil {
-		return err
-	}
-	vvv := reflect.TypeOf(input)
-	_, validable := vvv.MethodByName("Validate")
-	if validable {
-		ret := reflect.ValueOf(input).MethodByName("Validate").Call([]reflect.Value{})
-		switch ret[0].Interface().(type) {
-		case error:
-			return ret[0].Interface().(error)
-		}
-	}
-	return nil
 }
 
 func UnmarshallHCloudToSchema(response *hcloud.Response, v interface{}) error {

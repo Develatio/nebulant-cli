@@ -21,12 +21,13 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/util"
 )
 
 // FindVpcs func
 func FindVpcs(ctx *ActionContext) (*base.ActionOutput, error) {
 	awsinput := new(ec2.DescribeVpcsInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {
@@ -74,7 +75,7 @@ func FindOneVpc(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteVpc(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DeleteVpcInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {

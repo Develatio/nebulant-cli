@@ -1,5 +1,5 @@
 // Nebulant
-// Copyright (C) 2020  Develatio Technologies S.L.
+// Copyright (C) 2023  Develatio Technologies S.L.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/util"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
@@ -29,7 +30,7 @@ func CreateFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcloud.FloatingIPCreateOpts{}
 
-	if err := CleanInput(ctx.Action, input); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
 	}
 

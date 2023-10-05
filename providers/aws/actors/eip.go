@@ -27,7 +27,7 @@ import (
 // AllocateAddress func
 func AllocateAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 	awsinput := new(ec2.AllocateAddressInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {
@@ -57,7 +57,7 @@ func AllocateAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 func FindAddresses(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DescribeAddressesInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {
@@ -106,7 +106,7 @@ func FindOneAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 func AttachAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.AssociateAddressInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {
@@ -137,7 +137,7 @@ func AttachAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 func DetachAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DisassociateAddressInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {
@@ -163,7 +163,7 @@ func DetachAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 func ReleaseAddress(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.ReleaseAddressInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {

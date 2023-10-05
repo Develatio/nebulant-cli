@@ -21,13 +21,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/util"
 )
 
 // FindDatabases func
 func FindDatabases(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(rds.DescribeDBInstancesInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {
@@ -77,7 +78,7 @@ func FindOneDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 func CreateDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(rds.CreateDBInstanceInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {
@@ -98,7 +99,7 @@ func CreateDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(rds.DeleteDBInstanceInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {
@@ -123,7 +124,7 @@ func DeleteDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 func CreateSnapshotDatabase(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(rds.CreateDBSnapshotInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {

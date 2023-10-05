@@ -117,7 +117,7 @@ func TestFindImages(t *testing.T) {
 	}
 	action := &blueprint.Action{
 		Provider:   "aws",
-		ActionName: actors.ActionFindImages,
+		ActionName: "find_images",
 		Parameters: p,
 	}
 	lg := &fakeLogger{}
@@ -163,7 +163,7 @@ func TestFindOneImage(t *testing.T) {
 	}
 	action := &blueprint.Action{
 		Provider:   "aws",
-		ActionName: actors.ActionFindOneImage,
+		ActionName: "findone_image",
 		Parameters: p,
 	}
 	lg := &fakeLogger{}
