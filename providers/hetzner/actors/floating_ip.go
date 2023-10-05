@@ -25,6 +25,10 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type findOneFloatingIPParameters struct {
+	IdOrName *string `json:"id_or_name" validate:"required"`
+}
+
 // CreateFloatingIP func
 func CreateFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
@@ -78,6 +82,38 @@ func DeleteFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	_, err = ctx.HClient.FloatingIP.Delete(context.Background(), input)
+	if err != nil {
+		return nil, err
+	}
+
+	aout := base.NewActionOutput(ctx.Action, nil, nil)
+	return aout, nil
+}
+
+func FindOneFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
+	input := &findOneFloatingIPParameters{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.FloatingIP.Get(context.Background(), *input.IdOrName)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &schema.FloatingIPGetResponse{}
+	err = UnmarshallHCloudToSchema(response, result)
 	if err != nil {
 		return nil, err
 	}

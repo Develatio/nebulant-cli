@@ -79,6 +79,7 @@ type ActionLayout struct {
 
 // ActionFuncMap map
 var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
-	"create_floating_ip": {F: CreateFloatingIP, N: NextOKKO},
-	"delete_floating_ip": {F: DeleteFloatingIP, N: NextOKKO},
+	"create_floating_ip":  {F: CreateFloatingIP, N: NextOKKO},
+	"delete_floating_ip":  {F: DeleteFloatingIP, N: NextOKKO},
+	"findone_floating_ip": {F: FindOneFloatingIP, N: NextOKKO},
 }
