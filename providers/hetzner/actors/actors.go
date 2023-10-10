@@ -84,4 +84,27 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"findone_floating_ip":  {F: FindOneFloatingIP, N: NextOKKO},
 	"assign_floating_ip":   {F: AssignFloatingIP, N: NextOKKO},
 	"unassign_floating_ip": {F: UnassignFloatingIP, N: NextOKKO},
+
+	"find_images":   {F: FindImages, N: NextOKKO},
+	"findone_image": {F: FindOneImage, N: NextOKKO},
+	"delete_image":  {F: FindOneImage, N: NextOKKO},
+
+	"create_server":  {F: CreateServer, N: NextOKKO},
+	"delete_server":  {F: DeleteServer, N: NextOKKO},
+	"find_servers":   {F: FindServers, N: NextOKKO},
+	"findone_server": {F: FindOneServer, N: NextOKKO},
+	"start_server":   {F: PowerOnServer, N: NextOKKO},  // poweron server
+	"stop_server":    {F: PowerOffServer, N: NextOKKO}, // poweroff server
+}
+
+// GenericHCloudOutput unmarshall response into v and return ActionContext with
+// the result
+func GenericHCloudOutput(ctx *ActionContext, response *hcloud.Response, v interface{}) (*base.ActionOutput, error) {
+	err := UnmarshallHCloudToSchema(response, v)
+	if err != nil {
+		return nil, err
+	}
+
+	aout := base.NewActionOutput(ctx.Action, v, nil)
+	return aout, nil
 }

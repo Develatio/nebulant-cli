@@ -18,6 +18,7 @@ package actors
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -25,26 +26,9 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
-type findOneFloatingIPParameters struct {
-	IdOrName *string `json:"id_or_name" validate:"required"`
-}
-
-type assignFloatingIPParameters struct {
-	// Only FloatingIP.ID is really ussed
-	FloatingIP *hcloud.FloatingIP `json:"floating_ip" validate:"required"`
-	// only Server.ID is really ussed
-	Server *hcloud.Server `json:"server" validate:"required"`
-}
-
-type unassignFloatingIPParameters struct {
-	// Only FloatingIP.ID is really ussed
-	FloatingIP *hcloud.FloatingIP `json:"floating_ip" validate:"required"`
-}
-
-// CreateFloatingIP func
-func CreateFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
+func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	input := &hcloud.FloatingIPCreateOpts{}
+	input := &hcloud.ServerCreateOpts{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -59,20 +43,19 @@ func CreateFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.FloatingIP.Create(context.Background(), *input)
+	_, response, err := ctx.HClient.Server.Create(context.Background(), *input)
 	if err != nil {
 		return nil, err
 	}
 
-	output := &schema.FloatingIPCreateResponse{}
+	output := &schema.ServerCreateResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func DeleteFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
+func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	// only FloatingIP.ID attr are really used
-	// https://github.com/hetznercloud/hcloud-go/blob/v2.3.0/hcloud/floating_ip.go#L279
-	input := &hcloud.FloatingIP{}
+	// only Server.ID attr are really used
+	input := &hcloud.Server{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -87,18 +70,63 @@ func DeleteFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, err = ctx.HClient.FloatingIP.Delete(context.Background(), input)
+	_, response, err := ctx.HClient.Server.DeleteWithResult(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
 
-	aout := base.NewActionOutput(ctx.Action, nil, nil)
+	output := &schema.ServerDeleteResponse{}
+	return GenericHCloudOutput(ctx, response, output)
+}
+
+func FindServers(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &hcloud.ServerListOpts{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	_, response, err := ctx.HClient.Server.List(context.Background(), *input)
+	if err != nil {
+		return nil, err
+	}
+
+	output := &schema.ServerListResponse{}
+	return GenericHCloudOutput(ctx, response, output)
+}
+
+func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
+	aout, err := FindServers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+	if len(aout.Records) <= 0 {
+		return nil, fmt.Errorf("no server found")
+	}
+	raw := aout.Records[0].Value.(*schema.ServerListResponse)
+	found := len(raw.Servers)
+	if found > 1 {
+		return nil, fmt.Errorf("too many results")
+	}
+	if found <= 0 {
+		return nil, fmt.Errorf("no server found")
+	}
+	id := fmt.Sprintf("%v", raw.Servers[0].ID)
+	aout = base.NewActionOutput(ctx.Action, raw.Servers[0], &id)
 	return aout, nil
 }
 
-func FindOneFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
+func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	input := &findOneFloatingIPParameters{}
+	// only Server.ID are really used
+	input := &hcloud.Server{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -113,18 +141,19 @@ func FindOneFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.FloatingIP.Get(context.Background(), *input.IdOrName)
+	_, response, err := ctx.HClient.Server.Poweron(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
 
-	output := &schema.FloatingIPGetResponse{}
+	output := &schema.ServerActionPoweronResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func AssignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
+func PowerOffServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	input := &assignFloatingIPParameters{}
+	// only Server.ID are really used
+	input := &hcloud.Server{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -139,37 +168,11 @@ func AssignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.FloatingIP.Assign(context.Background(), input.FloatingIP, input.Server)
+	_, response, err := ctx.HClient.Server.Poweroff(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
 
-	output := &schema.FloatingIPActionAssignResponse{}
-	return GenericHCloudOutput(ctx, response, output)
-}
-
-func UnassignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
-	var err error
-	input := &unassignFloatingIPParameters{}
-
-	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
-		return nil, err
-	}
-
-	if ctx.Rehearsal {
-		return nil, nil
-	}
-
-	err = ctx.Store.DeepInterpolation(input)
-	if err != nil {
-		return nil, err
-	}
-
-	_, response, err := ctx.HClient.FloatingIP.Unassign(context.Background(), input.FloatingIP)
-	if err != nil {
-		return nil, err
-	}
-
-	output := &schema.FloatingIPActionUnassignRequest{}
+	output := &schema.ServerActionPoweroffResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }

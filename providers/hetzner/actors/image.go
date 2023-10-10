@@ -51,14 +51,8 @@ func DeleteImage(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	// delete returns scheme like {image:{}}, same as update
 	// so here is OK to use update response as delete response
-	result := &schema.ImageUpdateResponse{}
-	err = UnmarshallHCloudToSchema(response, result)
-	if err != nil {
-		return nil, err
-	}
-
-	aout := base.NewActionOutput(ctx.Action, nil, nil)
-	return aout, nil
+	output := &schema.ImageUpdateResponse{}
+	return GenericHCloudOutput(ctx, response, output)
 }
 
 func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -83,14 +77,8 @@ func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	result := &schema.ImageListResponse{}
-	err = UnmarshallHCloudToSchema(response, result)
-	if err != nil {
-		return nil, err
-	}
-
-	aout := base.NewActionOutput(ctx.Action, nil, nil)
-	return aout, nil
+	output := &schema.ImageListResponse{}
+	return GenericHCloudOutput(ctx, response, output)
 }
 
 func FindOneImage(ctx *ActionContext) (*base.ActionOutput, error) {
