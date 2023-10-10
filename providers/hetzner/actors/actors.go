@@ -95,6 +95,18 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"findone_server": {F: FindOneServer, N: NextOKKO},
 	"start_server":   {F: PowerOnServer, N: NextOKKO},  // poweron server
 	"stop_server":    {F: PowerOffServer, N: NextOKKO}, // poweroff server
+
+	"create_network":  {F: CreateNetwork, N: NextOKKO},
+	"delete_network":  {F: DeleteNetwork, N: NextOKKO},
+	"find_networks":   {F: FindNetworks, N: NextOKKO},
+	"findone_network": {F: FindOneNetwork, N: NextOKKO},
+
+	"create_volume":  {F: CreateVolume, N: NextOKKO},
+	"delete_volume":  {F: DeleteVolume, N: NextOKKO},
+	"find_volumes":   {F: FindVolumes, N: NextOKKO},
+	"findone_volume": {F: FindOneVolume, N: NextOKKO},
+	"attach_volume":  {F: AttachVolume, N: NextOKKO},
+	"dettach_volume": {F: DetachVolume, N: NextOKKO},
 }
 
 // GenericHCloudOutput unmarshall response into v and return ActionContext with
