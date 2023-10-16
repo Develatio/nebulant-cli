@@ -26,10 +26,8 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
-func DeleteImage(ctx *ActionContext) (*base.ActionOutput, error) {
-	var err error
-	// only Image.ID attr are really used
-	input := &hcloud.Image{}
+func FindLocations(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &hcloud.LocationListOpts{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -39,50 +37,17 @@ func DeleteImage(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	err = ctx.Store.DeepInterpolation(input)
+	_, response, err := ctx.HClient.Location.List(context.Background(), *input)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := ctx.HClient.Image.Delete(context.Background(), input)
-	if err != nil {
-		return nil, err
-	}
-
-	// delete returns scheme like {image:{}}, same as update
-	// so here is OK to use update response as delete response
-	output := &schema.ImageUpdateResponse{}
+	output := &schema.LocationListResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
-	var err error
-	input := &hcloud.ImageListOpts{}
-
-	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
-		return nil, err
-	}
-
-	if ctx.Rehearsal {
-		return nil, nil
-	}
-
-	err = ctx.Store.DeepInterpolation(input)
-	if err != nil {
-		return nil, err
-	}
-
-	_, response, err := ctx.HClient.Image.List(context.Background(), *input)
-	if err != nil {
-		return nil, err
-	}
-
-	output := &schema.ImageListResponse{}
-	return GenericHCloudOutput(ctx, response, output)
-}
-
-func FindOneImage(ctx *ActionContext) (*base.ActionOutput, error) {
-	aout, err := FindImages(ctx)
+func FindOneLocation(ctx *ActionContext) (*base.ActionOutput, error) {
+	aout, err := FindLocations(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -90,17 +55,17 @@ func FindOneImage(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 	if len(aout.Records) <= 0 {
-		return nil, fmt.Errorf("no image found")
+		return nil, fmt.Errorf("no location found")
 	}
-	raw := aout.Records[0].Value.(*schema.ImageListResponse)
-	found := len(raw.Images)
+	raw := aout.Records[0].Value.(*schema.LocationListResponse)
+	found := len(raw.Locations)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")
 	}
 	if found <= 0 {
-		return nil, fmt.Errorf("no image found")
+		return nil, fmt.Errorf("no location found")
 	}
-	id := fmt.Sprintf("%v", raw.Images[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.Images[0], &id)
+	id := fmt.Sprintf("%v", raw.Locations[0].ID)
+	aout = base.NewActionOutput(ctx.Action, raw.Locations[0], &id)
 	return aout, nil
 }

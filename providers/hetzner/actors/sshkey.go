@@ -26,10 +26,9 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
-func DeleteImage(ctx *ActionContext) (*base.ActionOutput, error) {
+func CreateSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	// only Image.ID attr are really used
-	input := &hcloud.Image{}
+	input := &hcloud.SSHKeyCreateOpts{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -44,20 +43,19 @@ func DeleteImage(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	response, err := ctx.HClient.Image.Delete(context.Background(), input)
+	_, response, err := ctx.HClient.SSHKey.Create(context.Background(), *input)
 	if err != nil {
 		return nil, err
 	}
 
-	// delete returns scheme like {image:{}}, same as update
-	// so here is OK to use update response as delete response
-	output := &schema.ImageUpdateResponse{}
+	output := &schema.SSHKeyCreateResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
+func DeleteSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	input := &hcloud.ImageListOpts{}
+	// only SSHKey.ID attr is really used
+	input := &hcloud.SSHKey{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -72,17 +70,37 @@ func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Image.List(context.Background(), *input)
+	_, err = ctx.HClient.SSHKey.Delete(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
 
-	output := &schema.ImageListResponse{}
+	aout := base.NewActionOutput(ctx.Action, nil, nil)
+	return aout, nil
+}
+
+func FindSSHKeys(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &hcloud.SSHKeyListOpts{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	_, response, err := ctx.HClient.SSHKey.List(context.Background(), *input)
+	if err != nil {
+		return nil, err
+	}
+
+	output := &schema.SSHKeyListResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func FindOneImage(ctx *ActionContext) (*base.ActionOutput, error) {
-	aout, err := FindImages(ctx)
+func FindOneSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
+	aout, err := FindSSHKeys(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -90,17 +108,17 @@ func FindOneImage(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 	if len(aout.Records) <= 0 {
-		return nil, fmt.Errorf("no image found")
+		return nil, fmt.Errorf("no ssh key found")
 	}
-	raw := aout.Records[0].Value.(*schema.ImageListResponse)
-	found := len(raw.Images)
+	raw := aout.Records[0].Value.(*schema.SSHKeyListResponse)
+	found := len(raw.SSHKeys)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")
 	}
 	if found <= 0 {
-		return nil, fmt.Errorf("no image found")
+		return nil, fmt.Errorf("no ssh key found")
 	}
-	id := fmt.Sprintf("%v", raw.Images[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.Images[0], &id)
+	id := fmt.Sprintf("%v", raw.SSHKeys[0].ID)
+	aout = base.NewActionOutput(ctx.Action, raw.SSHKeys[0], &id)
 	return aout, nil
 }

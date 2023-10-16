@@ -26,9 +26,19 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
-func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
+type loadbalancerAttachToNetworkParameters struct {
+	AttachOpts   hcloud.LoadBalancerAttachToNetworkOpts `json:"opts" validate:"required"`
+	LoadBalancer *hcloud.LoadBalancer                   `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
+}
+
+type loadbalancerDetachFromNetworkParameters struct {
+	DetachOpts   hcloud.LoadBalancerDetachFromNetworkOpts `json:"opts" validate:"required"`
+	LoadBalancer *hcloud.LoadBalancer                     `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
+}
+
+func CreateLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	input := &hcloud.ServerCreateOpts{}
+	input := &hcloud.LoadBalancerCreateOpts{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -43,19 +53,19 @@ func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Server.Create(context.Background(), *input)
+	_, response, err := ctx.HClient.LoadBalancer.Create(context.Background(), *input)
 	if err != nil {
 		return nil, err
 	}
 
-	output := &schema.ServerCreateResponse{}
+	output := &schema.LoadBalancerCreateResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {
+func DeleteLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	// only Server.ID attr are really used
-	input := &hcloud.Server{}
+	// only LoadBalancer.ID attr is really used
+	input := &hcloud.LoadBalancer{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -70,17 +80,17 @@ func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Server.DeleteWithResult(context.Background(), input)
+	_, err = ctx.HClient.LoadBalancer.Delete(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
 
-	output := &schema.ServerDeleteResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout := base.NewActionOutput(ctx.Action, nil, nil)
+	return aout, nil
 }
 
-func FindServers(ctx *ActionContext) (*base.ActionOutput, error) {
-	input := &hcloud.ServerListOpts{}
+func FindLoadBalancers(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &hcloud.LoadBalancerListOpts{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -90,17 +100,17 @@ func FindServers(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	_, response, err := ctx.HClient.Server.List(context.Background(), *input)
+	_, response, err := ctx.HClient.LoadBalancer.List(context.Background(), *input)
 	if err != nil {
 		return nil, err
 	}
 
-	output := &schema.ServerListResponse{}
+	output := &schema.LoadBalancerListResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
-	aout, err := FindServers(ctx)
+func FindOneLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
+	aout, err := FindLoadBalancers(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -108,25 +118,23 @@ func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 	if len(aout.Records) <= 0 {
-		return nil, fmt.Errorf("no server found")
+		return nil, fmt.Errorf("no load balancer found")
 	}
-	raw := aout.Records[0].Value.(*schema.ServerListResponse)
-	found := len(raw.Servers)
+	raw := aout.Records[0].Value.(*schema.LoadBalancerListResponse)
+	found := len(raw.LoadBalancers)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")
 	}
 	if found <= 0 {
-		return nil, fmt.Errorf("no server found")
+		return nil, fmt.Errorf("no load balancer found")
 	}
-	id := fmt.Sprintf("%v", raw.Servers[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.Servers[0], &id)
+	id := fmt.Sprintf("%v", raw.LoadBalancers[0].ID)
+	aout = base.NewActionOutput(ctx.Action, raw.LoadBalancers[0], &id)
 	return aout, nil
 }
 
-func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
-	var err error
-	// only Server.ID are really used
-	input := &hcloud.Server{}
+func AttachToNetworkLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &loadbalancerAttachToNetworkParameters{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -136,24 +144,17 @@ func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	err = ctx.Store.DeepInterpolation(input)
+	_, response, err := ctx.HClient.LoadBalancer.AttachToNetwork(context.Background(), input.LoadBalancer, input.AttachOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Server.Poweron(context.Background(), input)
-	if err != nil {
-		return nil, err
-	}
-
-	output := &schema.ServerActionPoweronResponse{}
+	output := &schema.LoadBalancerActionAttachToNetworkResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func PowerOffServer(ctx *ActionContext) (*base.ActionOutput, error) {
-	var err error
-	// only Server.ID are really used
-	input := &hcloud.Server{}
+func DetachFromNetworkLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &loadbalancerDetachFromNetworkParameters{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -163,16 +164,11 @@ func PowerOffServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	err = ctx.Store.DeepInterpolation(input)
+	_, response, err := ctx.HClient.LoadBalancer.DetachFromNetwork(context.Background(), input.LoadBalancer, input.DetachOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Server.Poweroff(context.Background(), input)
-	if err != nil {
-		return nil, err
-	}
-
-	output := &schema.ServerActionPoweroffResponse{}
+	output := &schema.LoadBalancerActionDetachFromNetworkResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }

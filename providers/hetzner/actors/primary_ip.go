@@ -26,9 +26,13 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
-func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
+type unassignPrimaryIPParameters struct {
+	ID int64 `json:"id" validate:"required"`
+}
+
+func CreatePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	input := &hcloud.ServerCreateOpts{}
+	input := &hcloud.PrimaryIPCreateOpts{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -43,19 +47,19 @@ func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Server.Create(context.Background(), *input)
+	_, response, err := ctx.HClient.PrimaryIP.Create(context.Background(), *input)
 	if err != nil {
 		return nil, err
 	}
 
-	output := &schema.ServerCreateResponse{}
+	output := &schema.PrimaryIPCreateResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {
+func DeletePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	// only Server.ID attr are really used
-	input := &hcloud.Server{}
+	// only PrimaryIP.ID attr are really used
+	input := &hcloud.PrimaryIP{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -70,17 +74,17 @@ func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Server.DeleteWithResult(context.Background(), input)
+	_, err = ctx.HClient.PrimaryIP.Delete(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
 
-	output := &schema.ServerDeleteResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout := base.NewActionOutput(ctx.Action, nil, nil)
+	return aout, nil
 }
 
-func FindServers(ctx *ActionContext) (*base.ActionOutput, error) {
-	input := &hcloud.ServerListOpts{}
+func FindPrimaryIPs(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &hcloud.PrimaryIPListOpts{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -90,17 +94,17 @@ func FindServers(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	_, response, err := ctx.HClient.Server.List(context.Background(), *input)
+	_, response, err := ctx.HClient.PrimaryIP.List(context.Background(), *input)
 	if err != nil {
 		return nil, err
 	}
 
-	output := &schema.ServerListResponse{}
+	output := &schema.PrimaryIPListResult{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
-	aout, err := FindServers(ctx)
+func FindOnePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
+	aout, err := FindPrimaryIPs(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -108,25 +112,23 @@ func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 	if len(aout.Records) <= 0 {
-		return nil, fmt.Errorf("no server found")
+		return nil, fmt.Errorf("no primary ip found")
 	}
-	raw := aout.Records[0].Value.(*schema.ServerListResponse)
-	found := len(raw.Servers)
+	raw := aout.Records[0].Value.(*schema.PrimaryIPListResult)
+	found := len(raw.PrimaryIPs)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")
 	}
 	if found <= 0 {
-		return nil, fmt.Errorf("no server found")
+		return nil, fmt.Errorf("no primary ip found")
 	}
-	id := fmt.Sprintf("%v", raw.Servers[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.Servers[0], &id)
+	id := fmt.Sprintf("%v", raw.PrimaryIPs[0].ID)
+	aout = base.NewActionOutput(ctx.Action, raw.PrimaryIPs[0], &id)
 	return aout, nil
 }
 
-func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
-	var err error
-	// only Server.ID are really used
-	input := &hcloud.Server{}
+func AssignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := hcloud.PrimaryIPAssignOpts{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -136,24 +138,18 @@ func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	err = ctx.Store.DeepInterpolation(input)
+	_, response, err := ctx.HClient.PrimaryIP.Assign(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Server.Poweron(context.Background(), input)
-	if err != nil {
-		return nil, err
-	}
-
-	output := &schema.ServerActionPoweronResponse{}
+	// ok to use hcloud instead scheme here
+	output := &hcloud.PrimaryIPAssignResult{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func PowerOffServer(ctx *ActionContext) (*base.ActionOutput, error) {
-	var err error
-	// only Server.ID are really used
-	input := &hcloud.Server{}
+func UnassignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &unassignPrimaryIPParameters{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -163,16 +159,11 @@ func PowerOffServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	err = ctx.Store.DeepInterpolation(input)
+	_, response, err := ctx.HClient.PrimaryIP.Unassign(context.Background(), input.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Server.Poweroff(context.Background(), input)
-	if err != nil {
-		return nil, err
-	}
-
-	output := &schema.ServerActionPoweroffResponse{}
+	output := &hcloud.PrimaryIPAssignResult{}
 	return GenericHCloudOutput(ctx, response, output)
 }
