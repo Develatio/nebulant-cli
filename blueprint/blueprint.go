@@ -189,7 +189,7 @@ func NewFromBuilder(data []byte) (*Blueprint, error) {
 	return &bp, nil
 }
 
-func NewIRBFromAny(any string) (*IRBlueprint, error) {
+func NewIRBFromAny(any string, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	var bp *Blueprint
 	var err error
 	if len(any) > 11 && any[:11] == "nebulant://" {
@@ -203,7 +203,7 @@ func NewIRBFromAny(any string) (*IRBlueprint, error) {
 			return nil, err
 		}
 	}
-	irb, err := GenerateIRB(bp, &IRBGenConfig{})
+	irb, err := GenerateIRB(bp, irbConf)
 	if err != nil {
 		return nil, err
 	}
@@ -259,6 +259,33 @@ func NewFromBackend(path string) (*Blueprint, error) {
 	return bp, nil
 }
 
+func ParseBPArgs(args []string) ([]*IRBArg, error) {
+	var parsed []*IRBArg
+	for _, arg := range args {
+		_arg, found := strings.CutPrefix(arg, "--")
+		if !found {
+			_arg, found = strings.CutPrefix(arg, "-")
+			if !found {
+				return nil, fmt.Errorf("malformed var name %v. Please prefix var names with one (-) or two (--) dashes. Example: --varname=value", arg)
+			}
+		}
+		sepidx := strings.Index(_arg, "=")
+		if sepidx == -1 || sepidx+1 == len(_arg) {
+			parsed = append(parsed, &IRBArg{Name: strings.TrimSuffix(_arg, "="), Value: ""})
+			continue
+		}
+		parsed = append(parsed, &IRBArg{Name: _arg[:sepidx], Value: _arg[sepidx+1:]})
+	}
+
+	return parsed, nil
+}
+
+// IRBArg struct. Represent parsed blueprint cli args
+type IRBArg struct {
+	Name  string
+	Value string
+}
+
 // IRBlueprint struct. Intermediate Representation Blueprint. Precompiler.
 type IRBlueprint struct {
 	BP            *Blueprint
@@ -267,11 +294,13 @@ type IRBlueprint struct {
 	JoinThreadPoints map[string]*Action
 	Actions          map[string]*Action
 	StartAction      *Action
+	Args             []*IRBArg
 }
 
 // IRBGenConfig struct
 type IRBGenConfig struct {
 	AllowResultReturn bool
+	Args              []string
 	// Not implemented
 	// PreventLoop       bool
 }
@@ -331,6 +360,13 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	if err != nil {
 		errors = append(errors, &iRBError{wErr: err})
 	}
+
+	// parse cli args
+	pargs, err := ParseBPArgs(irbConf.Args)
+	if err != nil {
+		return nil, err
+	}
+	irb.Args = pargs
 
 	irb.ExecutionUUID = bp.ExecutionUUID
 

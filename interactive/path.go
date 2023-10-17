@@ -58,7 +58,7 @@ func Path() error {
 		return nil
 	}
 	term.PrintInfo("Processing blueprint...\n")
-	irb, err := blueprint.NewIRBFromAny(path)
+	irb, err := blueprint.NewIRBFromAny(path, &blueprint.IRBGenConfig{})
 	if err != nil {
 		return err
 	}

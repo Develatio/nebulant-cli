@@ -248,7 +248,7 @@ L:
 		}
 
 		cast.LogInfo("Obtaining blueprint "+item.UUID+"...", nil)
-		irb, err := blueprint.NewIRBFromAny("nebulant://" + item.UUID)
+		irb, err := blueprint.NewIRBFromAny("nebulant://"+item.UUID, &blueprint.IRBGenConfig{})
 		if err != nil {
 			return err
 		}

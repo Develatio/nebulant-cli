@@ -255,6 +255,7 @@ type IStore interface {
 	Merge(IStore)
 	GetActionOutputByActionID(actionID *string) (*ActionOutput, error)
 	Insert(record *StorageRecord, providerPrefix string) error
+	Push(record *StorageRecord, providerPrefix string) error
 	Interpolate(sourcetext *string) error
 	GetPlain() (map[string]string, error)
 	GetRawJSONValues() (map[string]json.RawMessage, error)

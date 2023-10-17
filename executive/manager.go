@@ -205,8 +205,37 @@ func (m *Manager) Run() error {
 		}
 	}()
 	defer ipcs.Close()
+
+	// init store
 	st := storage.NewStore()
+
+	// set ipcs into store
 	st.SetPrivateVar("IPCS", ipcs)
+
+	// set vars from cli args
+	for _, irbarg := range m.IRB.Args {
+		if st.ExistsRefName(irbarg.Name) {
+			err := st.Push(&base.StorageRecord{
+				RefName: irbarg.Name,
+				Aout:    nil,
+				Value:   irbarg.Value,
+				Action:  nil,
+			}, "")
+			if err != nil {
+				return err
+			}
+		} else {
+			err := st.Insert(&base.StorageRecord{
+				RefName: irbarg.Name,
+				Aout:    nil,
+				Value:   irbarg.Value,
+				Action:  nil,
+			}, "")
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	m.RunStages([]*Stage{NewStage(m, st, m.IRB.StartAction)})
 	cast.PushEvent(cast.EventManagerStarted, m.ExecutionUUID)

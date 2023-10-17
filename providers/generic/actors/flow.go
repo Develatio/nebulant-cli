@@ -579,36 +579,27 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 
 		if v.Stack != nil && *v.Stack {
-			var newstackitems []interface{}
-			if ctx.Store.ExistsRefName(varname) {
-				sr, err := ctx.Store.GetByRefName(varname)
-				if err != nil {
-					return nil, err
-				}
-
-				if _, ok := sr.Value.(*base.StorageRecordStack); ok {
-					newstackitems = append(newstackitems, recordvalue)
-					newstackitems = append(newstackitems, sr.Value.(*base.StorageRecordStack).Items...)
-				} else {
-					newstackitems = []interface{}{recordvalue, sr.Value}
-				}
-			} else {
-				newstackitems = []interface{}{recordvalue}
+			err := ctx.Store.Push(&base.StorageRecord{
+				RefName: varname,
+				Aout:    nil,
+				Value:   recordvalue,
+				Action:  ctx.Action,
+			}, ctx.Action.Provider)
+			if err != nil {
+				return nil, err
 			}
-			recordvalue = &base.StorageRecordStack{
-				Items: newstackitems,
+		} else {
+			err := ctx.Store.Insert(&base.StorageRecord{
+				RefName: varname,
+				Aout:    nil,
+				Value:   recordvalue,
+				Action:  ctx.Action,
+			}, ctx.Action.Provider)
+			if err != nil {
+				return nil, err
 			}
 		}
 
-		err := ctx.Store.Insert(&base.StorageRecord{
-			RefName: varname,
-			Aout:    nil,
-			Value:   recordvalue,
-			Action:  ctx.Action,
-		}, ctx.Action.Provider)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	// if params has .Files, we should read those files
