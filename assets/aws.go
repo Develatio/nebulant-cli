@@ -23,8 +23,27 @@ import (
 	"github.com/develatio/nebulant-cli/config"
 )
 
+type CustomInstanceTypeInfo struct {
+	InstanceType *string
+	Summary      *string
+}
+
 func init() {
-	AssetsDefinition["aws/images"] = &AssetDefinition{
+	AssetsDefinition["aws_instance_types"] = &AssetDefinition{
+		Name:         "AWS Instance types",
+		IndexPath:    filepath.Join(config.AppHomePath(), "assets", "aws_instance_types.idx"),
+		SubIndexPath: filepath.Join(config.AppHomePath(), "assets", "aws_instance_types.subidx"),
+		FilePath:     filepath.Join(config.AppHomePath(), "assets", "aws_instance_types.asset"),
+		FreshItem:    func() interface{} { return &CustomInstanceTypeInfo{} },
+		LookPath: []string{
+			"$.InstanceType",
+			"$.Summary",
+		},
+		Alias: [][]string{
+			{"x64", "x86_64"},
+		},
+	}
+	AssetsDefinition["aws_images"] = &AssetDefinition{
 		Name:         "AWS Images",
 		IndexPath:    filepath.Join(config.AppHomePath(), "assets", "aws_images.idx"),
 		SubIndexPath: filepath.Join(config.AppHomePath(), "assets", "aws_images.subidx"),

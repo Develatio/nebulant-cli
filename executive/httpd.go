@@ -327,7 +327,7 @@ func (h *Httpd) Serve(addr *string) error {
 		h.autocompleteView(w, r)
 	}
 
-	h.urls[regexp.MustCompile(`/assets/$`)] = func(w http.ResponseWriter, r *http.Request) {
+	h.urls[regexp.MustCompile(`/assets/.+$`)] = func(w http.ResponseWriter, r *http.Request) {
 		err := h.httpMiddleware(w, r)
 		if err != nil {
 			cast.LogErr("Asset Request fail: "+err.Error(), nil)
@@ -691,23 +691,7 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u := r.URL
-	q := u.Query()
-
-	asset_id := q.Get("asset_id")
-	if len(asset_id) <= 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		resp := &GenericResponse{
-			Code:             "E03",
-			Fail:             true,
-			Errors:           []string{http.StatusText(http.StatusBadRequest), "'asset_id' query param not found"},
-			ValidationErrors: nil,
-		}
-		err := json.NewEncoder(w).Encode(resp)
-		if err != nil {
-			http.Error(w, "E03 "+err.Error(), http.StatusBadRequest)
-		}
-		return
-	}
+	asset_id := path.Base(u.Path)
 	assetdef, ok := assets.AssetsDefinition[asset_id]
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
@@ -724,13 +708,14 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	q := u.Query()
 	searchq := q.Get("search")
 	if len(searchq) <= 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		resp := &GenericResponse{
 			Code:             "E03",
 			Fail:             true,
-			Errors:           []string{http.StatusText(http.StatusBadRequest), "'search' query param not found"},
+			Errors:           []string{http.StatusText(http.StatusBadRequest), "Search query not found"},
 			ValidationErrors: nil,
 		}
 		err := json.NewEncoder(w).Encode(resp)
