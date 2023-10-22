@@ -64,7 +64,7 @@ func parseAssetsUpgradeFs() (*flag.FlagSet, error) {
 func parseAssetsBuildFs() (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("build", flag.ExitOnError)
 	fs.String("f", "", "Input file. Ej. -f ./file.json")
-	fs.String("a", "", "Asset ID. Ej. -a aws_images")
+	fs.String("a", "", "Asset ID. Ej. -a aws/images")
 	fs.String("d", "", "Output dir to save generated files")
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets build [options]\n")
@@ -82,7 +82,7 @@ func parseAssetsBuildFs() (*flag.FlagSet, error) {
 
 func parseAssetsSearchFs() (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("search", flag.ExitOnError)
-	fs.String("a", "", "Search into the `asset` ID. Ej. aws_images")
+	fs.String("a", "", "Search into the `asset` ID. Ej. aws/images")
 	fs.String("t", "", "Search term")
 	fs.Int("l", 0, "Limit")
 	fs.Int("o", 0, "Offset")
