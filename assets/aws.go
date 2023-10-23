@@ -63,4 +63,7 @@ func init() {
 			{"x64", "x86_64"},
 		},
 	}
+
+	AssetsIDAliases["aws/images"] = "aws_images"
+	AssetsIDAliases["aws/instance_types"] = "aws_instance_types"
 }

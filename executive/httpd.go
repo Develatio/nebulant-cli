@@ -692,18 +692,24 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 
 	u := r.URL
 	asset_id := path.Base(u.Path)
+
+	_asset_id, ok := assets.AssetsIDAliases[asset_id]
+	if ok {
+		asset_id = _asset_id
+	}
+
 	assetdef, ok := assets.AssetsDefinition[asset_id]
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		resp := &GenericResponse{
 			Code:             "E02",
 			Fail:             true,
-			Errors:           []string{http.StatusText(http.StatusBadRequest), "Unknown asset " + asset_id},
+			Errors:           []string{http.StatusText(http.StatusNotFound), "Unknown asset " + asset_id},
 			ValidationErrors: nil,
 		}
 		err := json.NewEncoder(w).Encode(resp)
 		if err != nil {
-			http.Error(w, "E02 "+err.Error(), http.StatusBadRequest)
+			http.Error(w, "E02 "+err.Error(), http.StatusNotFound)
 		}
 		return
 	}
