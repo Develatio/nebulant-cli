@@ -165,6 +165,21 @@ var commands map[string]*nbcommand = map[string]*nbcommand{
 			}
 		},
 	},
+	"update": {
+		upgradeTerm:   true,
+		welcomeMsg:    true,
+		initProviders: false,
+		help:          "  update\t\t" + term.EmojiSet["Squid"] + " Update the cli to the latest version\n",
+		sec:           secmain,
+		run: func() {
+			exitCode, err := subcom.UpdateCmd()
+			if err != nil {
+				cast.LogErr(err.Error(), nil)
+				cast.SBus.Close().Wait()
+				os.Exit(exitCode)
+			}
+		},
+	},
 	"readvar": {
 		upgradeTerm:   false,
 		welcomeMsg:    false,

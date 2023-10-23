@@ -18,6 +18,7 @@ var EmojiSet map[string]string = map[string]string{
 	"RunningShoe":                "👟",
 	"Key":                        "🔑",
 	"FaceWithMonocle":            "🧐",
+	"Dizzy":                      "💫",
 }
 
 var noEmojiSupportSet map[string]string = map[string]string{
@@ -38,4 +39,5 @@ var noEmojiSupportSet map[string]string = map[string]string{
 	"RunningShoe":                "  ",
 	"Key":                        "  ",
 	"FaceWithMonocle":            "  ",
+	"Dizzy":                      "  ",
 }

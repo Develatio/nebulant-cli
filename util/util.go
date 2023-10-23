@@ -17,17 +17,13 @@
 package util
 
 import (
-	"crypto/tls"
 	"encoding/json"
-	"net/http"
 	"os/exec"
 	"reflect"
 	"runtime"
 
 	"github.com/go-playground/validator/v10"
 )
-
-var httpclient *http.Client
 
 // UIStore interface
 type UIStore interface {
@@ -87,21 +83,4 @@ func OpenUrl(url string) error {
 type PanicData struct {
 	PanicValue interface{}
 	PanicTrace []byte
-}
-
-func GetHttpClient() *http.Client {
-	if httpclient != nil {
-		return httpclient
-	}
-	tr := &http.Transport{
-		MaxIdleConnsPerHost: 30,
-		TLSClientConfig: &tls.Config{
-			MinVersion:         tls.VersionTLS12,
-			InsecureSkipVerify: false,
-		},
-		// ReadIdleTimeout: 30 * time.Second,
-		DisableCompression: true,
-	}
-	httpclient = &http.Client{Transport: tr}
-	return httpclient
 }

@@ -17,13 +17,11 @@
 package assets
 
 import (
-	"compress/bzip2"
 	"crypto/md5" //#nosec G501-- weak, but ok
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -38,14 +36,12 @@ import (
 	"github.com/bhmj/jsonslice"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/downloader"
 	"github.com/develatio/nebulant-cli/term"
-	"github.com/develatio/nebulant-cli/util"
 )
 
 type UpgradeStateType int
 
-// 1500MB zip file size limit (a reasonable, but arbitrary value)
-const maxZipFileSize = 1500 * 1024 * 1024
 const INDEX_TOKEN_SIZE = 3
 const SUB_INDEX_TOKEN_SIZE = 2
 const USED_BY_SPA = "SPA"
@@ -393,67 +389,16 @@ func logStats(prefix string) {
 	cast.LogDebug(fmt.Sprintf("%s: Alloc: %v MiB\tHeapInuse: %v MiB\tFrees: %v MiB\tSys: %v MiB\tNumGC: %v", prefix, m.Alloc/1024/1024, m.HeapInuse/1024/1024, m.Frees/1024/1024, m.Sys/1024/1024, m.NumGC), nil)
 }
 
-func downloadFileWithProgressBar(url string, outfilepath string, msg string) error {
-	startTime := time.Now()
-	cast.LogDebug("Downloading "+url, nil)
-	client := util.GetHttpClient()
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("User-Agent", "nebulant")
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(http.StatusText(resp.StatusCode))
-	}
-
-	file, err := os.OpenFile(outfilepath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304 -- Not a file inclusion, just a well know otput file
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	lin := term.AppendLine()
-	defer lin.Close()
-	bar, err := lin.GetProgressBar(resp.ContentLength, msg, true)
-	if err != nil {
-		return err
-	}
-
-	ioreader := resp.Body
-	if strings.ToLower(resp.Header.Get("Content-Type")) == "application/x-bzip2" {
-		bz2dec := bzip2.NewReader(resp.Body)
-		// limit bzip file size, LimitReader will launch
-		// EOF on read > maxZipFileSize
-		ioreader = io.NopCloser(io.LimitReader(bz2dec, maxZipFileSize))
-	}
-
-	var buf []byte
-	_, err = io.CopyBuffer(io.MultiWriter(file, bar), ioreader, buf)
-	if err != nil {
-		return err
-	}
-
-	elapsedTime := time.Since(startTime).String()
-	cast.LogDebug("downloaded in "+elapsedTime, nil)
-	return nil
-}
-
 func downloadAsset(remotedef *AssetRemoteDescription, localdef *AssetDefinition) error {
 	err := os.MkdirAll(filepath.Dir(localdef.FilePath), os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	err = downloadFileWithProgressBar(remotedef.URL+".bz2", localdef.FilePath, "Downloading asset "+localdef.Name+"...")
+	err = downloader.DownloadFileWithProgressBar(remotedef.URL+".bz2", localdef.FilePath, "Downloading asset "+localdef.Name+"...")
 	if err != nil {
 		cast.LogDebug("Err on bz2 asset descriptor download: "+err.Error(), nil)
-		err = downloadFileWithProgressBar(remotedef.URL, localdef.FilePath, "Downloading asset "+localdef.Name+"...")
+		err = downloader.DownloadFileWithProgressBar(remotedef.URL, localdef.FilePath, "Downloading asset "+localdef.Name+"...")
 		if err != nil {
 			return err
 		}
@@ -468,20 +413,20 @@ func downloadIndex(remotedef *AssetRemoteDescription, localdef *AssetDefinition)
 	}
 
 	// download index
-	err = downloadFileWithProgressBar(remotedef.URL+".idx.bz2", localdef.IndexPath, "Downloading index...")
+	err = downloader.DownloadFileWithProgressBar(remotedef.URL+".idx.bz2", localdef.IndexPath, "Downloading index...")
 	if err != nil {
 		cast.LogDebug("Err on bz2 index download: "+err.Error(), nil)
-		err = downloadFileWithProgressBar(remotedef.URL+".idx", localdef.IndexPath, "Downloading index...")
+		err = downloader.DownloadFileWithProgressBar(remotedef.URL+".idx", localdef.IndexPath, "Downloading index...")
 		if err != nil {
 			return err
 		}
 	}
 
 	// download subindex
-	err = downloadFileWithProgressBar(remotedef.URL+".subidx.bz2", localdef.SubIndexPath, "Downloading subindex...")
+	err = downloader.DownloadFileWithProgressBar(remotedef.URL+".subidx.bz2", localdef.SubIndexPath, "Downloading subindex...")
 	if err != nil {
 		cast.LogDebug("Err on bz2 subindex download: "+err.Error(), nil)
-		err = downloadFileWithProgressBar(remotedef.URL+".subidx", localdef.SubIndexPath, "Downloading subindex...")
+		err = downloader.DownloadFileWithProgressBar(remotedef.URL+".subidx", localdef.SubIndexPath, "Downloading subindex...")
 		if err != nil {
 			return err
 		}
@@ -1108,7 +1053,7 @@ func updateDescriptor(descpath string) error {
 		return err
 	}
 	cast.LogDebug("Downloading "+config.AssetDescriptorURL, nil)
-	return downloadFileWithProgressBar(config.AssetDescriptorURL, descpath, "Updating asset descriptor...")
+	return downloader.DownloadFileWithProgressBar(config.AssetDescriptorURL, descpath, "Updating asset descriptor...")
 }
 
 func GenerateIndexFromFile(term string) error {
