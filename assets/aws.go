@@ -29,20 +29,6 @@ type CustomInstanceTypeInfo struct {
 }
 
 func init() {
-	AssetsDefinition["aws_instance_types"] = &AssetDefinition{
-		Name:         "AWS Instance types",
-		IndexPath:    filepath.Join(config.AppHomePath(), "assets", "aws_instance_types.idx"),
-		SubIndexPath: filepath.Join(config.AppHomePath(), "assets", "aws_instance_types.subidx"),
-		FilePath:     filepath.Join(config.AppHomePath(), "assets", "aws_instance_types.asset"),
-		FreshItem:    func() interface{} { return &CustomInstanceTypeInfo{} },
-		LookPath: []string{
-			"$.InstanceType",
-			"$.Summary",
-		},
-		Alias: [][]string{
-			{"x64", "x86_64"},
-		},
-	}
 	AssetsDefinition["aws_images"] = &AssetDefinition{
 		Name:         "AWS Images",
 		IndexPath:    filepath.Join(config.AppHomePath(), "assets", "aws_images.idx"),
@@ -65,5 +51,4 @@ func init() {
 	}
 
 	AssetsIDAliases["aws/images"] = "aws_images"
-	AssetsIDAliases["aws/instance_types"] = "aws_instance_types"
 }
