@@ -102,7 +102,7 @@ type GenericResponse struct {
 	ValidationErrors []*ValidationError `json:"validation_errors"`
 }
 
-type viewFunc func(w http.ResponseWriter, r *http.Request)
+type viewFunc func(w http.ResponseWriter, r *http.Request, matches [][]string)
 
 // Httpd struct
 type Httpd struct {
@@ -188,14 +188,17 @@ func (h *Httpd) httpMiddleware(w http.ResponseWriter, r *http.Request) error {
 
 func (h *Httpd) route(w http.ResponseWriter, r *http.Request) {
 	var vfn viewFunc
+	var vrgx *regexp.Regexp
 	for rgx, fn := range h.urls {
 		if rgx.MatchString(r.URL.Path) {
 			vfn = fn
+			vrgx = rgx
 			break
 		}
 	}
 	if vfn != nil {
-		vfn(w, r)
+		matches := vrgx.FindAllStringSubmatch(r.URL.Path, -1)
+		vfn(w, r, matches)
 	} else {
 		http.Error(w, "404 Not found", http.StatusNotFound)
 	}
@@ -213,7 +216,7 @@ func (h *Httpd) Serve(addr *string) error {
 	}()
 	h.urls = make(map[*regexp.Regexp]viewFunc)
 
-	h.urls[regexp.MustCompile(`/ws/.+$`)] = func(w http.ResponseWriter, r *http.Request) {
+	h.urls[regexp.MustCompile(`/ws/.+$`)] = func(w http.ResponseWriter, r *http.Request, matches [][]string) {
 		upgrader.CheckOrigin = h.validateOrigin
 		clientUUID := path.Base(r.URL.Path)
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -239,7 +242,7 @@ func (h *Httpd) Serve(addr *string) error {
 		}
 	}
 
-	h.urls[regexp.MustCompile(`/handshake`)] = func(w http.ResponseWriter, r *http.Request) {
+	h.urls[regexp.MustCompile(`/handshake`)] = func(w http.ResponseWriter, r *http.Request, matches [][]string) {
 		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Origin")
 		err := h.httpMiddleware(w, r)
@@ -282,7 +285,7 @@ func (h *Httpd) Serve(addr *string) error {
 		cast.LogDebug("WS Test OK. Version: "+hReq.Version, nil)
 	}
 
-	h.urls[regexp.MustCompile(`/stop/.+$`)] = func(w http.ResponseWriter, r *http.Request) {
+	h.urls[regexp.MustCompile(`/stop/.+$`)] = func(w http.ResponseWriter, r *http.Request, matches [][]string) {
 		err := h.httpMiddleware(w, r)
 		if err != nil {
 			cast.LogErr("Stop Request fail: "+err.Error(), nil)
@@ -291,7 +294,7 @@ func (h *Httpd) Serve(addr *string) error {
 		h.stopBlueprintView(w, r)
 	}
 
-	h.urls[regexp.MustCompile(`/pause/.+$`)] = func(w http.ResponseWriter, r *http.Request) {
+	h.urls[regexp.MustCompile(`/pause/.+$`)] = func(w http.ResponseWriter, r *http.Request, matches [][]string) {
 		err := h.httpMiddleware(w, r)
 		if err != nil {
 			cast.LogErr("Pause Request fail: "+err.Error(), nil)
@@ -300,7 +303,7 @@ func (h *Httpd) Serve(addr *string) error {
 		h.pauseBlueprintView(w, r)
 	}
 
-	h.urls[regexp.MustCompile(`/resume/.+$`)] = func(w http.ResponseWriter, r *http.Request) {
+	h.urls[regexp.MustCompile(`/resume/.+$`)] = func(w http.ResponseWriter, r *http.Request, matches [][]string) {
 		err := h.httpMiddleware(w, r)
 		if err != nil {
 			cast.LogErr("Resume Request fail: "+err.Error(), nil)
@@ -309,7 +312,7 @@ func (h *Httpd) Serve(addr *string) error {
 		h.resumeBlueprintView(w, r)
 	}
 
-	h.urls[regexp.MustCompile(`/blueprint/.+$`)] = func(w http.ResponseWriter, r *http.Request) {
+	h.urls[regexp.MustCompile(`/blueprint/.+$`)] = func(w http.ResponseWriter, r *http.Request, matches [][]string) {
 		err := h.httpMiddleware(w, r)
 		if err != nil {
 			cast.LogErr("Blueprint Request fail: "+err.Error(), nil)
@@ -318,7 +321,7 @@ func (h *Httpd) Serve(addr *string) error {
 		h.blueprintView(w, r)
 	}
 
-	h.urls[regexp.MustCompile(`/autocomplete/$`)] = func(w http.ResponseWriter, r *http.Request) {
+	h.urls[regexp.MustCompile(`/autocomplete/$`)] = func(w http.ResponseWriter, r *http.Request, matches [][]string) {
 		err := h.httpMiddleware(w, r)
 		if err != nil {
 			cast.LogErr("Blueprint Request fail: "+err.Error(), nil)
@@ -327,13 +330,13 @@ func (h *Httpd) Serve(addr *string) error {
 		h.autocompleteView(w, r)
 	}
 
-	h.urls[regexp.MustCompile(`/assets/.+$`)] = func(w http.ResponseWriter, r *http.Request) {
+	h.urls[regexp.MustCompile(`/assets/(.+)$`)] = func(w http.ResponseWriter, r *http.Request, matches [][]string) {
 		err := h.httpMiddleware(w, r)
 		if err != nil {
 			cast.LogErr("Asset Request fail: "+err.Error(), nil)
 			return
 		}
-		h.assetsView(w, r)
+		h.assetsView(w, r, matches)
 	}
 
 	// start server
@@ -647,7 +650,7 @@ func (h *Httpd) blueprintView(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
+func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request, matches [][]string) {
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Origin")
 	w.Header().Set("Content-Type", "application/json")
@@ -691,7 +694,8 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u := r.URL
-	asset_id := path.Base(u.Path)
+	asset_id := matches[0][1]
+	asset_id = strings.TrimSuffix(asset_id, "/")
 
 	_asset_id, ok := assets.AssetsIDAliases[asset_id]
 	if ok {
