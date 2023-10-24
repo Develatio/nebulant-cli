@@ -176,7 +176,8 @@ func AssetsCmd() (int, error) {
 		cast.LogInfo("Found "+fmt.Sprintf("%v", searchres.Count)+" items", nil)
 
 		for e, item := range searchres.Results {
-			cast.LogInfo(fmt.Sprintf("Result %v / %v -> %v", e, searchres.Count, item), nil)
+			b := assetdef.MarshallIndentItem(item)
+			cast.LogInfo(fmt.Sprintf("Result %v / %v -> %v", e, searchres.Count, b), nil)
 			if e >= 10 {
 				cast.LogInfo("[...]", nil)
 				break

@@ -697,11 +697,6 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request, matches [][]s
 	asset_id := matches[0][1]
 	asset_id = strings.TrimSuffix(asset_id, "/")
 
-	_asset_id, ok := assets.AssetsIDAliases[asset_id]
-	if ok {
-		asset_id = _asset_id
-	}
-
 	assetdef, ok := assets.AssetsDefinition[asset_id]
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)

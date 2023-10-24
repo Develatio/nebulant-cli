@@ -144,13 +144,15 @@ func (a *assetsState) loadState() error {
 }
 
 type AssetDefinition struct {
-	Name         string
-	FreshItem    func() interface{}
-	LookPath     []string
-	IndexPath    string
-	SubIndexPath string
-	FilePath     string
-	Alias        [][]string
+	Name               string
+	FreshItem          func() interface{}
+	MarshallIndentItem func(interface{}) string
+	Filter             func(interface{}) bool
+	LookPath           []string
+	IndexPath          string
+	SubIndexPath       string
+	FilePath           string
+	Alias              [][]string
 }
 
 type SearchRequest struct {
@@ -174,7 +176,6 @@ type AssetRemoteDescription struct {
 }
 
 var AssetsDefinition map[string]*AssetDefinition = make(map[string]*AssetDefinition)
-var AssetsIDAliases map[string]string = make(map[string]string)
 
 // var CurrentUpgradeState UpgradeStateType
 // var LastUpgradeState UpgradeStateType
@@ -926,6 +927,11 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 			return nil, err
 		}
 
+		if !assetdef.Filter(img) {
+			discardcount++
+			continue
+		}
+
 		// obtain texts
 		vof := reflect.ValueOf(img)
 		var t []string
@@ -1172,10 +1178,6 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 		}
 
 		asset_id := desc.ID
-		_asset_id, ok := AssetsIDAliases[asset_id]
-		if ok {
-			asset_id = _asset_id
-		}
 
 		def, exists := AssetsDefinition[asset_id]
 		if !exists {

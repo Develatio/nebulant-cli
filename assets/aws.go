@@ -19,22 +19,41 @@ package assets
 import (
 	"path/filepath"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/develatio/nebulant-cli/config"
 )
 
-type CustomInstanceTypeInfo struct {
-	InstanceType *string
-	Summary      *string
+type CustomAwsImage struct {
+	Architecture       *string           `json:"Architecture"`
+	CreationDate       *string           `json:"CreationDate"`
+	Description        *string           `json:"Description"`
+	EnaSupport         *bool             `json:"EnaSupport"`
+	Hypervisor         *string           `json:"Hypervisor"`
+	ImageType          *string           `json:"ImageType"`
+	Name               *string           `json:"Name"`
+	OwnerId            *string           `json:"OwnerId"`
+	PlatformDetails    *string           `json:"PlatformDetails"`
+	VirtualizationType *string           `json:"VirtualizationType"`
+	ImageIds           map[string]string `json:"ImageIds"`
+	ImageId            *string           `json:"ImageId"`
 }
 
 func init() {
-	AssetsDefinition["aws_images"] = &AssetDefinition{
+	// base aws images
+	AssetsDefinition["aws/images"] = &AssetDefinition{
 		Name:         "AWS Images",
 		IndexPath:    filepath.Join(config.AppHomePath(), "assets", "aws_images.idx"),
 		SubIndexPath: filepath.Join(config.AppHomePath(), "assets", "aws_images.subidx"),
 		FilePath:     filepath.Join(config.AppHomePath(), "assets", "aws_images.asset"),
-		FreshItem:    func() interface{} { return &ec2.Image{} },
+		FreshItem:    func() interface{} { return &CustomAwsImage{} },
+		MarshallIndentItem: func(v interface{}) string {
+			return awsutil.Prettify(v)
+		},
+		Filter: func(v interface{}) bool {
+			// filter sample:
+			// return *v.(*CustomAwsImage).Architecture == "x86_64"
+			return true
+		},
 		LookPath: []string{
 			"$.Architecture",
 			"$.Name",
@@ -50,5 +69,15 @@ func init() {
 		},
 	}
 
-	AssetsIDAliases["aws/images"] = "aws_images"
+	// copy base aws images
+	_a := *AssetsDefinition["aws/images"]
+	AssetsDefinition["aws/us-east-1/images"] = &_a
+	// filter by region
+	AssetsDefinition["aws/us-east-1/images"].Filter = func(v interface{}) bool {
+		if id, exists := v.(*CustomAwsImage).ImageIds["us-east-1"]; exists {
+			v.(*CustomAwsImage).ImageId = &id
+			return true
+		}
+		return false
+	}
 }
