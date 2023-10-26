@@ -538,14 +538,6 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 
 	dec := json.NewDecoder(input)
 
-	// read {
-	if _, err := dec.Token(); err != nil {
-		return 0, fmt.Errorf("MainIndex:" + err.Error())
-	}
-	// read attr name
-	if _, err := dec.Token(); err != nil {
-		return 0, fmt.Errorf("MainIndex:" + err.Error())
-	}
 	// read [
 	if _, err := dec.Token(); err != nil {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
@@ -597,7 +589,7 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 		count++
 	}
 
-	// read }
+	// read ]
 	if _, err := dec.Token(); err != nil {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
