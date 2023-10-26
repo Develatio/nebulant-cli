@@ -17,6 +17,7 @@
 package assets
 
 import (
+	"net/url"
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws/awsutil"
@@ -49,11 +50,17 @@ func init() {
 		MarshallIndentItem: func(v interface{}) string {
 			return awsutil.Prettify(v)
 		},
-		Filter: func(v interface{}) bool {
-			// filter sample:
-			// return *v.(*CustomAwsImage).Architecture == "x86_64"
-			return true
-		},
+		Filters: []AssetDefinitionFilter{func(v interface{}, terms url.Values) bool {
+			region := terms.Get("region")
+			if region == "" {
+				return true
+			}
+			if id, exists := v.(*CustomAwsImage).ImageIds[region]; exists {
+				v.(*CustomAwsImage).ImageId = &id
+				return true
+			}
+			return false
+		}},
 		LookPath: []string{
 			"$.Architecture",
 			"$.Name",
@@ -67,17 +74,5 @@ func init() {
 		Alias: [][]string{
 			{"x64", "x86_64"},
 		},
-	}
-
-	// copy base aws images
-	_a := *AssetsDefinition["aws/images"]
-	AssetsDefinition["aws/us-east-1/images"] = &_a
-	// filter by region
-	AssetsDefinition["aws/us-east-1/images"].Filter = func(v interface{}) bool {
-		if id, exists := v.(*CustomAwsImage).ImageIds["us-east-1"]; exists {
-			v.(*CustomAwsImage).ImageId = &id
-			return true
-		}
-		return false
 	}
 }

@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -143,11 +144,23 @@ func (a *assetsState) loadState() error {
 	return nil
 }
 
+type AssetDefinitionFilterTerms map[string][]string
+
+func (a AssetDefinitionFilterTerms) Get(key string) string {
+	ft := a[key]
+	if len(ft) == 0 {
+		return ""
+	}
+	return ft[0]
+}
+
+type AssetDefinitionFilter func(interface{}, url.Values) bool
+
 type AssetDefinition struct {
 	Name               string
 	FreshItem          func() interface{}
 	MarshallIndentItem func(interface{}) string
-	Filter             func(interface{}) bool
+	Filters            []AssetDefinitionFilter
 	LookPath           []string
 	IndexPath          string
 	SubIndexPath       string
@@ -156,10 +169,11 @@ type AssetDefinition struct {
 }
 
 type SearchRequest struct {
-	SearchTerm string
-	Limit      int
-	Offset     int
-	Sort       string
+	SearchTerm  string
+	FilterTerms url.Values
+	Limit       int
+	Offset      int
+	Sort        string
 }
 
 type SearchResult struct {
@@ -905,6 +919,7 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 
 	count := 0
 	discardcount := 0
+F:
 	for position, minfo := range fpositions {
 		// position should match all
 		// search tokens discard if not.
@@ -919,9 +934,11 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 			return nil, err
 		}
 
-		if !assetdef.Filter(img) {
-			discardcount++
-			continue
+		for _, ff := range assetdef.Filters {
+			if !ff(img, sr.FilterTerms) {
+				discardcount++
+				continue F
+			}
 		}
 
 		// obtain texts

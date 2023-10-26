@@ -772,11 +772,13 @@ func (h *Httpd) assetsView(w http.ResponseWriter, r *http.Request, matches [][]s
 			return
 		}
 	}
+
 	searchres, err := assets.Search(&assets.SearchRequest{
-		SearchTerm: searchq,
-		Limit:      int(limit),
-		Offset:     int(offset),
-		Sort:       rsort,
+		SearchTerm:  searchq,
+		FilterTerms: q,
+		Limit:       int(limit),
+		Offset:      int(offset),
+		Sort:        rsort,
 	}, assetdef)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
