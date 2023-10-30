@@ -17,8 +17,10 @@
 package subcom
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"net/url"
 	"strconv"
 
 	"github.com/develatio/nebulant-cli/assets"
@@ -82,11 +84,12 @@ func parseAssetsBuildFs() (*flag.FlagSet, error) {
 
 func parseAssetsSearchFs() (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("search", flag.ExitOnError)
-	fs.String("a", "", "Search into the `asset` ID. Ej. aws_images")
-	fs.String("t", "", "Search term")
-	fs.Int("l", 0, "Limit")
-	fs.Int("o", 0, "Offset")
-	fs.String("s", "", "Sort. Ej. $.Name")
+	fs.String("a", "", "\tSearch into the `asset` ID. Ej. aws_images")
+	fs.String("t", "", "\tSearch term")
+	fs.String("f", "", "\tFilter terms. Ej. -f region=us-east-1")
+	fs.Int("l", 0, "\tLimit")
+	fs.Int("o", 0, "\tOffset")
+	fs.String("s", "", "\tSort. Ej. $.Name")
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets search [options]\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
@@ -169,6 +172,15 @@ func AssetsCmd() (int, error) {
 			return 1, fmt.Errorf("invalid search pagination offset")
 		}
 
+		ff := fs.Lookup("f").Value.String()
+		if ff != "" {
+			ft, err := url.ParseQuery(ff)
+			if err != nil {
+				return 1, errors.Join(err, fmt.Errorf("bad filter terms"))
+			}
+			srq.FilterTerms = ft
+		}
+
 		searchres, err := assets.Search(srq, assetdef)
 		if err != nil {
 			return 1, err
@@ -176,7 +188,8 @@ func AssetsCmd() (int, error) {
 		cast.LogInfo("Found "+fmt.Sprintf("%v", searchres.Count)+" items", nil)
 
 		for e, item := range searchres.Results {
-			cast.LogInfo(fmt.Sprintf("Result %v / %v -> %v", e, searchres.Count, item), nil)
+			b := assetdef.MarshallIndentItem(item)
+			cast.LogInfo(fmt.Sprintf("Result %v / %v -> %v", e, searchres.Count, b), nil)
 			if e >= 10 {
 				cast.LogInfo("[...]", nil)
 				break

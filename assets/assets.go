@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -139,21 +140,36 @@ func (a *assetsState) loadState() error {
 	return nil
 }
 
+type AssetDefinitionFilterTerms map[string][]string
+
+func (a AssetDefinitionFilterTerms) Get(key string) string {
+	ft := a[key]
+	if len(ft) == 0 {
+		return ""
+	}
+	return ft[0]
+}
+
+type AssetDefinitionFilter func(interface{}, url.Values) bool
+
 type AssetDefinition struct {
-	Name         string
-	FreshItem    func() interface{}
-	LookPath     []string
-	IndexPath    string
-	SubIndexPath string
-	FilePath     string
-	Alias        [][]string
+	Name               string
+	FreshItem          func() interface{}
+	MarshallIndentItem func(interface{}) string
+	Filters            []AssetDefinitionFilter
+	LookPath           []string
+	IndexPath          string
+	SubIndexPath       string
+	FilePath           string
+	Alias              [][]string
 }
 
 type SearchRequest struct {
-	SearchTerm string
-	Limit      int
-	Offset     int
-	Sort       string
+	SearchTerm  string
+	FilterTerms url.Values
+	Limit       int
+	Offset      int
+	Sort        string
 }
 
 type SearchResult struct {
@@ -170,7 +186,6 @@ type AssetRemoteDescription struct {
 }
 
 var AssetsDefinition map[string]*AssetDefinition = make(map[string]*AssetDefinition)
-var AssetsIDAliases map[string]string = make(map[string]string)
 
 // var CurrentUpgradeState UpgradeStateType
 // var LastUpgradeState UpgradeStateType
@@ -482,14 +497,6 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 
 	dec := json.NewDecoder(input)
 
-	// read {
-	if _, err := dec.Token(); err != nil {
-		return 0, fmt.Errorf("MainIndex:" + err.Error())
-	}
-	// read attr name
-	if _, err := dec.Token(); err != nil {
-		return 0, fmt.Errorf("MainIndex:" + err.Error())
-	}
 	// read [
 	if _, err := dec.Token(); err != nil {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
@@ -541,7 +548,7 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 		count++
 	}
 
-	// read }
+	// read ]
 	if _, err := dec.Token(); err != nil {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
@@ -857,6 +864,7 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 
 	count := 0
 	discardcount := 0
+F:
 	for position, minfo := range fpositions {
 		// position should match all
 		// search tokens discard if not.
@@ -869,6 +877,13 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 		img := assetdef.FreshItem()
 		if err := recoverFilePosition(assetdef.FilePath, position, img); err != nil {
 			return nil, err
+		}
+
+		for _, ff := range assetdef.Filters {
+			if !ff(img, sr.FilterTerms) {
+				discardcount++
+				continue F
+			}
 		}
 
 		// obtain texts
@@ -1117,10 +1132,6 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 		}
 
 		asset_id := desc.ID
-		_asset_id, ok := AssetsIDAliases[asset_id]
-		if ok {
-			asset_id = _asset_id
-		}
 
 		def, exists := AssetsDefinition[asset_id]
 		if !exists {
