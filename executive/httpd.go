@@ -19,7 +19,7 @@ package executive
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -261,7 +261,7 @@ func (h *Httpd) Serve(addr *string) error {
 
 		defer r.Body.Close()
 		body := http.MaxBytesReader(w, r.Body, 65536)
-		data, readBodyErr := ioutil.ReadAll(body)
+		data, readBodyErr := io.ReadAll(body)
 		if readBodyErr != nil {
 			http.Error(w, "Handshake Failed", http.StatusPreconditionFailed)
 		}
@@ -373,7 +373,7 @@ func (h *Httpd) autocompleteView(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 	body := http.MaxBytesReader(w, r.Body, 4000000)
-	data, err := ioutil.ReadAll(body)
+	data, err := io.ReadAll(body)
 	if err != nil {
 		http.Error(w, "E05 "+err.Error(), http.StatusRequestEntityTooLarge)
 		return
@@ -384,7 +384,7 @@ func (h *Httpd) autocompleteView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rand.Seed(time.Now().UnixNano())
+	// rand.Seed(time.Now().UnixNano())
 	randIntString := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
 	bp.ExecutionUUID = &randIntString
 	irbConf := &blueprint.IRBGenConfig{
@@ -582,7 +582,7 @@ func (h *Httpd) blueprintView(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 	body := http.MaxBytesReader(w, r.Body, 4000000)
-	data, err := ioutil.ReadAll(body)
+	data, err := io.ReadAll(body)
 	if err != nil {
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		errs, valerrs := parseErrors(err)
