@@ -78,7 +78,7 @@ rundev:
 
 .PHONY: rundockerdev
 rundockerdev:
-	# ej: make rundockerdev ARGS="-x -s -b 0.0.0.0:15678"
+	# ej: make rundockerdev ARGS="-x serve -b 0.0.0.0:15678"
 	docker run --rm -v "$(PWD)":/usr/src/myapp -w /usr/src/myapp -p 15678:15678 golang:$(MINGOVERSION) go run -race -ldflags "$(LDFLAGS) $(DEVLDFLAGS)" nebulant.go $(ARGS)
 
 .PHONY: build
