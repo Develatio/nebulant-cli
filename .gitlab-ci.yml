@@ -21,10 +21,27 @@ before_script:
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
   - ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME
+  - apt update > /dev/null && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y tzdata > /dev/null
+  - apt install -y ca-certificates libcap2-bin curl bzip2 jq awscli gpg wget lsb-release unzip > /dev/null
+  - wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+  - echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
+  - mkdir -p /etc/apt/keyrings
+  - curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+  - echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
+  - apt update > /dev/null && apt install vault nodejs > /dev/null
+  - >-
+    echo "hosts: files dns" > /etc/nsswitch.conf
+  - echo -e "-----BEGIN CERTIFICATE-----\nMIIEADCCAuigAwIBAgIID+rOSdTGfGcwDQYJKoZIhvcNAQELBQAwgYsxCzAJBgNV\nBAYTAlVTMRkwFwYDVQQKExBDbG91ZEZsYXJlLCBJbmMuMTQwMgYDVQQLEytDbG91\nZEZsYXJlIE9yaWdpbiBTU0wgQ2VydGlmaWNhdGUgQXV0aG9yaXR5MRYwFAYDVQQH\nEw1TYW4gRnJhbmNpc2NvMRMwEQYDVQQIEwpDYWxpZm9ybmlhMB4XDTE5MDgyMzIx\nMDgwMFoXDTI5MDgxNTE3MDAwMFowgYsxCzAJBgNVBAYTAlVTMRkwFwYDVQQKExBD\nbG91ZEZsYXJlLCBJbmMuMTQwMgYDVQQLEytDbG91ZEZsYXJlIE9yaWdpbiBTU0wg\nQ2VydGlmaWNhdGUgQXV0aG9yaXR5MRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMRMw\nEQYDVQQIEwpDYWxpZm9ybmlhMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC\nAQEAwEiVZ/UoQpHmFsHvk5isBxRehukP8DG9JhFev3WZtG76WoTthvLJFRKFCHXm\nV6Z5/66Z4S09mgsUuFwvJzMnE6Ej6yIsYNCb9r9QORa8BdhrkNn6kdTly3mdnykb\nOomnwbUfLlExVgNdlP0XoRoeMwbQ4598foiHblO2B/LKuNfJzAMfS7oZe34b+vLB\nyrP/1bgCSLdc1AxQc1AC0EsQQhgcyTJNgnG4va1c7ogPlwKyhbDyZ4e59N5lbYPJ\nSmXI/cAe3jXj1FBLJZkwnoDKe0v13xeF+nF32smSH0qB7aJX2tBMW4TWtFPmzs5I\nlwrFSySWAdwYdgxw180yKU0dvwIDAQABo2YwZDAOBgNVHQ8BAf8EBAMCAQYwEgYD\nVR0TAQH/BAgwBgEB/wIBAjAdBgNVHQ4EFgQUJOhTV118NECHqeuU27rhFnj8KaQw\nHwYDVR0jBBgwFoAUJOhTV118NECHqeuU27rhFnj8KaQwDQYJKoZIhvcNAQELBQAD\nggEBAHwOf9Ur1l0Ar5vFE6PNrZWrDfQIMyEfdgSKofCdTckbqXNTiXdgbHs+TWoQ\nwAB0pfJDAHJDXOTCWRyTeXOseeOi5Btj5CnEuw3P0oXqdqevM1/+uWp0CM35zgZ8\nVD4aITxity0djzE6Qnx3Syzz+ZkoBgTnNum7d9A66/V636x4vTeqbZFBr9erJzgz\nhhurjcoacvRNhnjtDRM0dPeiCJ50CP3wEYuvUzDHUaowOsnLCjQIkWbR7Ni6KEIk\nMOz2U0OBSif3FTkhCgZWQKOOLo1P42jHC3ssUZAtVNXrCk3fw9/E15k8NPkBazZ6\n0iykLhH1trywrKRMVw67F44IE8Y=\n-----END CERTIFICATE-----" > /usr/local/share/ca-certificates/cloudflare.crt
+  - update-ca-certificates
+  - setcap cap_ipc_lock= /usr/bin/vault
+  - curl -fsSL https://bun.sh/install | bash
+  - source ~/.bashrc
+  - export BUN_INSTALL="$HOME/.bun"
+  - export PATH=$BUN_INSTALL/bin:$PATH
+  - npm install > /dev/null
 
 stages:
   - analysis
-  - build
   - deploy
 
 # unittest:
@@ -55,7 +72,7 @@ autotest:
     - make builddebug
     - echo $BLUEPRINT >/tmp/blueprint.json
     - ./dist/nebulant-debug run /tmp/blueprint.json
-
+  # coverage: '/Code coverage: \d+(?:\.\d+)?/'
   rules:
     - if: $CI_COMMIT_MESSAGE =~ /skip[-_]all/
       when: never
@@ -69,13 +86,19 @@ autotest:
       when: on_success
     - when: never
 
-gobuild:
-  stage: build
+gobuild_and_r2upload:
+  stage: deploy
   tags:
     - local
   script:
-    - echo "build for ${BUILD_BRANCH} ${DEPLOY_BUCKET}"
+    - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"  
     - make buildall
+    - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
+    - export CLOUDFLARE_ACCOUNT_ID=$(vault kv get -field="accountid" secret/Nebulant/Dev/Cloudflare/API/nebulant.dev)
+    - export CLOUDFLARE_ACCESS_KEY_ID=$(vault kv get -field="Builder assets generator access key id" secret/Develatio/Dev/Cloudflare/API/api-tokens)
+    - export CLOUDFLARE_SECRET_ACCESS_KEY=$(vault kv get -field="Builder assets generator secret access key" secret/Develatio/Dev/Cloudflare/API/api-tokens)
+    - export BUCKET=nebulant-dev-assets
+    - ./nebulant -x run ./r2upload.nbp --SOURCEPATH=./dist/ --DSTPATH=/releases/ --BUCKET=${DEPLOY_BUCKET}
   artifacts:
     paths:
       - dist/
