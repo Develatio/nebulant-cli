@@ -82,7 +82,7 @@ dev_gobuild_and_r2upload:
     - local
   script:
     - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"  
-    - apk update && apk add vault make
+    - apk update && apk add vault make git perl-utils
     - make buildall
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
     - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
@@ -105,7 +105,7 @@ prod_gobuild_and_r2upload:
     - local
   script:
     - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"  
-    - apk update && apk add vault
+    - apk update && apk add vault git perl-utils
     - make buildall
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
     - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
