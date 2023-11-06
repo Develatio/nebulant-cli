@@ -82,7 +82,7 @@ dev_gobuild_and_r2upload:
     - local
   script:
     - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"  
-    - apk update && apk add vault make git perl-utils
+    - apk update && apk add vault make git perl-utils libcap
     - make buildall
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
     - setcap -r /usr/bin/vault
@@ -106,7 +106,7 @@ prod_gobuild_and_r2upload:
     - local
   script:
     - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"  
-    - apk update && apk add vault git perl-utils
+    - apk update && apk add vault git perl-utils libcap
     - make buildall
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
     - setcap -r /usr/bin/vault
