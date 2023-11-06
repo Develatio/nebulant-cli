@@ -37,6 +37,7 @@ import (
 	"github.com/develatio/nebulant-cli/interactive"
 	"github.com/develatio/nebulant-cli/providers/aws"
 	"github.com/develatio/nebulant-cli/providers/azure"
+	"github.com/develatio/nebulant-cli/providers/cloudflare"
 	"github.com/develatio/nebulant-cli/providers/generic"
 	"github.com/develatio/nebulant-cli/providers/hetzner"
 	"github.com/develatio/nebulant-cli/subcom"
@@ -320,6 +321,7 @@ func main() {
 			cast.SBus.RegisterProviderInitFunc("azure", azure.New)
 			cast.SBus.RegisterProviderInitFunc("generic", generic.New)
 			cast.SBus.RegisterProviderInitFunc("hetzner", hetzner.New)
+			cast.SBus.RegisterProviderInitFunc("cloudflare", cloudflare.New)
 			blueprint.ActionValidators["providerValidator"] = func(action *blueprint.Action) error {
 				if _, err := cast.SBus.GetProviderInitFunc(action.Provider); err != nil {
 					return err
@@ -330,6 +332,7 @@ func main() {
 			blueprint.ActionValidators["azureValidator"] = azure.ActionValidator
 			blueprint.ActionValidators["genericsValidator"] = generic.ActionValidator
 			blueprint.ActionValidators["hetznerValidator"] = hetzner.ActionValidator
+			blueprint.ActionValidators["cloudflareValidator"] = cloudflare.ActionValidator
 		}
 
 		// finally run command
