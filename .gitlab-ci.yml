@@ -96,10 +96,6 @@ gobuild_and_r2upload:
     - export CLOUDFLARE_SECRET_ACCESS_KEY=$(vault kv get -field="Builder assets generator secret access key" secret/Develatio/Dev/Cloudflare/API/api-tokens)
     - export BUCKET=nebulant-dev-assets
     - ./nebulant -x run ./r2upload.nbp --SOURCEPATH=./dist/ --DSTPATH=/releases/ --BUCKET=${DEPLOY_BUCKET}
-  artifacts:
-    paths:
-      - dist/
-    expire_in: 1 week
   rules:
     - if: $CI_COMMIT_TAG && $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_TAG =~ /v\d\.\d.\d$/
       variables:
