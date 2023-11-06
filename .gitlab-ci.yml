@@ -3,7 +3,7 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Go.gitlab-ci.yml
 
-image: golang:1.21.1-alpine
+image: golang:1.21.1-alpine3.18
 
 variables:
   # Please edit to your GitLab project
@@ -81,7 +81,7 @@ dev_gobuild_and_r2upload:
     - local
   script:
     - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"  
-    - apk update && apk add vault
+    - apk update && apk add vault make
     - make buildall
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
     - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
