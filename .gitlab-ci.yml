@@ -8,6 +8,8 @@ image: golang:1.21
 variables:
   # Please edit to your GitLab project
   REPO_NAME: github.com/develatio/nebulant-cli
+  BUILD_BRANCH: "nightly"
+  DEPLOY_BUCKET: "nightly"
 
 # The problem is that to be able to use go get, one needs to put
 # the repository in the $GOPATH. So for example if your gitlab domain
@@ -22,9 +24,8 @@ before_script:
 
 stages:
   - analysis
-  # - analysis
-  # - build
-  # - deploy
+  - build
+  - deploy
 
 # unittest:
 #   stage: analysis
@@ -67,6 +68,37 @@ self:
     - if: '$CI_COMMIT_BRANCH == "master"'
       when: on_success
     - when: never
+
+build:
+  stage: analysis
+  tags:
+    - local
+  script:
+    - echo "build for ${BUILD_BRANCH} ${DEPLOY_BUCKET}"
+    - echo make buildall
+  rules:
+    - if: $CI_COMMIT_TAG && $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_TAG =~ /v\d\.\d.\d$/
+      variables:
+        BUILD_BRANCH: "release"
+        DEPLOY_BUCKET: "releases.nebulant.io"
+    - if: $CI_COMMIT_TAG && $CI_COMMIT_BRANCH == "develop" && $CI_COMMIT_TAG =~ /v\d\.\d.\d-rc.$/
+      variables:
+        BUILD_BRANCH: "pre-release"
+        DEPLOY_BUCKET: "releases.nebulant.dev"
+    - if: $CI_COMMIT_BRANCH == "develop"
+      when: manual
+
+deploy:
+  stage: analysis
+  tags:
+    - local
+  script:
+    - echo "deploy for ${BUILD_BRANCH} ${DEPLOY_BUCKET}"
+  rules:
+    - if: $CI_COMMIT_TAG && $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_TAG =~ /v\d\.\d.\d$/
+    - if: $CI_COMMIT_TAG && $CI_COMMIT_BRANCH == "develop" && $CI_COMMIT_TAG =~ /v\d\.\d.\d-rc.$/
+    - if: $CI_COMMIT_TAG && $CI_COMMIT_BRANCH == "develop"
+      when: manual
 
 # compile:
 #   stage: build
