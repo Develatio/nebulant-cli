@@ -85,7 +85,7 @@ dev_gobuild_and_r2upload:
     - apk update && apk add vault make git perl-utils libcap
     - make buildall
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
-    - setcap -r /usr/bin/vault
+    - setcap -r /usr/sbin/vault
     - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
     - export CLOUDFLARE_ACCOUNT_ID=$(vault kv get -field="accountid" secret/Nebulant/Dev/Cloudflare/API/nebulant.dev)
     - export CLOUDFLARE_ACCESS_KEY_ID=$(vault kv get -field="Builder assets generator access key id" secret/Develatio/Dev/Cloudflare/API/api-tokens)
@@ -109,7 +109,7 @@ prod_gobuild_and_r2upload:
     - apk update && apk add vault git perl-utils libcap
     - make buildall
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
-    - setcap -r /usr/bin/vault
+    - setcap -r /usr/sbin/vault
     - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
     - export CLOUDFLARE_ACCOUNT_ID=$(vault kv get -field="accountid" secret/Nebulant/Dev/Cloudflare/API/nebulant.io)
     - export CLOUDFLARE_ACCESS_KEY_ID=$(vault kv get -field="Builder assets generator access key id" secret/Develatio/Dev/Cloudflare/API/api-tokens)
