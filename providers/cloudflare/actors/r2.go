@@ -84,6 +84,7 @@ func (r *r2uploadonefile) upload() (*manager.UploadOutput, error) {
 		return nil, err
 	}
 	defer upfile.Close()
+	r.Logger.LogDebug(fmt.Sprintf("uploading file to bucket %s and key %v", r.Bucket, filepath.Join(r.Dst, rel)))
 	result, err := r.Uploader.Upload(context.TODO(), &s3.PutObjectInput{
 		Bucket: &r.Bucket,
 		Key:    aws.String(filepath.Join(r.Dst, rel)),
@@ -164,6 +165,7 @@ func R2Upload(ctx *ActionContext) (*base.ActionOutput, error) {
 			// walking. ww.close() will EOF the range
 			for wpath := range ww.paths {
 				ctx.Logger.LogInfo(fmt.Sprintf("uploading file %s", wpath))
+				r2up.Logger = ctx.Logger
 				r2up.Basepath = *upp.Src
 				r2up.Wpath = wpath
 				r2up.Dst = *upp.Dst
@@ -181,6 +183,7 @@ func R2Upload(ctx *ActionContext) (*base.ActionOutput, error) {
 			}
 		default:
 			// upload file
+			r2up.Logger = ctx.Logger
 			r2up.Basepath = filepath.Dir(*upp.Src)
 			r2up.Wpath = *upp.Src
 			r2up.Dst = *upp.Dst
