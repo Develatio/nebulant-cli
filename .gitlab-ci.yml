@@ -58,6 +58,7 @@ autotest:
   tags:
     - local
   script:
+    - apk update && apk add make
     - make builddebug
     - echo $BLUEPRINT >/tmp/blueprint.json
     - ./dist/nebulant-debug run /tmp/blueprint.json
