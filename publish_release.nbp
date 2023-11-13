@@ -2117,7 +2117,7 @@
         },
         "diagram_version": "1.0.2",
         "n_warnings": 0,
-        "n_errors": 1,
+        "n_errors": 0,
         "actions": [
             {
                 "action_id": "9de8a0c8-0fa5-4a5b-bdfb-ca2e1a1f841e",
