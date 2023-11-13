@@ -90,6 +90,9 @@ var SERVER_PORT = "15678"
 // AssetDescriptorURL conf
 var AssetDescriptorURL = "https://builder-assets.nebulant.io/assets.json"
 
+// UpdateDescriptorURL conf
+var UpdateDescriptorURL string = "https://releases.nebulant.io/version.json"
+
 // arg argv conf
 
 var ServerModeFlag *bool

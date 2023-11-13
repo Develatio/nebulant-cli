@@ -33,13 +33,17 @@ LOCALLDFLAGS = -X github.com/develatio/nebulant-cli/config.WSScheme=ws\
 	-X github.com/develatio/nebulant-cli/config.AccountURLDomain=account.nebulant.lc\
 	-X github.com/develatio/nebulant-cli/config.PanelURLDomain=panel.nebulant.lc\
 	-X github.com/develatio/nebulant-cli/config.FrontUrl=https://builder.nebulant.lc\
+	-X github.com/develatio/nebulant-cli/config.UpdateDescriptorURL=https://releases.nebulant.lc/version.json\
 	-X github.com/develatio/nebulant-cli/config.FrontOrigin=*\
 	-X github.com/develatio/nebulant-cli/config.AssetDescriptorURL=https://builder-assets.nebulant.dev/assets.json
 
 DEVLDFLAGS = -X github.com/develatio/nebulant-cli/config.WSScheme=wss\
 	-X github.com/develatio/nebulant-cli/config.BackendProto=https\
 	-X github.com/develatio/nebulant-cli/config.BackendURLDomain=api.nebulant.dev\
+	-X github.com/develatio/nebulant-cli/config.AccountURLDomain=account.nebulant.dev\
+	-X github.com/develatio/nebulant-cli/config.PanelURLDomain=panel.nebulant.dev\
 	-X github.com/develatio/nebulant-cli/config.FrontUrl=https://builder.nebulant.dev\
+	-X github.com/develatio/nebulant-cli/config.UpdateDescriptorURL=https://releases.nebulant.dev/version.json\
 	-X github.com/develatio/nebulant-cli/config.FrontOrigin=*\
 	-X github.com/develatio/nebulant-cli/config.AssetDescriptorURL=https://builder-assets.nebulant.dev/assets.json
 
@@ -74,7 +78,7 @@ run:
 
 .PHONY: rundev
 rundev:
-	go run -race -ldflags "$(LDFLAGS) $(DEVLDFLAGS)" nebulant.go $(ARGS)
+	go run -ldflags "$(LDFLAGS) $(DEVLDFLAGS)" nebulant.go $(ARGS)
 
 .PHONY: rundockerdev
 rundockerdev:
@@ -126,13 +130,13 @@ buildall:
 	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-openbsd-arm nebulant.go
 	shasum dist/$(CLIVERSION)/nebulant-openbsd-arm > dist/$(CLIVERSION)/nebulant-openbsd-arm.shasum
 	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-windows-386.exe nebulant.go
-	shasum dist/$(CLIVERSION)/nebulant-windows-386.exe > dist/$(CLIVERSION)/nebulant-windows-386.shasum
+	shasum dist/$(CLIVERSION)/nebulant-windows-386.exe > dist/$(CLIVERSION)/nebulant-windows-386.exe.shasum
 	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-windows-amd64.exe nebulant.go
-	shasum dist/$(CLIVERSION)/nebulant-windows-amd64.exe > dist/$(CLIVERSION)/nebulant-windows-amd64.shasum
+	shasum dist/$(CLIVERSION)/nebulant-windows-amd64.exe > dist/$(CLIVERSION)/nebulant-windows-amd64.exe.shasum
 	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-windows-arm64.exe nebulant.go
-	shasum dist/$(CLIVERSION)/nebulant-windows-arm64.exe > dist/$(CLIVERSION)/nebulant-windows-arm64.shasum
+	shasum dist/$(CLIVERSION)/nebulant-windows-arm64.exe > dist/$(CLIVERSION)/nebulant-windows-arm64.exe.shasum
 	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-windows-arm.exe nebulant.go
-	shasum dist/$(CLIVERSION)/nebulant-windows-arm.exe > dist/$(CLIVERSION)/nebulant-windows-arm.shasum
+	shasum dist/$(CLIVERSION)/nebulant-windows-arm.exe > dist/$(CLIVERSION)/nebulant-windows-arm.exe.shasum
 	GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-darwin-amd64 nebulant.go
 	shasum dist/$(CLIVERSION)/nebulant-darwin-amd64 > dist/$(CLIVERSION)/nebulant-darwin-amd64.shasum
 	GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/$(CLIVERSION)/nebulant-darwin-arm64 nebulant.go
