@@ -92,7 +92,7 @@ dev_gobuild_and_r2upload:
     - export CLOUDFLARE_SECRET_ACCESS_KEY=$(vault kv get -field="Builder assets generator secret access key" secret/Develatio/Dev/Cloudflare/API/api-tokens)
     - export VERSION_NUMBER=$(./nebulant -v | head -n 1)
     - export VERSION_DATE=$(git log -1 --date=format:'%Y/%m/%d' --format=%cd)
-    - ./nebulant -x run ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH=/ --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=cli-releases.nebulant.dev
+    - ./nebulant -x run ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=releases.nebulant.dev
   rules:
     - if: $CI_COMMIT_TAG && $CI_COMMIT_BRANCH == "develop" && $CI_COMMIT_TAG =~ /v\d\.\d.\d-rc.$/
       variables:
