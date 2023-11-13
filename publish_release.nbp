@@ -2188,7 +2188,7 @@
                 "action": "write_file",
                 "parameters": {
                     "interpolate": true,
-                    "content": "{\n    \"versions\": {\n        \"latest\": {\n            \"version\": \"{{ VERSION_NUMBER }}\",\n            \"date\": \"{{ VERSION_DATE }}\",\n            \"url\": \"https://{{ URL_DOMAIN }}/1.0.1/nebulant-{OS}-{ARCH}{EXE}\",\n            \"checksum\": \"{URL}.checksum\"\n        }\n    }\n}\n",
+                    "content": "{\n    \"versions\": {\n        \"latest\": {\n            \"version\": \"{{ VERSION_NUMBER }}\",\n            \"date\": \"{{ VERSION_DATE }}\",\n            \"url\": \"https://{{ URL_DOMAIN }}/{{ VERSION_NUMBER}} /nebulant-{OS}-{ARCH}{EXE}\",\n            \"checksum\": \"{URL}.checksum\"\n        }\n    }\n}\n",
                     "file_path": "./dist/version.json",
                     "_maxRetries": 5
                 },

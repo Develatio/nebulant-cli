@@ -37,7 +37,7 @@ func UpdateCmd() (int, error) {
 		return 1, err
 	}
 
-	err = update.UpdateCLI("1")
+	err = update.UpdateCLI("latest")
 	if err != nil {
 		return 1, err
 	}

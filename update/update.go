@@ -54,10 +54,10 @@ func UpdateCLI(version string) error {
 	defer os.RemoveAll(dir)
 
 	// download update descriptor
-	upfilepath := filepath.Join(dir, "update.json")
+	upfilepath := filepath.Join(dir, "version.json")
 	err = downloader.DownloadFileWithProgressBar(config.UpdateDescriptorURL, upfilepath, "Checking for update...")
 	if err != nil {
-		return err
+		return errors.Join(err, fmt.Errorf("cannot check for %s", config.UpdateDescriptorURL))
 	}
 
 	// unmarshall update descriptor file
@@ -89,7 +89,7 @@ func UpdateCLI(version string) error {
 	nebulantBinNew := filepath.Join(dir, "nebulant")
 	err = downloader.DownloadFileWithProgressBar(downurl, nebulantBinNew, fmt.Sprintf("Downloading %v...", newVersion.Version))
 	if err != nil {
-		return err
+		return errors.Join(err, fmt.Errorf("cannot download %s", downurl))
 	}
 
 	// get current bin
