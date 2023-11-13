@@ -120,7 +120,7 @@ func UpdateCLI(version string) error {
 		return err
 	}
 
-	err = os.Chmod(dstFilePath, 0755)
+	err = os.Chmod(dstFilePath, 0755) // #nosec G302 -- Here +x is needed
 	if err != nil {
 		err2 := os.Rename(oldFilePath, dstFilePath)
 		if err2 != nil {
