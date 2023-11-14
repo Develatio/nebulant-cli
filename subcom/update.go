@@ -24,8 +24,17 @@ import (
 	"github.com/develatio/nebulant-cli/update"
 )
 
+var forceupdate *bool
+
 func parseUpdate() (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("update", flag.ExitOnError)
+	forceupdate = fs.Bool("f", false, "force update")
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "\nUsage: nebulant update [options]\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
+		PrintDefaults(fs)
+		fmt.Fprintf(fs.Output(), "\n\n")
+	}
 	err := fs.Parse(flag.Args()[1:])
 	if err != nil {
 		return fs, err
@@ -39,7 +48,7 @@ func UpdateCmd() (int, error) {
 		return 1, err
 	}
 
-	out, err := update.UpdateCLI("latest", false)
+	out, err := update.UpdateCLI("latest", *forceupdate)
 	if err != nil {
 		if _, ok := err.(*update.AlreadyUpToDateError); ok {
 			cast.LogInfo("Already up to date", nil)
