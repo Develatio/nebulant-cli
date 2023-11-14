@@ -110,7 +110,7 @@ prod_gobuild_and_r2upload:
     - local
   script:
     - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"  
-    - apk update && apk add vault git perl-utils libcap
+    - apk update && apk add vault make git perl-utils libcap
     - make buildall
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
     - setcap -r /usr/sbin/vault
@@ -126,6 +126,7 @@ prod_gobuild_and_r2upload:
       variables:
         BUILD_BRANCH: "release"
         DEPLOY_BUCKET: "nebulant-io-cli-releases"
+      when: manual
 
 # r2upload:
 #   stage: deploy
