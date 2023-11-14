@@ -21,13 +21,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/util"
 )
 
 // FindImages func
 func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DescribeImagesInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {

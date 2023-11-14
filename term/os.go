@@ -25,6 +25,11 @@ import (
 	"github.com/manifoldco/promptui"
 )
 
+// from readline.std_windows.go
+// Stdin = NewRawReader()
+// Stdout = NewANSIWriter(Stdout)
+// Stderr = NewANSIWriter(Stderr)
+
 var Stdout = readline.Stdout
 var Stderr = readline.Stderr
 var Stdin = readline.Stdin

@@ -24,13 +24,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
+	"github.com/develatio/nebulant-cli/util"
 )
 
 // FindVolumes func
 func FindVolumes(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DescribeVolumesInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {
@@ -80,7 +81,7 @@ func FindOneVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 // CreateVolume func
 func CreateVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	awsinput := new(ec2.CreateVolumeInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
@@ -140,7 +141,7 @@ func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	svc := ctx.NewEC2Client()
 
 	awsinput := new(ec2.AttachVolumeInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)
@@ -189,7 +190,7 @@ func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 func DetachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DetachVolumeInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {
@@ -215,7 +216,7 @@ func DetachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DeleteVolumeInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	internalparams := new(blueprint.InternalParameters)

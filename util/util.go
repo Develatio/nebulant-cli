@@ -17,8 +17,14 @@
 package util
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
+	"io"
+	"os"
 	"os/exec"
+	"reflect"
 	"runtime"
 
 	"github.com/go-playground/validator/v10"
@@ -35,11 +41,25 @@ func UnmarshalValidJSON(data []byte, v interface{}) error {
 	if jsonErr != nil {
 		return jsonErr
 	}
+
+	// json tag validator
 	validate := validator.New()
 	vErr := validate.Struct(v)
 	if vErr != nil {
 		return vErr
 	}
+
+	// Validate()
+	vvv := reflect.TypeOf(v)
+	_, validable := vvv.MethodByName("Validate")
+	if validable {
+		ret := reflect.ValueOf(v).MethodByName("Validate").Call([]reflect.Value{})
+		switch ret[0].Interface().(type) {
+		case error:
+			return ret[0].Interface().(error)
+		}
+	}
+
 	return nil
 }
 
@@ -58,11 +78,36 @@ func OpenUrl(url string) error {
 	case "darwin":
 		cmd = exec.Command("open", url)
 	case "windows":
-		cmd = exec.Command("start", url)
+		cmd = exec.Command("cmd", "/c", "start", url)
 	default:
 		exec.Command("xdg-open", url)
 	}
 	return cmd.Run()
+}
+
+func Sha1SumOfFile(filepath string) ([]byte, error) {
+	// check for sum
+	f, err := os.Open(filepath) // #nosec G304 -- Not a file inclusion, just file read
+	if err != nil {
+		return nil, err
+	}
+	// ensure close
+	defer f.Close()
+	h := sha256.New()
+	_, err = io.Copy(h, f)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(fmt.Sprintf("%x", h.Sum(nil))), nil
+}
+
+func ReadChecksumFile(filepath string) ([]byte, error) {
+	_hhc, err := os.ReadFile(filepath) // #nosec G304 -- Not a file inclusion, just file read
+	if err != nil {
+		return nil, err
+	}
+	sum, _, _ := bytes.Cut([]byte(_hhc), []byte(" "))
+	return sum, nil
 }
 
 type PanicData struct {

@@ -19,6 +19,7 @@ package actors
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -61,25 +62,36 @@ func (d *defineVarsParametersVar) askForValue() error {
 	v := reflect.ValueOf(d.Value)
 	isEmpty := v.Kind() == reflect.Ptr && v.IsNil()
 	isNotValid := !v.IsValid()
-	if d.AskAtRuntime != nil && *d.AskAtRuntime && (isEmpty || isNotValid) && d.Required {
+	if d.AskAtRuntime != nil && *d.AskAtRuntime {
 		lin := term.AppendLine()
+		defer lin.Close()
 		var err error
 		switch *d.Type {
 		case VarTypeString:
 			var vv string
-			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", &vv)
+			var def []byte
+			if !isEmpty && !isNotValid {
+				def = []byte(d.Value.(string))
+			}
+			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", def, &vv)
+			d.Value = vv
 			if err != nil {
 				return err
 			}
-			d.Value = vv
+
 		case VarTypeInt:
 			var vv int
-			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", &vv)
+			if !isEmpty && !isNotValid {
+				vv = d.Value.(int)
+			}
+			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", nil, &vv)
+			d.Value = vv
 			if err != nil {
 				return err
 			}
-			d.Value = vv
 		case VarTypeSelectableStatic:
+			// TODO: test if there is value
+			// selected and mark option acordingly
 			var options []string
 			for _, obj := range d.Options {
 				options = append(options, obj.Label)
@@ -101,7 +113,7 @@ func (d *defineVarsParametersVar) askForValue() error {
 		// if err != nil {
 		// 	return err
 		// }
-		err = term.DeleteLine(lin)
+		err = lin.Close()
 		if err != nil {
 			return err
 		}
@@ -472,15 +484,14 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	// validate var type/value
 	for _, v := range params.Vars {
+		// dont care here preset value,
+		// it will be setted by user at runtime
+		if v.AskAtRuntime != nil && *v.AskAtRuntime {
+			continue
+		}
 		if v.Type == nil {
 			v.Type = new(VarType)
 			*v.Type = VarTypeString
-		}
-		if ctx.Rehearsal {
-			err := v.askForValue()
-			if err != nil {
-				return nil, err
-			}
 		}
 		// test type
 		switch *v.Type {
@@ -512,60 +523,83 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	for _, v := range params.Vars {
 		// ask for value as needed
-		err := v.askForValue()
-		if err != nil {
-			return nil, err
+		for {
+			err := v.askForValue()
+			if err != nil && err == io.EOF {
+				if v.Required {
+					switch v.Value.(type) {
+					case nil:
+						ctx.Logger.LogWarn("var " + v.Key + " is required and cannot be null")
+						continue
+					case string:
+						if v.Value == "" {
+							ctx.Logger.LogWarn("var " + v.Key + " is required and cannot be empty")
+							continue
+						}
+					}
+				} else {
+					switch v.Value.(type) {
+					case nil:
+						ctx.Logger.LogWarn("var " + v.Key + " is null and NOT required. Be catious")
+					case string:
+						if v.Value == "" {
+							ctx.Logger.LogWarn("var " + v.Key + " is empty and NOT required. Be catious")
+						}
+					}
+					break
+				}
+			} else if err != nil {
+				return nil, err
+			}
+			break
 		}
 
 		var recordvalue interface{}
 		varname := v.Key
 		ctx.Logger.LogInfo("Setting var " + varname)
 
-		switch *v.Type {
-		case VarTypeString:
-			varvalue := v.Value.(string)
-			err := ctx.Store.Interpolate(&varvalue)
-			if err != nil {
-				return nil, err
-			}
-			varvalue = strings.Replace(varvalue, "\\{", "{", -1)
-			varvalue = strings.Replace(varvalue, "\\}", "}", -1)
-			recordvalue = varvalue
-		default:
-			recordvalue = v.Value
-		}
-
-		if v.Stack != nil && *v.Stack {
-			var newstackitems []interface{}
-			if ctx.Store.ExistsRefName(varname) {
-				sr, err := ctx.Store.GetByRefName(varname)
+		switch v.Value.(type) {
+		case string:
+			switch *v.Type {
+			case VarTypeString:
+				varvalue := v.Value.(string)
+				err := ctx.Store.Interpolate(&varvalue)
 				if err != nil {
 					return nil, err
 				}
-
-				if _, ok := sr.Value.(*base.StorageRecordStack); ok {
-					newstackitems = append(newstackitems, recordvalue)
-					newstackitems = append(newstackitems, sr.Value.(*base.StorageRecordStack).Items...)
-				} else {
-					newstackitems = []interface{}{recordvalue, sr.Value}
-				}
-			} else {
-				newstackitems = []interface{}{recordvalue}
+				varvalue = strings.Replace(varvalue, "\\{", "{", -1)
+				varvalue = strings.Replace(varvalue, "\\}", "}", -1)
+				recordvalue = varvalue
+			default:
+				recordvalue = v.Value
 			}
-			recordvalue = &base.StorageRecordStack{
-				Items: newstackitems,
+		case nil:
+			recordvalue = nil
+			ctx.Logger.LogDebug("var " + v.Key + " is null and cannot be interpolated")
+		}
+
+		if v.Stack != nil && *v.Stack {
+			err := ctx.Store.Push(&base.StorageRecord{
+				RefName: varname,
+				Aout:    nil,
+				Value:   recordvalue,
+				Action:  ctx.Action,
+			}, ctx.Action.Provider)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			err := ctx.Store.Insert(&base.StorageRecord{
+				RefName: varname,
+				Aout:    nil,
+				Value:   recordvalue,
+				Action:  ctx.Action,
+			}, ctx.Action.Provider)
+			if err != nil {
+				return nil, err
 			}
 		}
 
-		err = ctx.Store.Insert(&base.StorageRecord{
-			RefName: varname,
-			Aout:    nil,
-			Value:   recordvalue,
-			Action:  ctx.Action,
-		}, ctx.Action.Provider)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	// if params has .Files, we should read those files

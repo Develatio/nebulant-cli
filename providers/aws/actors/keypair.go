@@ -22,13 +22,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/util"
 )
 
 // FindKeyPairs func
 func FindKeyPairs(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DescribeKeyPairsInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {
@@ -93,7 +94,7 @@ func FindOneKeyPair(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteKeyPair(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DeleteKeyPairInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {

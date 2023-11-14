@@ -25,14 +25,13 @@ package actors
 
 import (
 	"fmt"
-	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/develatio/nebulant-cli/base"
 	nebulantssh "github.com/develatio/nebulant-cli/netproto/ssh"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/povsister/scp"
-	"golang.org/x/crypto/ssh"
 )
 
 type scpCopyParametersPath struct {
@@ -43,77 +42,9 @@ type scpCopyParametersPath struct {
 }
 
 type scpCopyParameters struct {
-	Source               *string                 `json:"source"`
-	Target               *string                 `json:"target"`
-	Port                 uint16                  `json:"port"`
-	Paths                []scpCopyParametersPath `json:"paths" validate:"required"`
-	Username             *string                 `json:"username" validate:"required"`
-	PrivateKeyPath       *string                 `json:"privkeyPath"`
-	PrivateKeyPassphrase *string                 `json:"passphrase"`
-	PrivateKey           *string                 `json:"privkey"`
-	Password             *string                 `json:"password"`
-}
-
-func getSshConfig(params *scpCopyParameters) (*ssh.ClientConfig, error) {
-	var err error
-	sshConfig := &ssh.ClientConfig{
-		User: *params.Username,
-		//#nosec G106 -- Allow config this? Hacker comunity feedback needed.
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
-	if len(params.Paths) <= 0 {
-		return nil, fmt.Errorf("please set source and destination paths")
-	}
-
-	if params.PrivateKeyPath != nil {
-		var key []byte
-		key, err = ioutil.ReadFile(*params.PrivateKeyPath)
-		if err != nil {
-			return nil, err
-		}
-		// Create the Signer for this private key.
-		var signer ssh.Signer
-		if params.PrivateKeyPassphrase != nil {
-			signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(*params.PrivateKeyPassphrase))
-		} else {
-			signer, err = ssh.ParsePrivateKey(key)
-		}
-		if err != nil {
-			return nil, err
-		}
-		sshConfig.Auth = []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		}
-	} else if params.PrivateKey != nil {
-		// Create the Signer for this private key.
-		var signer ssh.Signer
-		if params.PrivateKeyPassphrase != nil {
-			signer, err = ssh.ParsePrivateKeyWithPassphrase([]byte(*params.PrivateKey), []byte(*params.PrivateKeyPassphrase))
-		} else {
-			signer, err = ssh.ParsePrivateKey([]byte(*params.PrivateKey))
-		}
-		if err != nil {
-			return nil, err
-		}
-		sshConfig.Auth = []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		}
-	} else if params.Password != nil {
-		sshConfig.Auth = []ssh.AuthMethod{
-			ssh.Password(*params.Password),
-		}
-	} else {
-		// Use ssh agent for auth
-		sshAgent, err := nebulantssh.GetSSHAgentClient()
-		if err != nil {
-			return nil, err
-		}
-		sshConfig.Auth = []ssh.AuthMethod{
-			ssh.PublicKeysCallback(sshAgent.Signers),
-		}
-	}
-	return sshConfig, nil
+	nebulantssh.ClientConfigParameters
+	Source *string                 `json:"source"`
+	Paths  []scpCopyParametersPath `json:"paths" validate:"required"`
 }
 
 func RemoteCopy(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -170,18 +101,79 @@ func ScpCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	ctx.Logger.LogDebug("Connecting to " + *remoteAddress + " to upload files...")
 
-	sshConfig, sshConfErr := getSshConfig(params)
-	if sshConfErr != nil {
-		return nil, sshConfErr
+	var proxies []*nebulantssh.ClientConfigParameters
+	for _, prx := range params.Proxies {
+		raddr := prx.Target
+		err = ctx.Store.Interpolate(raddr)
+		if err != nil {
+			return nil, err
+		}
+		if strings.Trim(*raddr, " ") == "" {
+			return nil, fmt.Errorf("the proxy target addr is empty. Please provide one")
+		}
+		proxies = append(proxies, &nebulantssh.ClientConfigParameters{
+			Target:               raddr,
+			Port:                 prx.Port,
+			Username:             prx.Username,
+			PrivateKey:           prx.PrivateKey,
+			PrivateKeyPath:       prx.PrivateKeyPath,
+			PrivateKeyPassphrase: prx.PrivateKeyPassphrase,
+			Password:             prx.Password,
+			Proxies:              prx.Proxies,
+		})
 	}
 
-	port := "22"
-	if params.Port != 0 {
-		port = fmt.Sprintf("%d", params.Port)
+	sshClient := nebulantssh.NewSSHClient()
+	mainclient := sshClient
+	out := make(chan bool)
+	defer func() {
+		err := mainclient.Disconnect()
+		if err != nil {
+			ctx.Logger.LogWarn(err.Error())
+		}
+		out <- true
+	}()
+	mainClientEvents := sshClient.Events
+	go func() {
+	L1:
+		for {
+			select {
+			case evt := <-mainClientEvents:
+				addr := evt.SSHClient.DialAddr
+				if evt.Type == nebulantssh.SSHClientEventMasterClosed {
+					ctx.Logger.LogDebug(fmt.Sprintf("SCP Closing %v...", addr))
+					break L1
+				}
+				if evt.Type == nebulantssh.SSHClientEventDialing {
+					ctx.Logger.LogDebug(fmt.Sprintf("SCP Dialing %v...", addr))
+				}
+				if evt.Type == nebulantssh.SSHClientEventClosed {
+					ctx.Logger.LogDebug(fmt.Sprintf("SCP Closing %v...", addr))
+				}
+			case <-out:
+				ctx.Logger.LogDebug("Should out from go routine")
+				break L1
+			default:
+				ctx.Logger.LogDebug("Waiting scp event...")
+				time.Sleep(200000 * time.Microsecond)
+			}
+		}
+	}()
+	sshClient, err = sshClient.DialWithProxies(&nebulantssh.ClientConfigParameters{
+		Target:               remoteAddress,
+		Port:                 params.Port,
+		Username:             params.Username,
+		PrivateKey:           params.PrivateKey,
+		PrivateKeyPath:       params.PrivateKeyPath,
+		PrivateKeyPassphrase: params.PrivateKeyPassphrase,
+		Password:             params.Password,
+		Proxies:              proxies,
+	})
+	if err != nil {
+		return nil, err
 	}
-	*remoteAddress = *remoteAddress + ":" + port
 
-	scpClient, err := scp.NewClient(*remoteAddress, sshConfig, &scp.ClientOption{})
+	scpClient, err := sshClient.NewSCPClientFromExistingSSH()
 	if err != nil {
 		return nil, err
 	}
@@ -195,6 +187,7 @@ func ScpCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 				copyErr = scpClient.CopyDirToRemote(*params.Paths[i].Src, *params.Paths[i].Dst, &scp.DirTransferOption{})
 			} else {
 				copyErr = scpClient.CopyFileToRemote(*params.Paths[i].Src, *params.Paths[i].Dst, &scp.FileTransferOption{})
+				ctx.Logger.LogDebug("Done upload")
 			}
 		} else {
 			ctx.Logger.LogInfo("Downloading " + *remoteAddress + ":" + *params.Paths[i].Src + " to " + *params.Paths[i].Dst + " ...")
@@ -209,5 +202,6 @@ func ScpCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
+	ctx.Logger.LogDebug("Done SCP")
 	return nil, nil
 }

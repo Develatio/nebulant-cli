@@ -10,12 +10,11 @@
 //
 // I'll keep this bug open to document that it's frozen though.
 // We'll fix bugs but not add features.
-//
 package smtp
 
 import (
 	"crypto/hmac"
-	"crypto/md5" //#nosec G501-- weak, but needed
+	"crypto/md5" // #nosec G501-- weak, but needed
 	"errors"
 	"fmt"
 )
@@ -78,7 +77,7 @@ func (a *plainAuth) Start(server *ServerInfo) (string, []byte, error) {
 		return "", nil, errors.New("unencrypted connection")
 	}
 	if server.Name != a.host {
-		return "", nil, errors.New("wrong host name")
+		return "", nil, errors.New("wrong host name " + server.Name + " != " + a.host)
 	}
 	resp := []byte(a.identity + "\x00" + a.username + "\x00" + a.password)
 	return "PLAIN", resp, nil

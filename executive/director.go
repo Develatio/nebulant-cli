@@ -166,6 +166,7 @@ L:
 			delete(d.managers, manager)
 			delete(d.managersByIRB, irb)
 			if len(d.managers) <= 0 && !d.serverMode {
+				d.Clean()
 				d.ExitCode = exitCode
 				break L
 			}

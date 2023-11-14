@@ -69,24 +69,13 @@ func DefaultOnActionErrorHook(ctx *ProviderHookContext, aout *base.ActionOutput)
 		*ctx.MaxRetries = *aout.Action.MaxRetries
 	}
 	if retries_count < *ctx.MaxRetries {
-		if retries_count > *ctx.MaxRetries || (retries_count > 0 && aout.Action.NextAction.NextKoLoop) {
-			ctx.Logger.LogDebug("Ending retry process...")
-			// retry process end, reset retry status
-			ctx.Store.SetPrivateVar(retries_count_id, 0)
-			// returning nil, nil to stop hook callback
-			return nil, nil
-		}
 		retries_count++
 		ctx.Store.SetPrivateVar(retries_count_id, retries_count)
 		seconds := int64(1)
 		if !skipSleep {
 			seconds = int64(10.0 * math.Pow(float64(retries_count), (1.0/4.0)))
 		}
-		if aout.Action.NextAction.NextKoLoop {
-			ctx.Logger.LogWarn(fmt.Sprintf("Action Error. Retrying after %vs. There is a loop over KO, limiting the retries to only one...", seconds))
-		} else {
-			ctx.Logger.LogWarn(fmt.Sprintf("Action Error. Retrying after %vs (Retry %d/%d)...", seconds, retries_count, *ctx.MaxRetries))
-		}
+		ctx.Logger.LogWarn(fmt.Sprintf("Action Error. Retrying after %vs (Retry %d/%d)...", seconds, retries_count, *ctx.MaxRetries))
 
 		// TODO: move the hot-sleep-action-creation
 		// to something like providers.generic.NewSleepAction()?
@@ -94,7 +83,7 @@ func DefaultOnActionErrorHook(ctx *ProviderHookContext, aout *base.ActionOutput)
 		// stay here forever hahahaha, laugh with me..., I mean with
 		// you..., I mean with both..., sh*t I'm going crazy.
 		rand.Seed(time.Now().UnixNano())
-		randIntString := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
+		randIntString := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
 		actions := []*blueprint.Action{
 			{
 				ActionID: sleepIdPrefix + randIntString,

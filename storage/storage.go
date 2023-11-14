@@ -19,6 +19,7 @@ package storage
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -218,6 +219,48 @@ func (s *Store) GetActionOutputByActionID(actionID *string) (*base.ActionOutput,
 		return aout, nil
 	}
 	return nil, fmt.Errorf("output action by id does not exists")
+}
+
+func (s *Store) Push(sr *base.StorageRecord, providerPrefix string) error {
+	var items []interface{}
+	newitem := sr.Value
+
+	if s.ExistsRefName(sr.RefName) {
+		// get current storage record
+		csr, err := s.GetByRefName(sr.RefName)
+		if err != nil {
+			return err
+		}
+
+		if _, ok := csr.Value.(*base.StorageRecordStack); ok {
+			// previous stacked var value, append new item
+			items = append(items, newitem)
+			items = append(items, csr.Value.(*base.StorageRecordStack).Items...)
+		} else {
+			// previous non-stacked var value, convert into array
+			items = []interface{}{newitem, csr.Value}
+		}
+	} else {
+		// no previous var, create new one
+		items = []interface{}{newitem}
+	}
+
+	// build record stack
+	recordstack := &base.StorageRecordStack{
+		Items: items,
+	}
+
+	// insert record (override previous if exists)
+	err := s.Insert(&base.StorageRecord{
+		RefName: sr.RefName,
+		Aout:    sr.Aout,
+		Value:   recordstack,
+		Action:  sr.Action,
+	}, providerPrefix)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Insert func
@@ -543,14 +586,14 @@ func (s *Store) DumpValuesToShellFile() (*os.File, error) {
 	}
 	if _, err := f.Write([]byte("# nebulant shell vars\ndeclare -A NEBULANT\n")); err != nil {
 		if err2 := f.Close(); err2 != nil {
-			return nil, fmt.Errorf(err.Error() + " " + err2.Error())
+			return nil, errors.Join(err, err2)
 		}
 		return nil, err
 	}
 	for path, value := range vars {
 		if _, err := f.Write([]byte("NEBULANT[" + path + "]=$( cat <<EOF\n" + value + "\nEOF\n)\n")); err != nil {
 			if err2 := f.Close(); err2 != nil {
-				return nil, fmt.Errorf(err.Error() + " " + err2.Error())
+				return nil, errors.Join(err, err2)
 			}
 			return nil, err
 		}

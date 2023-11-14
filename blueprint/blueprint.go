@@ -20,14 +20,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/util"
@@ -128,12 +127,12 @@ func TestMinCliVersion(bp *Blueprint) error {
 
 // NewFromFile func
 func NewFromFile(path string) (*Blueprint, error) {
-	jsonFile, err := os.Open(path) //#nosec G304 -- Not a file inclusion, just a json read
+	jsonFile, err := os.Open(path) // #nosec G304 -- Not a file inclusion, just a json read
 	if err != nil {
 		return nil, err
 	}
 	defer jsonFile.Close()
-	byteValue, _ := ioutil.ReadAll(jsonFile)
+	byteValue, _ := io.ReadAll(jsonFile)
 	wrap := &wrappedBlueprint{}
 	if err := json.Unmarshal(byteValue, wrap); err != nil {
 		return nil, err
@@ -146,8 +145,9 @@ func NewFromFile(path string) (*Blueprint, error) {
 		return nil, err
 	}
 	if bp.ExecutionUUID == nil || *bp.ExecutionUUID == "" {
-		rand.Seed(time.Now().UnixNano())
-		randIntString := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
+		// rand.Seed is deprecated: As of Go 1.20 there is no reason to call Seed with a random value
+		// rand.Seed(time.Now().UnixNano())
+		randIntString := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
 		bp.ExecutionUUID = &randIntString
 	}
 	bp.Raw = &byteValue
@@ -182,15 +182,14 @@ func NewFromBuilder(data []byte) (*Blueprint, error) {
 	}
 	bp.ExecutionUUID = wrap.ExecutionUUID
 	if bp.ExecutionUUID == nil || *bp.ExecutionUUID == "" {
-		rand.Seed(time.Now().UnixNano())
-		randIntString := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
+		randIntString := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
 		bp.ExecutionUUID = &randIntString
 	}
 
 	return &bp, nil
 }
 
-func NewIRBFromAny(any string) (*IRBlueprint, error) {
+func NewIRBFromAny(any string, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	var bp *Blueprint
 	var err error
 	if len(any) > 11 && any[:11] == "nebulant://" {
@@ -204,7 +203,7 @@ func NewIRBFromAny(any string) (*IRBlueprint, error) {
 			return nil, err
 		}
 	}
-	irb, err := GenerateIRB(bp, &IRBGenConfig{})
+	irb, err := GenerateIRB(bp, irbConf)
 	if err != nil {
 		return nil, err
 	}
@@ -213,8 +212,8 @@ func NewIRBFromAny(any string) (*IRBlueprint, error) {
 
 // NewFromBackend func
 func NewFromBackend(path string) (*Blueprint, error) {
-	if config.CREDENTIALS.AuthToken == nil {
-		return nil, fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET env vars")
+	if config.CREDENTIAL.AuthToken == nil {
+		return nil, fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token")
 	}
 
 	url := url.URL{Scheme: config.BackendProto, Host: config.BackendURLDomain, Path: "/apiv1/cli/" + path}
@@ -226,16 +225,19 @@ func NewFromBackend(path string) (*Blueprint, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", *config.CREDENTIALS.AuthToken)
+	jar, err := config.Login(nil)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{Jar: jar}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	rawbody, _ := ioutil.ReadAll(resp.Body)
+	rawbody, _ := io.ReadAll(resp.Body)
 	body := &wrappedBlueprint{}
 	if resp.StatusCode != http.StatusOK {
 		if body.Detail != "" {
@@ -257,6 +259,33 @@ func NewFromBackend(path string) (*Blueprint, error) {
 	return bp, nil
 }
 
+func ParseBPArgs(args []string) ([]*IRBArg, error) {
+	var parsed []*IRBArg
+	for _, arg := range args {
+		_arg, found := strings.CutPrefix(arg, "--")
+		if !found {
+			_arg, found = strings.CutPrefix(arg, "-")
+			if !found {
+				return nil, fmt.Errorf("malformed var name %v. Please prefix var names with one (-) or two (--) dashes. Example: --varname=value", arg)
+			}
+		}
+		sepidx := strings.Index(_arg, "=")
+		if sepidx == -1 || sepidx+1 == len(_arg) {
+			parsed = append(parsed, &IRBArg{Name: strings.TrimSuffix(_arg, "="), Value: ""})
+			continue
+		}
+		parsed = append(parsed, &IRBArg{Name: _arg[:sepidx], Value: _arg[sepidx+1:]})
+	}
+
+	return parsed, nil
+}
+
+// IRBArg struct. Represent parsed blueprint cli args
+type IRBArg struct {
+	Name  string
+	Value string
+}
+
 // IRBlueprint struct. Intermediate Representation Blueprint. Precompiler.
 type IRBlueprint struct {
 	BP            *Blueprint
@@ -265,11 +294,13 @@ type IRBlueprint struct {
 	JoinThreadPoints map[string]*Action
 	Actions          map[string]*Action
 	StartAction      *Action
+	Args             []*IRBArg
 }
 
 // IRBGenConfig struct
 type IRBGenConfig struct {
 	AllowResultReturn bool
+	Args              []string
 	// Not implemented
 	// PreventLoop       bool
 }
@@ -316,7 +347,7 @@ func (ies IRBErrors) Error() string {
 // GenerateIRB func
 func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	if bp.BuilderErrors > 0 {
-		return nil, fmt.Errorf("sorry, I'm not going to run this blueprint because it contains " + fmt.Sprintf("%v", bp.BuilderErrors) + " errors from the builder")
+		return nil, fmt.Errorf("Refusing to run this blueprint as it contains " + fmt.Sprintf("%v", bp.BuilderErrors) + " errors")
 	}
 	var errors IRBErrors
 	irb := &IRBlueprint{
@@ -329,6 +360,13 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	if err != nil {
 		errors = append(errors, &iRBError{wErr: err})
 	}
+
+	// parse cli args
+	pargs, err := ParseBPArgs(irbConf.Args)
+	if err != nil {
+		return nil, err
+	}
+	irb.Args = pargs
 
 	irb.ExecutionUUID = bp.ExecutionUUID
 
@@ -421,7 +459,7 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	// 	lin.Scanln("Enter value for var: ", &first)
 	// 	// fmt.Println("Var setted to: ", first)
 	// 	lin.Write([]byte("var setted to " + first))
-	// 	err = term.DeleteLine(lin)
+	// 	err = lin.Close()
 	// 	if err != nil {
 	// 		panic("there is a problem with the terminal")
 	// 	}

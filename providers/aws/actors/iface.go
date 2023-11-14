@@ -21,13 +21,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/util"
 )
 
 // FindNetworkInterfaces func
 func FindNetworkInterfaces(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DescribeNetworkInterfacesInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {
@@ -77,7 +78,7 @@ func FindNetworkInterface(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteNetworkInterface(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	awsinput := new(ec2.DeleteNetworkInterfaceInput)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {

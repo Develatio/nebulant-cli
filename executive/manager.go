@@ -27,6 +27,7 @@ import (
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
+	"github.com/develatio/nebulant-cli/ipc"
 	"github.com/develatio/nebulant-cli/storage"
 	"github.com/develatio/nebulant-cli/util"
 )
@@ -191,7 +192,52 @@ func (m *Manager) Run() error {
 	if m.IRB.StartAction == nil {
 		return fmt.Errorf("[Manager] First action id not found")
 	}
-	m.RunStages([]*Stage{NewStage(m, storage.NewStore(), m.IRB.StartAction)})
+
+	// conf ipcs server
+	ipcs, err := ipc.NewIPCServer()
+	if err != nil {
+		return err
+	}
+	go func() {
+		err := ipcs.Accept()
+		if err != nil {
+			m.Logger.LogErr(err.Error())
+		}
+	}()
+	defer ipcs.Close()
+
+	// init store
+	st := storage.NewStore()
+
+	// set ipcs into store
+	st.SetPrivateVar("IPCS", ipcs)
+
+	// set vars from cli args
+	for _, irbarg := range m.IRB.Args {
+		if st.ExistsRefName(irbarg.Name) {
+			err := st.Push(&base.StorageRecord{
+				RefName: irbarg.Name,
+				Aout:    nil,
+				Value:   irbarg.Value,
+				Action:  nil,
+			}, "")
+			if err != nil {
+				return err
+			}
+		} else {
+			err := st.Insert(&base.StorageRecord{
+				RefName: irbarg.Name,
+				Aout:    nil,
+				Value:   irbarg.Value,
+				Action:  nil,
+			}, "")
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	m.RunStages([]*Stage{NewStage(m, st, m.IRB.StartAction)})
 	cast.PushEvent(cast.EventManagerStarted, m.ExecutionUUID)
 	m.internalRegistry.SetManagerState(cast.EventManagerStarted)
 	m.ExternalRegistry.SetManagerState(cast.EventManagerStarted)

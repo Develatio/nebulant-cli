@@ -19,6 +19,7 @@ package actors
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/util"
 )
 
 type setRegionParameters struct {
@@ -28,7 +29,7 @@ type setRegionParameters struct {
 // SetRegion func
 func SetRegion(ctx *ActionContext) (*base.ActionOutput, error) {
 	awsinput := new(setRegionParameters)
-	if err := CleanInput(ctx.Action, awsinput); err != nil {
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, awsinput); err != nil {
 		return nil, err
 	}
 	if ctx.Rehearsal {

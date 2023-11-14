@@ -4,15 +4,17 @@
 
 // Package smtp implements the Simple Mail Transfer Protocol as defined in RFC 5321.
 // It also implements the following extensions:
+//
 //	8BITMIME  RFC 1652
 //	AUTH      RFC 2554
 //	STARTTLS  RFC 3207
+//
 // Additional extensions may be handled by clients.
 //
 // The smtp package is frozen and is not accepting new features.
 // Some external packages provide more functionality. See:
 //
-//   https://godoc.org/?q=smtp
+//	https://godoc.org/?q=smtp
 //
 // 17 Feb 2022
 // This is a fork maded by develat.io as sugested by @bradfitz
@@ -22,7 +24,6 @@
 //
 // I'll keep this bug open to document that it's frozen though.
 // We'll fix bugs but not add features.
-//
 package smtp
 
 import (
@@ -35,6 +36,14 @@ import (
 	"net/textproto"
 	"strings"
 )
+
+type SendMailCTX struct {
+	Host      string
+	Port      int
+	Conn      net.Conn
+	Auth      Auth
+	TLSConfig *tls.Config
+}
 
 // A Client represents a client connection to an SMTP server.
 type Client struct {
@@ -330,7 +339,11 @@ var testHookStartTLS func(*tls.Config) // nil, except for tests
 // attachments (see the mime/multipart package), or other mail
 // functionality. Higher-level packages exist outside of the standard
 // library.
-func SendMail(conn net.Conn, a Auth, from string, to []string, msg []byte) error {
+func SendMail(ctx *SendMailCTX, from string, to []string, msg []byte) error {
+
+	conn := ctx.Conn
+	a := ctx.Auth
+
 	if err := validateLine(from); err != nil {
 		return err
 	}
@@ -340,11 +353,7 @@ func SendMail(conn net.Conn, a Auth, from string, to []string, msg []byte) error
 		}
 	}
 
-	host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
-	if err != nil {
-		return err
-	}
-	c, err := NewClient(conn, host)
+	c, err := NewClient(conn, ctx.Host)
 	if err != nil {
 		return err
 	}
@@ -355,15 +364,11 @@ func SendMail(conn net.Conn, a Auth, from string, to []string, msg []byte) error
 	}
 
 	if ok, _ := c.Extension("STARTTLS"); ok {
-		config := &tls.Config{
-			ServerName: c.serverName,
-			MinVersion: tls.VersionTLS12,
-		}
 		if testHookStartTLS != nil {
-			testHookStartTLS(config)
+			testHookStartTLS(ctx.TLSConfig)
 		}
-		if err = c.StartTLS(config); err != nil {
-			return err
+		if err = c.StartTLS(ctx.TLSConfig); err != nil {
+			return errors.Join(fmt.Errorf("STARTLS failed"), err)
 		}
 	}
 

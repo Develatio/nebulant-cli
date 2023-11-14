@@ -17,13 +17,12 @@
 package assets
 
 import (
-	"compress/bzip2"
-	"crypto/md5" //#nosec G501-- weak, but ok
+	"crypto/md5" // #nosec G501-- weak, but ok
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -38,14 +37,12 @@ import (
 	"github.com/bhmj/jsonslice"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/downloader"
 	"github.com/develatio/nebulant-cli/term"
-	"github.com/develatio/nebulant-cli/util"
 )
 
 type UpgradeStateType int
 
-// 1500MB zip file size limit (a reasonable, but arbitrary value)
-const maxZipFileSize = 1500 * 1024 * 1024
 const INDEX_TOKEN_SIZE = 3
 const SUB_INDEX_TOKEN_SIZE = 2
 const USED_BY_SPA = "SPA"
@@ -126,7 +123,7 @@ func (a *assetsState) NeedUpgrade() bool {
 }
 
 func (a *assetsState) loadState() error {
-	jsonFile, err := os.Open(filepath.Join(config.AppHomePath(), "assets", "state")) //#nosec G304 -- Not a file inclusion, just a json read
+	jsonFile, err := os.Open(filepath.Join(config.AppHomePath(), "assets", "state")) // #nosec G304 -- Not a file inclusion, just a json read
 	if err != nil {
 		if os.IsNotExist(err) {
 			a.CurrentUpgradeState = UpgradeStateNone
@@ -143,21 +140,36 @@ func (a *assetsState) loadState() error {
 	return nil
 }
 
+type AssetDefinitionFilterTerms map[string][]string
+
+func (a AssetDefinitionFilterTerms) Get(key string) string {
+	ft := a[key]
+	if len(ft) == 0 {
+		return ""
+	}
+	return ft[0]
+}
+
+type AssetDefinitionFilter func(interface{}, url.Values) bool
+
 type AssetDefinition struct {
-	Name         string
-	FreshItem    func() interface{}
-	LookPath     []string
-	IndexPath    string
-	SubIndexPath string
-	FilePath     string
-	Alias        [][]string
+	Name               string
+	FreshItem          func() interface{}
+	MarshallIndentItem func(interface{}) string
+	Filters            []AssetDefinitionFilter
+	LookPath           []string
+	IndexPath          string
+	SubIndexPath       string
+	FilePath           string
+	Alias              [][]string
 }
 
 type SearchRequest struct {
-	SearchTerm string
-	Limit      int
-	Offset     int
-	Sort       string
+	SearchTerm  string
+	FilterTerms url.Values
+	Limit       int
+	Offset      int
+	Sort        string
 }
 
 type SearchResult struct {
@@ -225,7 +237,7 @@ func (s *SearchRequest) Validate() (bool, error) {
 
 func writeIndexFile(fpath string, list *index, name string) (int, error) {
 	nn := 0
-	file, err := os.OpenFile(fpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) //#nosec G304-- file inclusion from var needed
+	file, err := os.OpenFile(fpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304-- file inclusion from var needed
 	if err != nil {
 		return 0, err
 	}
@@ -238,8 +250,9 @@ func writeIndexFile(fpath string, list *index, name string) (int, error) {
 	nn = n + nn
 	partcount := 0
 	partlen := len(list.Parts)
-	sb := term.OpenStatusBar()
-	bar, err := sb.GetProgressBar(int64(partlen), "Writing "+name+" index file", false)
+	lin := term.AppendLine()
+	defer lin.Close()
+	bar, err := lin.GetProgressBar(int64(partlen), "Writing "+name+" index file", false)
 	if err != nil {
 		return 0, err
 	}
@@ -290,11 +303,11 @@ func writeIndexFile(fpath string, list *index, name string) (int, error) {
 }
 
 func recoverFilePosition(filepath string, position int64, container interface{}) error {
-	f, err := os.Open(filepath) //#nosec G304-- file inclusion from var needed
+	f, err := os.Open(filepath) // #nosec G304-- file inclusion from var needed
 	if err != nil {
 		return err
 	}
-	defer f.Close() //#nosec G104 -- Unhandle is OK here
+	defer f.Close() // #nosec G104 -- Unhandle is OK here
 	if _, err = f.Seek(position, 0); err != nil {
 		return err
 	}
@@ -391,114 +404,16 @@ func logStats(prefix string) {
 	cast.LogDebug(fmt.Sprintf("%s: Alloc: %v MiB\tHeapInuse: %v MiB\tFrees: %v MiB\tSys: %v MiB\tNumGC: %v", prefix, m.Alloc/1024/1024, m.HeapInuse/1024/1024, m.Frees/1024/1024, m.Sys/1024/1024, m.NumGC), nil)
 }
 
-func b2unzipWithProgressBar(file string, msg string) error {
-	infile, err := os.OpenFile(file, os.O_RDONLY, 0600) // #nosec G304 -- Not a file inclusion, just a well know zipped file
-	if err != nil {
-		return err
-	}
-	defer infile.Close()
-
-	outfile, err := os.OpenFile(file+"---.uztmp", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304 -- Not a file inclusion, just a well know otput file
-	if err != nil {
-		return err
-	}
-	defer outfile.Close()
-
-	instats, err := infile.Stat()
-	if err != nil {
-		return err
-	}
-
-	if instats.Size() > maxZipFileSize {
-		return fmt.Errorf("the downloaded zip file is too big")
-	}
-
-	bz2dec := bzip2.NewReader(infile)
-	// limit bzip file size, LimitReader will launch
-	// EOF on read > maxZipFileSize
-	noZipBombReader := io.LimitReader(bz2dec, maxZipFileSize)
-
-	sb := term.OpenStatusBar()
-	bar, err := sb.GetProgressBar(instats.Size(), msg, false)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(io.MultiWriter(outfile, bar), noZipBombReader)
-	if err != nil {
-		return err
-	}
-
-	err = outfile.Close()
-	if err != nil {
-		return err
-	}
-
-	err = infile.Close()
-	if err != nil {
-		return err
-	}
-
-	err = os.Rename(file+"---.uztmp", file)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func downloadFileWithProgressBar(url string, outputfile string, msg string) error {
-	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    30 * time.Second,
-		DisableCompression: false,
-	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(http.StatusText(resp.StatusCode))
-	}
-
-	file, err := os.OpenFile(outputfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304 -- Not a file inclusion, just a well know otput file
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	sb := term.OpenStatusBar()
-	bar, err := sb.GetProgressBar(resp.ContentLength, msg, true)
-	if err != nil {
-		return err
-	}
-
-	mimedetector := &util.MimeDetectorWriter{}
-
-	_, err = io.Copy(io.MultiWriter(file, bar, mimedetector), resp.Body)
-	if err != nil {
-		return err
-	}
-
-	if mimedetector.MimeType != nil && *mimedetector.MimeType == "application/x-bzip2" {
-		return b2unzipWithProgressBar(outputfile, "Unzipping file "+filepath.Base(outputfile)+"...")
-	}
-	return nil
-}
-
 func downloadAsset(remotedef *AssetRemoteDescription, localdef *AssetDefinition) error {
 	err := os.MkdirAll(filepath.Dir(localdef.FilePath), os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	err = downloadFileWithProgressBar(remotedef.URL+".bz2", localdef.FilePath, "Downloading asset "+localdef.Name+"...")
+	err = downloader.DownloadFileWithProgressBar(remotedef.URL+".bz2", localdef.FilePath, "Downloading asset "+localdef.Name+"...")
 	if err != nil {
 		cast.LogDebug("Err on bz2 asset descriptor download: "+err.Error(), nil)
-		err = downloadFileWithProgressBar(remotedef.URL, localdef.FilePath, "Downloading asset "+localdef.Name+"...")
+		err = downloader.DownloadFileWithProgressBar(remotedef.URL, localdef.FilePath, "Downloading asset "+localdef.Name+"...")
 		if err != nil {
 			return err
 		}
@@ -513,20 +428,20 @@ func downloadIndex(remotedef *AssetRemoteDescription, localdef *AssetDefinition)
 	}
 
 	// download index
-	err = downloadFileWithProgressBar(remotedef.URL+".idx.bz2", localdef.IndexPath, "Downloading index...")
+	err = downloader.DownloadFileWithProgressBar(remotedef.URL+".idx.bz2", localdef.IndexPath, "Downloading index...")
 	if err != nil {
 		cast.LogDebug("Err on bz2 index download: "+err.Error(), nil)
-		err = downloadFileWithProgressBar(remotedef.URL+".idx", localdef.IndexPath, "Downloading index...")
+		err = downloader.DownloadFileWithProgressBar(remotedef.URL+".idx", localdef.IndexPath, "Downloading index...")
 		if err != nil {
 			return err
 		}
 	}
 
 	// download subindex
-	err = downloadFileWithProgressBar(remotedef.URL+".subidx.bz2", localdef.SubIndexPath, "Downloading subindex...")
+	err = downloader.DownloadFileWithProgressBar(remotedef.URL+".subidx.bz2", localdef.SubIndexPath, "Downloading subindex...")
 	if err != nil {
 		cast.LogDebug("Err on bz2 subindex download: "+err.Error(), nil)
-		err = downloadFileWithProgressBar(remotedef.URL+".subidx", localdef.SubIndexPath, "Downloading subindex...")
+		err = downloader.DownloadFileWithProgressBar(remotedef.URL+".subidx", localdef.SubIndexPath, "Downloading subindex...")
 		if err != nil {
 			return err
 		}
@@ -574,22 +489,14 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
 
-	sb := term.OpenStatusBar()
-	bar, err := sb.GetProgressBar(fi.Size(), "Reading asset items", false)
+	lin := term.AppendLine()
+	bar, err := lin.GetProgressBar(fi.Size(), "Reading asset items", false)
 	if err != nil {
 		return 0, err
 	}
 
 	dec := json.NewDecoder(input)
 
-	// read {
-	if _, err := dec.Token(); err != nil {
-		return 0, fmt.Errorf("MainIndex:" + err.Error())
-	}
-	// read attr name
-	if _, err := dec.Token(); err != nil {
-		return 0, fmt.Errorf("MainIndex:" + err.Error())
-	}
 	// read [
 	if _, err := dec.Token(); err != nil {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
@@ -641,7 +548,7 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 		count++
 	}
 
-	// read }
+	// read ]
 	if _, err := dec.Token(); err != nil {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
@@ -671,8 +578,8 @@ func makeSubIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
 
-	sb := term.OpenStatusBar()
-	bar, err := sb.GetProgressBar(fi.Size(), "Optimizing "+assetdef.Name+" index", false)
+	lin := term.AppendLine()
+	bar, err := lin.GetProgressBar(fi.Size(), "Optimizing "+assetdef.Name+" index", false)
 	if err != nil {
 		return 0, err
 	}
@@ -957,6 +864,7 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 
 	count := 0
 	discardcount := 0
+F:
 	for position, minfo := range fpositions {
 		// position should match all
 		// search tokens discard if not.
@@ -969,6 +877,13 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 		img := assetdef.FreshItem()
 		if err := recoverFilePosition(assetdef.FilePath, position, img); err != nil {
 			return nil, err
+		}
+
+		for _, ff := range assetdef.Filters {
+			if !ff(img, sr.FilterTerms) {
+				discardcount++
+				continue F
+			}
 		}
 
 		// obtain texts
@@ -1152,42 +1067,8 @@ func updateDescriptor(descpath string) error {
 	if err != nil {
 		return err
 	}
-
-	cast.LogInfo("Updating asset descriptor "+config.AssetDescriptorURL+"...", nil)
-	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    30 * time.Second,
-		DisableCompression: false,
-	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Get(config.AssetDescriptorURL)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(http.StatusText(resp.StatusCode))
-	}
-
-	file, err := os.OpenFile(descpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) //#nosec G304-- file inclusion from var needed
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	sb := term.OpenStatusBar()
-	bar, err := sb.GetProgressBar(resp.ContentLength, "Downloading asset descriptor", true)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(io.MultiWriter(file, bar), resp.Body)
-
-	if err != nil {
-		return err
-	}
-	return nil
+	cast.LogDebug("Downloading "+config.AssetDescriptorURL, nil)
+	return downloader.DownloadFileWithProgressBar(config.AssetDescriptorURL, descpath, "Updating asset descriptor...")
 }
 
 func GenerateIndexFromFile(term string) error {
@@ -1213,7 +1094,6 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 	State.setUpgradeState(UpgradeStateInProgress)
 	err := State.saveState()
 	if err != nil {
-		// use erros.Join() when go 1.20
 		return err
 	}
 	var descriptor []*AssetRemoteDescription
@@ -1223,28 +1103,25 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		err2 := State.saveState()
 		if err2 != nil {
-			// use erros.Join() when go 1.20
-			return err2
+			return errors.Join(err, err2)
 		}
 		return err
 	}
 
-	descfile, err := os.Open(descpath) //#nosec G304 -- Not a file inclusion, just a json read
+	descfile, err := os.Open(descpath) // #nosec G304 -- Not a file inclusion, just a json read
 	if err != nil {
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		return err
 	}
 
 	defer descfile.Close()
-	defer term.CloseStatusBar()
 
 	byteValue, _ := io.ReadAll(descfile)
 	if err := json.Unmarshal(byteValue, &descriptor); err != nil {
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		err2 := State.saveState()
 		if err2 != nil {
-			// use erros.Join() when go 1.20
-			return err2
+			return errors.Join(err, err2)
 		}
 		return err
 	}
@@ -1254,10 +1131,12 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			continue
 		}
 
-		def, exists := AssetsDefinition[desc.ID]
+		asset_id := desc.ID
+
+		def, exists := AssetsDefinition[asset_id]
 		if !exists {
 			State.setUpgradeState(UpgradeStateInProgressWithErr)
-			cast.LogWarn("Unknown asset descriptor "+desc.ID, nil)
+			cast.LogWarn("Unknown asset descriptor "+asset_id, nil)
 			continue
 		}
 
@@ -1269,17 +1148,16 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			if err != nil {
 				err2 := State.saveState()
 				if err2 != nil {
-					// use erros.Join() when go 1.20
-					return err2
+					return errors.Join(err, err2)
 				}
 				State.setUpgradeState(UpgradeStateEndWithErr)
 				return err
 			}
 			defer f.Close()
 
-			h := md5.New() //#nosec G401-- weak, but ok
+			h := md5.New() // #nosec G401-- weak, but ok
 			if _, err := io.Copy(h, f); err != nil {
-				cast.LogErr("Cannot determine asset "+desc.ID+" integrity due to "+err.Error(), nil)
+				cast.LogErr("Cannot determine asset "+asset_id+" integrity due to "+err.Error(), nil)
 				State.setUpgradeState(UpgradeStateInProgressWithErr)
 				continue
 			}
@@ -1289,7 +1167,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 				err = downloadAsset(desc, def)
 				if err != nil {
 					State.setUpgradeState(UpgradeStateInProgressWithErr)
-					cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
+					cast.LogErr("Cannot download asset "+asset_id+" due to "+err.Error(), nil)
 					continue
 				}
 				err := os.Remove(def.IndexPath)
@@ -1305,7 +1183,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 					continue
 				}
 			} else {
-				cast.LogInfo("Asset file "+desc.ID+" up to date. No download needed", nil)
+				cast.LogInfo("Asset file "+asset_id+" up to date. No download needed", nil)
 			}
 		} else if errors.Is(err, os.ErrNotExist) {
 			//
@@ -1314,7 +1192,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			err = downloadAsset(desc, def)
 			if err != nil {
 				State.setUpgradeState(UpgradeStateInProgressWithErr)
-				cast.LogErr("Cannot download asset "+desc.ID+" due to "+err.Error(), nil)
+				cast.LogErr("Cannot download asset "+asset_id+" due to "+err.Error(), nil)
 				continue
 			}
 		} else {
@@ -1324,8 +1202,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			State.setUpgradeState(UpgradeStateEndWithErr)
 			err2 := State.saveState()
 			if err2 != nil {
-				// use erros.Join() when go 1.20
-				return err2
+				return errors.Join(err, err2)
 			}
 			return err
 		}
@@ -1335,49 +1212,51 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			f2, err2 := os.Open(def.FilePath)
 			if err2 != nil {
 				State.setUpgradeState(UpgradeStateInProgressWithErr)
-				cast.LogErr("Cannot determine asset "+desc.ID+" integrity after download due to "+err2.Error(), nil)
+				cast.LogErr("Cannot determine asset "+asset_id+" integrity after download due to "+err2.Error(), nil)
 				continue
 			}
-			h2 := md5.New() //#nosec G401-- weak, but ok
+			h2 := md5.New() // #nosec G401-- weak, but ok
 			if _, err := io.Copy(h2, f2); err != nil {
 				State.setUpgradeState(UpgradeStateInProgressWithErr)
-				cast.LogErr("Cannot determine asset "+desc.ID+" integrity after download due to "+err.Error(), nil)
+				cast.LogErr("Cannot determine asset "+asset_id+" integrity after download due to "+err.Error(), nil)
 				continue
 			}
 			file2md5 := fmt.Sprintf("%x", h2.Sum(nil))
 			if file2md5 != desc.Hash {
 				State.setUpgradeState(UpgradeStateInProgressWithErr)
-				cast.LogErr("Cannot determine asset "+desc.ID+" integrity after download: hash mismatch", nil)
+				cast.LogErr("Cannot determine asset "+asset_id+" integrity after download: hash mismatch", nil)
 				continue
 			}
 		} else {
 			State.setUpgradeState(UpgradeStateInProgressWithErr)
-			cast.LogErr("Cannot determine asset "+desc.ID+" integrity after download due to "+err.Error(), nil)
+			cast.LogErr("Cannot determine asset "+asset_id+" integrity after download due to "+err.Error(), nil)
 			continue
 		}
 
 		// download or gen index
 		if _, err := os.Stat(def.IndexPath); err == nil {
-			cast.LogInfo("Index of "+desc.ID+" up to date", nil)
+			cast.LogInfo("Index of "+asset_id+" up to date", nil)
 		} else if errors.Is(err, os.ErrNotExist) {
 			err = nil
 			if !skipdownload {
-				cast.LogInfo("Downloading "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
+				cast.LogDebug("Downloading "+desc.URL, nil)
+				cast.LogInfo("Downloading "+asset_id+" asset index in bg...", nil)
 				err = downloadIndex(desc, def)
 			}
 			if err != nil {
-				cast.LogWarn("Cannot download "+desc.ID+" index: ("+err.Error()+")", nil)
-				cast.LogWarn(desc.ID+": Since the index could not be downloaded, it will be built locally. This process is long and expensive.", nil)
+				cast.LogWarn("Cannot download "+asset_id+" index: ("+err.Error()+")", nil)
+				cast.LogWarn(asset_id+": Since the index could not be downloaded, it will be built locally. This process is long and expensive.", nil)
 			}
 			if err != nil || skipdownload {
-				cast.LogInfo("Building "+desc.ID+" index in bg... (from "+desc.URL+")", nil)
+				cast.LogDebug("Building "+desc.URL, nil)
+				cast.LogInfo("Building "+asset_id+" index in bg...", nil)
 				_, err := makeIndex(def)
 				if err != nil {
 					State.setUpgradeState(UpgradeStateInProgressWithErr)
-					cast.LogErr("Cannot build index of "+desc.ID+" due to "+err.Error(), nil)
+					cast.LogErr("Cannot build index of "+asset_id+" due to "+err.Error(), nil)
 					continue
 				}
-				cast.LogInfo("Building index of "+desc.ID+"...DONE", nil)
+				cast.LogInfo("Building index of "+asset_id+"...DONE", nil)
 			}
 		} else {
 			State.setUpgradeState(UpgradeStateInProgressWithErr)
@@ -1386,20 +1265,19 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 	}
 
 	if State.CurrentUpgradeState == UpgradeStateInProgressWithErr {
-		cast.LogErr("Asset process done. Some problems found.", nil)
+		err := fmt.Errorf("asset process done. Some problems found")
+		cast.LogErr(err.Error(), nil)
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		err2 := State.saveState()
 		if err2 != nil {
-			// use erros.Join() when go 1.20
-			return err2
+			return errors.Join(err, err2)
 		}
 	} else if State.CurrentUpgradeState == UpgradeStateInProgress {
 		cast.LogInfo("Asset process done. All is up to date", nil)
 		State.setUpgradeState(UpgradeStateEndOK)
-		err2 := State.saveState()
-		if err2 != nil {
-			// use erros.Join() when go 1.20
-			return err2
+		err := State.saveState()
+		if err != nil {
+			return err
 		}
 	}
 

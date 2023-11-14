@@ -33,6 +33,12 @@ var Version = "DEV build"
 // VersionDate var
 var VersionDate = ""
 
+// VersionCommit var
+var VersionCommit = ""
+
+// VersionGo var
+var VersionGo = ""
+
 // WSScheme var
 var WSScheme string = "wss"
 
@@ -41,6 +47,12 @@ var BackendProto string = "https"
 
 // BackendURLDomain var
 var BackendURLDomain string = "api.nebulant.io"
+
+// AccountURLDomain var
+var AccountURLDomain string = "account.nebulant.io"
+
+// PanelURLDomain var
+var PanelURLDomain string = "panel.nebulant.io"
 
 // FrontOrigin var
 var FrontOrigin string = "https://builder.nebulant.io"
@@ -66,8 +78,8 @@ var BACKEND_AUTH_TOKEN = ""
 // ACTIVE_CONF_PROFILE
 var ACTIVE_CONF_PROFILE = "default"
 
-// CREDENTIALS
-var CREDENTIALS *Credential = &Credential{}
+// CREDENTIAL
+var CREDENTIAL *Credential = &Credential{}
 
 // Server addr
 var SERVER_ADDR = "localhost"
@@ -77,6 +89,9 @@ var SERVER_PORT = "15678"
 
 // AssetDescriptorURL conf
 var AssetDescriptorURL = "https://builder-assets.nebulant.io/assets.json"
+
+// UpdateDescriptorURL conf
+var UpdateDescriptorURL string = "https://releases.nebulant.io/version.json"
 
 // arg argv conf
 
@@ -107,6 +122,19 @@ func AppHomePath() string {
 // * Environment Variables
 // * Shared Credentials file
 func init() {
+	// ensure config dir
+	assetsdir := filepath.Join(AppHomePath(), "assets")
+	err := os.MkdirAll(assetsdir, os.ModePerm)
+	if err != nil {
+		log.Panic(err.Error())
+	}
+
+	// ensure credentials file
+	_, err = createEmptyCredentialsFile()
+	if err != nil {
+		log.Panic(err.Error())
+	}
+
 	if os.Getenv("NEBULANT_DEBUG") != "" {
 		var err error
 		DEBUG, err = strconv.ParseBool(os.Getenv("NEBULANT_DEBUG"))
@@ -131,12 +159,12 @@ func init() {
 		log.Panic("Cannot read credentials from specified profile " + ACTIVE_CONF_PROFILE)
 	}
 	if credential != nil {
-		CREDENTIALS = credential
+		CREDENTIAL = credential
 	}
 
 	// Use credentials from env vars if exists
 	if os.Getenv("NEBULANT_TOKEN_ID") != "" && os.Getenv("NEBULANT_TOKEN_SECRET") != "" {
 		var data string = os.Getenv("NEBULANT_TOKEN_ID") + ":" + os.Getenv("NEBULANT_TOKEN_SECRET")
-		CREDENTIALS.AuthToken = &data
+		CREDENTIAL.AuthToken = &data
 	}
 }

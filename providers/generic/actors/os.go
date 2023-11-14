@@ -19,8 +19,10 @@ package actors
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"os"
 	"os/exec"
@@ -30,6 +32,7 @@ import (
 	"strings"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/ipc"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/joho/godotenv"
 )
@@ -54,13 +57,24 @@ type runLocalParameters struct {
 	// Password       *string `json:"password"`
 	// Port           *string `json:"port"`
 	Vars               map[string]string `json:"vars"`
-	VarsTargets        []string          `json:"vars_targets"`
+	DumpJSON           *bool             `json:"dump_json"`
 	ScriptText         *string           `json:"script"`
 	ScriptParameters   *string           `json:"scriptParameters"`
 	ScriptName         string            `json:"scriptName"`
 	Command            *string           `json:"command"`
 	CommandAsSingleArg bool              `json:"pass_to_entrypoint_as_single_param"`
 	Entrypoint         *string           `json:"entrypoint"`
+}
+
+type readFileParameters struct {
+	FilePath    *string `json:"file_path" validate:"required"`
+	Interpolate bool    `json:"interpolate"`
+}
+
+type writeFileParameters struct {
+	FilePath    *string `json:"file_path" validate:"required"`
+	Content     *string `json:"content" validate:"required"`
+	Interpolate bool    `json:"interpolate"`
 }
 
 // RunLocalScript func
@@ -89,21 +103,18 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		defer os.Remove(f.Name())
 		if _, err := f.Write([]byte(*p.ScriptText)); err != nil {
 			if err2 := f.Close(); err2 != nil {
-				return nil, fmt.Errorf(err.Error() + " " + err2.Error())
+				return nil, errors.Join(err, err2)
 			}
 			return nil, err
 		}
 		if err := f.Close(); err != nil {
 			return nil, err
 		}
-		//#nosec G302 -- Here +x is needed
+		// #nosec G302 -- Here +x is needed
 		if err := os.Chmod(f.Name(), 0755); err != nil {
 			return nil, err
 		}
 		stin := f.Name()
-		if p.Entrypoint != nil {
-			stin = *p.Entrypoint + " " + stin
-		}
 		if p.ScriptParameters != nil {
 			stin = stin + " " + *p.ScriptParameters
 		}
@@ -204,31 +215,37 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		envVars = append(envVars, varname+"="+varvalue)
 	}
 
-	for _, vt := range p.VarsTargets {
-		switch vt {
-		case "bash":
-			f, err := ctx.Store.DumpValuesToShellFile()
-			if err != nil {
-				return nil, err
-			}
-			defer os.Remove(f.Name())
-			envVars = append(envVars, "NEBULANT_BASH_VARIABLES_PATH="+f.Name())
-		case "zsh":
-			f, err := ctx.Store.DumpValuesToShellFile()
-			if err != nil {
-				return nil, err
-			}
-			defer os.Remove(f.Name())
-			envVars = append(envVars, "NEBULANT_ZSH_VARIABLES_PATH="+f.Name())
-		case "json":
-			f, err := ctx.Store.DumpValuesToJSONFile()
-			if err != nil {
-				return nil, err
-			}
-			defer os.Remove(f.Name())
-			envVars = append(envVars, "NEBULANT_JSON_VARIABLES_PATH="+f.Name())
+	if p.DumpJSON != nil && *p.DumpJSON {
+		f, err := ctx.Store.DumpValuesToJSONFile()
+		if err != nil {
+			return nil, err
 		}
+		defer os.Remove(f.Name())
+		envVars = append(envVars, "NEBULANT_JSON_VARIABLES_PATH="+f.Name())
 	}
+
+	execpath, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	envVars = append(envVars, "NEBULANT_CLI_PATH="+execpath)
+
+	// Conf IPCS Consumer
+	ipcs := ctx.Store.GetPrivateVar("IPCS").(*ipc.IPC)
+	envVars = append(envVars, "NEBULANT_IPCSID="+ipcs.GetUUID())
+	// out := make(chan bool)
+	ipccid := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
+	ipcc := &ipc.IPCConsumer{
+		ID:     ipccid,
+		Stream: make(chan *ipc.PipeData),
+	}
+	ipcs.AppendConsumer(ipcc)
+	envVars = append(envVars, "NEBULANT_IPCCID="+ipcc.ID)
+	out := ipcc.ExposeStoreVars(ctx.Store)
+	defer func() {
+		out <- true
+		ipcs.OutConsumer(ipcc)
+	}()
 
 	cmd.Env = envVars
 	result := &runLocalScriptOutput{}
@@ -301,4 +318,67 @@ func DefineEnvs(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 	return nil, nil
+}
+
+func ReadFile(ctx *ActionContext) (*base.ActionOutput, error) {
+	params := new(readFileParameters)
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	finfo, err := os.Stat(*params.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if finfo.Size() > 100*1024*1024 {
+		ctx.Logger.LogWarn("reading a file larger than 100MB, be carefully")
+	}
+
+	bcontent, err := os.ReadFile(*params.FilePath)
+	if err != nil {
+		return nil, err
+	}
+	scontent := string(bcontent)
+
+	if params.Interpolate {
+		err := ctx.Store.Interpolate(&scontent)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	aout := base.NewActionOutput(ctx.Action, scontent, nil)
+	return aout, nil
+}
+
+func WriteFile(ctx *ActionContext) (*base.ActionOutput, error) {
+	params := new(writeFileParameters)
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	var scontent = *params.Content
+	if params.Interpolate {
+		err := ctx.Store.Interpolate(&scontent)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err := os.WriteFile(*params.FilePath, []byte(scontent), 0600)
+	if err != nil {
+		return nil, err
+	}
+
+	aout := base.NewActionOutput(ctx.Action, nil, nil)
+	return aout, nil
 }

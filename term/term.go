@@ -17,6 +17,7 @@
 package term
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -49,21 +50,27 @@ var BGCyan string = "\033[46m"
 
 var Gray string = "\033[97m"
 
-var White string = "\033[97m"
+var White string = "\033[37m"
 
 var Bold string = "\033[1m"
 
 var CursorToColZero = "\033[0G"
-var CursorUp string = "\033[1F"
+var CursorUp string = "\033[1A"
+var CursorDown string = "\033[1B"
+var CursorLeft string = "\033[1D"
+
+var SaveCursor string = "\033[s"
+var RestoreCursor string = "\033[u"
 
 var HideCursor string = "\033[?25l"
 var ShowCursor string = "\033[?25h"
 
 var EraseLine string = "\033[K"
 
-var mls *MultilineStdout = nil
+var EraseLineFromCursor string = "\033[0K"
+var EraseEntireLine string = "\033[2K"
 
-var statusBarLine *oneLineWriteCloser = nil
+var mls *MultilineStdout = nil
 
 // https://github.com/manifoldco/promptui/issues/49
 type noBellStdout struct{}
@@ -82,18 +89,10 @@ func (n *noBellStdout) Close() error {
 var NoBellStdout = &noBellStdout{}
 
 func isTerminal() bool {
-	if *config.ForceTerm {
+	if config.ForceTerm != nil && *config.ForceTerm {
 		return true
 	}
 	return term.IsTerminal(int(os.Stdout.Fd()))
-}
-
-func OpenStatusBar() *oneLineWriteCloser {
-	if statusBarLine != nil {
-		return statusBarLine
-	}
-	statusBarLine = mls.AppendLine()
-	return statusBarLine
 }
 
 func AppendLine() *oneLineWriteCloser {
@@ -104,29 +103,14 @@ func Selectable(prompt string, options []string) (int, error) {
 	return mls.SelectTest(prompt, options)
 }
 
-func DeleteLine(line *oneLineWriteCloser) error {
-	return mls.DeleteLine(line)
-}
-
-func OpenMultilineStdout() {
+func openMultilineStdout() {
 	if mls == nil {
-		mls = &MultilineStdout{
-			// WARN: this sould be called AFTER InitTerm
-			MainStdout: Stdout,
-		}
+		mls = &MultilineStdout{}
+
+		mls.SetMainStdout(Stdout)
+		mls.Init()
 		log.SetOutput(mls)
 	}
-}
-
-func CloseStatusBar() error {
-	if statusBarLine != nil {
-		err := mls.DeleteLine(statusBarLine)
-		if err != nil {
-			return err
-		}
-		statusBarLine = nil
-	}
-	return nil
 }
 
 // PrintInfo func
@@ -152,8 +136,47 @@ func Print(a ...interface{}) (n int, err error) {
 	return fmt.Fprint(Stdout, a...)
 }
 
-func InitTerm() {
-	if *config.DisableColorFlag {
+func configEmojiSupport() error {
+	width, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return err
+	}
+	fmt.Print("🔧")
+	fmt.Print("\b")
+	fmt.Print("🔧")
+	count := width - 3
+	for i := 0; i < count; i++ {
+		fmt.Print("*")
+	}
+	cpos, _, err := getCursorPosition()
+	if err != nil {
+		return err
+	}
+	if cpos == 0 {
+		EmojiSet = noEmojiSupportSet
+		_, err := Print(CursorUp)
+		if err != nil {
+			return err
+		}
+	}
+	fmt.Print("\b\b\b")
+	_, err = Print(EraseEntireLine)
+	if err != nil {
+		return err
+	}
+	_, err = Print("\n")
+	if err != nil {
+		return err
+	}
+	_, err = Print(CursorUp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ConfigColors() {
+	if config.DisableColorFlag != nil && *config.DisableColorFlag {
 		Stdout = os.Stdout
 		Stderr = os.Stderr
 		// Reset = ""
@@ -174,19 +197,35 @@ func InitTerm() {
 		Gray = ""
 		White = ""
 		Bold = ""
-		// CursorUp = ""
-		// EraseLine = ""
-	} else {
-		log.SetOutput(Stdout)
 	}
+}
+
+// UpgradeTerm func sets advanced ANSI supoprt, colors and
+// multiline StdOut
+func UpgradeTerm() error {
+	var err error
 	if !config.DEBUG {
 		log.SetFlags(0)
 	}
+
+	if isTerminal() {
+		err = configEmojiSupport()
+		if err != nil {
+			return errors.Join(fmt.Errorf("cannot configure emoji support"), err)
+		}
+	}
+	err = EnableColorSupport()
+	if err != nil {
+		return errors.Join(fmt.Errorf("cannot enable colors"), err)
+	}
+	ConfigColors()
+	log.SetOutput(Stdout)
 	//
 	// uses Stdout (term.Stdout in os.go)
 	// it can be equal to readline.Stdout
 	// as default, or can be os.Stdout if
 	// os cannot support colors or if has
 	// been disabled manually.
-	OpenMultilineStdout()
+	openMultilineStdout()
+	return nil
 }

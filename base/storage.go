@@ -186,6 +186,15 @@ func (sr *StorageRecord) BuildInternals() error {
 		vof = vof.Elem()
 	}
 
+	switch sr.Value.(type) {
+	case nil:
+		cs := make(map[string]*AttrTreeValue)
+		sr.JSONValue = []byte(nil)
+		sr.IsString = false
+		sr.PlainValue = cs
+		return nil
+	}
+
 	if vof.Kind() == reflect.String {
 		cs := make(map[string]*AttrTreeValue)
 		sr.JSONValue = []byte(sr.Value.(string))
@@ -246,6 +255,7 @@ type IStore interface {
 	Merge(IStore)
 	GetActionOutputByActionID(actionID *string) (*ActionOutput, error)
 	Insert(record *StorageRecord, providerPrefix string) error
+	Push(record *StorageRecord, providerPrefix string) error
 	Interpolate(sourcetext *string) error
 	GetPlain() (map[string]string, error)
 	GetRawJSONValues() (map[string]json.RawMessage, error)

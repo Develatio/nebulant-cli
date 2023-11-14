@@ -28,7 +28,7 @@ import (
 func parseRunFs() (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "\nUsage: nebulant run [path or nebulant:// protocol]\n")
+		fmt.Fprintf(fs.Output(), "\nUsage: nebulant run [path or nebulant:// protocol] [--varname=varvalue --varname=varvalue]\n")
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
 	err := fs.Parse(flag.Args()[1:])
@@ -50,7 +50,12 @@ func RunCmd() (int, error) {
 	}
 
 	cast.LogInfo("Processing blueprint...", nil)
-	irb, err := blueprint.NewIRBFromAny(bluePrintFilePath)
+	irbConf := &blueprint.IRBGenConfig{}
+	args := fs.Args()
+	if len(args) > 1 {
+		irbConf.Args = args[1:]
+	}
+	irb, err := blueprint.NewIRBFromAny(bluePrintFilePath, irbConf)
 	if err != nil {
 		return 1, err
 	}

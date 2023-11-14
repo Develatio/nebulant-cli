@@ -94,11 +94,11 @@ L:
 
 func (c *ConsoleLogger) setDefaultTheme() {
 	prefxmap = map[int]string{
-		CriticalLevel: " " + term.BGRed + term.White + " 😱 CRITICAL ERROR " + term.Reset,
-		ErrorLevel:    " " + term.BGRed + term.White + " 🚨 ERROR " + term.Reset,
-		WarningLevel:  " " + term.BGYellow + term.Black + " 🚧 WARNING " + term.Reset,
+		CriticalLevel: " " + term.White + term.BGRed + " " + term.EmojiSet["FaceScreamingInFear"] + " CRITICAL ERROR " + term.Reset,
+		ErrorLevel:    " " + term.White + term.BGRed + " " + term.EmojiSet["PoliceCarLight"] + " ERROR " + term.Reset,
+		WarningLevel:  " " + term.Black + term.BGYellow + " " + term.EmojiSet["Construction"] + " WARNING " + term.Reset,
 		InfoLevel:     " " + term.Blue + "»" + term.Magenta + "»" + term.Reset,
-		DebugLevel:    " " + term.BGBrightMagenta + term.Black + " 🔧 DEBUG " + term.Reset,
+		DebugLevel:    " " + term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
 		NotsetLevel:   "( · ) ",
 	}
 }
