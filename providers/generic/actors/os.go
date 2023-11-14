@@ -110,7 +110,7 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		if err := f.Close(); err != nil {
 			return nil, err
 		}
-		//#nosec G302 -- Here +x is needed
+		// #nosec G302 -- Here +x is needed
 		if err := os.Chmod(f.Name(), 0755); err != nil {
 			return nil, err
 		}
@@ -234,7 +234,7 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	ipcs := ctx.Store.GetPrivateVar("IPCS").(*ipc.IPC)
 	envVars = append(envVars, "NEBULANT_IPCSID="+ipcs.GetUUID())
 	// out := make(chan bool)
-	ipccid := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
+	ipccid := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
 	ipcc := &ipc.IPCConsumer{
 		ID:     ipccid,
 		Stream: make(chan *ipc.PipeData),

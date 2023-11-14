@@ -14,7 +14,7 @@ package smtp
 
 import (
 	"crypto/hmac"
-	"crypto/md5" //#nosec G501-- weak, but needed
+	"crypto/md5" // #nosec G501-- weak, but needed
 	"errors"
 	"fmt"
 )

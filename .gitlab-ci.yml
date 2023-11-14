@@ -83,7 +83,7 @@ dev_gobuild_and_r2upload:
   script:
     - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"  
     - apk update && apk add vault make git perl-utils libcap
-    - make buildall
+    - make buildalldev
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
     - setcap -r /usr/sbin/vault
     - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")

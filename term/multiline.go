@@ -54,8 +54,8 @@ func (s *stdinEcoWriter) eco(tick bool) {
 		spc = append(s.p, []byte(Magenta+" "+Reset)...)
 	}
 	// write s.p + cursor to onelineWriteCloser
-	s.stdout.Write([]byte(EraseEntireLine)) //#nosec G104 -- Unhandle is OK here
-	s.stdout.Write(spc)                     //#nosec G104 -- Unhandle is OK here
+	s.stdout.Write([]byte(EraseEntireLine)) // #nosec G104 -- Unhandle is OK here
+	s.stdout.Write(spc)                     // #nosec G104 -- Unhandle is OK here
 }
 
 func (s *stdinEcoWriter) Init() {
@@ -225,7 +225,7 @@ func (o *oneLineWriteCloser) Scanln(prompt string, def []byte, a any) (n int, er
 	if err != nil {
 		return n, err
 	}
-	defer o.MLStdout.Write([]byte(ShowCursor + "\r")) //#nosec G104 -- Unhandle is OK here
+	defer o.MLStdout.Write([]byte(ShowCursor + "\r")) // #nosec G104 -- Unhandle is OK here
 
 	var buff bytes.Buffer
 	eco := &stdinEcoWriter{stdout: o}
@@ -316,9 +316,9 @@ func (m *MultilineStdout) Init() {
 			case <-m.close:
 				return
 			case <-m.repaint:
-				m.rePaintLines(nil) //#nosec G104 -- Unhandle is OK here
+				m.rePaintLines(nil) // #nosec G104 -- Unhandle is OK here
 			case <-ticker.C:
-				m.rePaintLines(nil) //#nosec G104 -- Unhandle is OK here
+				m.rePaintLines(nil) // #nosec G104 -- Unhandle is OK here
 			}
 		}
 	}()
@@ -486,7 +486,7 @@ func (m *MultilineStdout) SelectTest(prompt string, options []string) (int, erro
 	if err != nil {
 		return -1, err
 	}
-	defer m.mainStdout.Write([]byte(ShowCursor)) //#nosec G104 -- Unhandle is OK here
+	defer m.mainStdout.Write([]byte(ShowCursor)) // #nosec G104 -- Unhandle is OK here
 
 	var buff bytes.Buffer
 	reader := bufio.NewReader(os.Stdin)

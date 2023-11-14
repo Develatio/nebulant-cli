@@ -127,7 +127,7 @@ func TestMinCliVersion(bp *Blueprint) error {
 
 // NewFromFile func
 func NewFromFile(path string) (*Blueprint, error) {
-	jsonFile, err := os.Open(path) //#nosec G304 -- Not a file inclusion, just a json read
+	jsonFile, err := os.Open(path) // #nosec G304 -- Not a file inclusion, just a json read
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func NewFromFile(path string) (*Blueprint, error) {
 	if bp.ExecutionUUID == nil || *bp.ExecutionUUID == "" {
 		// rand.Seed is deprecated: As of Go 1.20 there is no reason to call Seed with a random value
 		// rand.Seed(time.Now().UnixNano())
-		randIntString := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
+		randIntString := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
 		bp.ExecutionUUID = &randIntString
 	}
 	bp.Raw = &byteValue
@@ -182,7 +182,7 @@ func NewFromBuilder(data []byte) (*Blueprint, error) {
 	}
 	bp.ExecutionUUID = wrap.ExecutionUUID
 	if bp.ExecutionUUID == nil || *bp.ExecutionUUID == "" {
-		randIntString := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
+		randIntString := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
 		bp.ExecutionUUID = &randIntString
 	}
 

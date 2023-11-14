@@ -17,7 +17,7 @@
 package assets
 
 import (
-	"crypto/md5" //#nosec G501-- weak, but ok
+	"crypto/md5" // #nosec G501-- weak, but ok
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -123,7 +123,7 @@ func (a *assetsState) NeedUpgrade() bool {
 }
 
 func (a *assetsState) loadState() error {
-	jsonFile, err := os.Open(filepath.Join(config.AppHomePath(), "assets", "state")) //#nosec G304 -- Not a file inclusion, just a json read
+	jsonFile, err := os.Open(filepath.Join(config.AppHomePath(), "assets", "state")) // #nosec G304 -- Not a file inclusion, just a json read
 	if err != nil {
 		if os.IsNotExist(err) {
 			a.CurrentUpgradeState = UpgradeStateNone
@@ -237,7 +237,7 @@ func (s *SearchRequest) Validate() (bool, error) {
 
 func writeIndexFile(fpath string, list *index, name string) (int, error) {
 	nn := 0
-	file, err := os.OpenFile(fpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) //#nosec G304-- file inclusion from var needed
+	file, err := os.OpenFile(fpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304-- file inclusion from var needed
 	if err != nil {
 		return 0, err
 	}
@@ -303,11 +303,11 @@ func writeIndexFile(fpath string, list *index, name string) (int, error) {
 }
 
 func recoverFilePosition(filepath string, position int64, container interface{}) error {
-	f, err := os.Open(filepath) //#nosec G304-- file inclusion from var needed
+	f, err := os.Open(filepath) // #nosec G304-- file inclusion from var needed
 	if err != nil {
 		return err
 	}
-	defer f.Close() //#nosec G104 -- Unhandle is OK here
+	defer f.Close() // #nosec G104 -- Unhandle is OK here
 	if _, err = f.Seek(position, 0); err != nil {
 		return err
 	}
@@ -1108,7 +1108,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 		return err
 	}
 
-	descfile, err := os.Open(descpath) //#nosec G304 -- Not a file inclusion, just a json read
+	descfile, err := os.Open(descpath) // #nosec G304 -- Not a file inclusion, just a json read
 	if err != nil {
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		return err
@@ -1155,7 +1155,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			}
 			defer f.Close()
 
-			h := md5.New() //#nosec G401-- weak, but ok
+			h := md5.New() // #nosec G401-- weak, but ok
 			if _, err := io.Copy(h, f); err != nil {
 				cast.LogErr("Cannot determine asset "+asset_id+" integrity due to "+err.Error(), nil)
 				State.setUpgradeState(UpgradeStateInProgressWithErr)
@@ -1215,7 +1215,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 				cast.LogErr("Cannot determine asset "+asset_id+" integrity after download due to "+err2.Error(), nil)
 				continue
 			}
-			h2 := md5.New() //#nosec G401-- weak, but ok
+			h2 := md5.New() // #nosec G401-- weak, but ok
 			if _, err := io.Copy(h2, f2); err != nil {
 				State.setUpgradeState(UpgradeStateInProgressWithErr)
 				cast.LogErr("Cannot determine asset "+asset_id+" integrity after download due to "+err.Error(), nil)

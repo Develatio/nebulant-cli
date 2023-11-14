@@ -209,5 +209,5 @@ func NewListenerIPCServer(l net.Listener, id string) (*IPC, error) {
 }
 
 func NewIPCServer() (*IPC, error) {
-	return NewListenerIPCServer(nil, fmt.Sprintf("%d", rand.Int())) //#nosec G404 -- Weak random is OK here
+	return NewListenerIPCServer(nil, fmt.Sprintf("%d", rand.Int())) // #nosec G404 -- Weak random is OK here
 }

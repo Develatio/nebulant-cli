@@ -65,7 +65,7 @@ type clientMsg struct {
 func (c *WSocketLogger) readWebSocket() {
 	defer func() {
 		SBus.disconnect <- c.fLink
-		c.conn.Close() //#nosec G104 -- Unhandle is OK here
+		c.conn.Close() // #nosec G104 -- Unhandle is OK here
 		SBus.castWaiter.Done()
 	}()
 
@@ -156,7 +156,7 @@ func (c *WSocketLogger) readCastBus() {
 
 	defer func() {
 		ticker.Stop()
-		c.conn.Close() //#nosec G104 -- Unhandle is OK here
+		c.conn.Close() // #nosec G104 -- Unhandle is OK here
 		SBus.castWaiter.Done()
 	}()
 	power := true

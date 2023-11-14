@@ -396,7 +396,7 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	// swb := new(strings.Builder)
-	written, err := io.Copy(io.MultiWriter(f, bar), dcr) //#nosec G110 -- The user is free to get decompression bomb
+	written, err := io.Copy(io.MultiWriter(f, bar), dcr) // #nosec G110 -- The user is free to get decompression bomb
 	if err != nil {
 		return nil, err
 	}

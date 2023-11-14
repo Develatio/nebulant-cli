@@ -114,7 +114,7 @@ func GetSSHClientConfig(cc *ClientConfigParameters) (*ssh.ClientConfig, error) {
 	}
 	sshConfig := &ssh.ClientConfig{
 		User: *cc.Username,
-		//#nosec G106 -- Allow config this? Hacker comunity feedback needed.
+		// #nosec G106 -- Allow config this? Hacker comunity feedback needed.
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         20 * time.Second,
 	}
@@ -273,7 +273,7 @@ func (s *sshClient) Listen(network string, address string) (net.Listener, error)
 }
 
 func (s *sshClient) StartIPC() (*ipc.IPCConsumer, error) {
-	lid := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
+	lid := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
 	fullpath := filepath.Join("/tmp", "ipc_"+lid+".sock")
 	l, err := s.Listen("unix", fullpath)
 	if err != nil {
@@ -437,7 +437,7 @@ func (s *sshClient) RunCmd(cmd string) error { // stdout, stderr, error
 // RunScriptFromLocalPath func. Run local script file sending it to the remote machine
 func (s *sshClient) RunScriptFromLocalPath(localPath string) error { // stdout, stderr, error
 	var stdin bytes.Buffer
-	file, err := os.Open(localPath) //#nosec G304 -- This is indeed an inclusion, but the user is fully responsible for this.
+	file, err := os.Open(localPath) // #nosec G304 -- This is indeed an inclusion, but the user is fully responsible for this.
 	if err != nil {
 		return err
 	}

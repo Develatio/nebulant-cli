@@ -88,7 +88,7 @@ func createEmptyCredentialsFile() (int, error) {
 func readCredentialsFile() (*CredentialsStore, error) {
 	credentialsPath := filepath.Join(AppHomePath(), "credentials")
 
-	jsonFile, err := os.Open(credentialsPath) //#nosec G304 -- Not a file inclusion, just a json read
+	jsonFile, err := os.Open(credentialsPath) // #nosec G304 -- Not a file inclusion, just a json read
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func readCredentialsFile() (*CredentialsStore, error) {
 func saveCredentialsFile(crs *CredentialsStore) (int, error) {
 	credentialsPath := filepath.Join(AppHomePath(), "credentials")
 
-	file, err := os.OpenFile(credentialsPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) //#nosec G304-- file inclusion from var needed
+	file, err := os.OpenFile(credentialsPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304-- file inclusion from var needed
 	if err != nil {
 		return 0, err
 	}

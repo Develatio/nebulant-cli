@@ -257,7 +257,7 @@ func SendMail(ctx *ActionContext) (*base.ActionOutput, error) {
 			msg = append(msg, []byte("--mixedBoundary\r\n")...)
 
 			// read file
-			ff, err := os.Open(filepath) //#nosec G304 -- File inclusion is necesary
+			ff, err := os.Open(filepath) // #nosec G304 -- File inclusion is necesary
 			if err != nil {
 				return nil, errors.Join(fmt.Errorf("cannot open file for mail attachment"), err)
 			}

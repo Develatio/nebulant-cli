@@ -18,7 +18,9 @@ package subcom
 
 import (
 	"flag"
+	"fmt"
 
+	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/update"
 )
 
@@ -37,10 +39,16 @@ func UpdateCmd() (int, error) {
 		return 1, err
 	}
 
-	err = update.UpdateCLI("latest")
+	out, err := update.UpdateCLI("latest", false)
 	if err != nil {
+		if _, ok := err.(*update.AlreadyUpToDateError); ok {
+			cast.LogInfo("Already up to date", nil)
+			return 0, nil
+		}
 		return 1, err
 	}
-
+	if out != nil {
+		cast.LogInfo(fmt.Sprintf("Updated to version: %s (%s) ", out.NewVersion.Version, out.NewVersion.Date), nil)
+	}
 	return 0, nil
 }

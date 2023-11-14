@@ -83,7 +83,7 @@ func DefaultOnActionErrorHook(ctx *ProviderHookContext, aout *base.ActionOutput)
 		// stay here forever hahahaha, laugh with me..., I mean with
 		// you..., I mean with both..., sh*t I'm going crazy.
 		rand.Seed(time.Now().UnixNano())
-		randIntString := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
+		randIntString := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
 		actions := []*blueprint.Action{
 			{
 				ActionID: sleepIdPrefix + randIntString,

@@ -385,7 +385,7 @@ func (h *Httpd) autocompleteView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// rand.Seed(time.Now().UnixNano())
-	randIntString := fmt.Sprintf("%d", rand.Int()) //#nosec G404 -- Weak random is OK here
+	randIntString := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
 	bp.ExecutionUUID = &randIntString
 	irbConf := &blueprint.IRBGenConfig{
 		AllowResultReturn: true,
