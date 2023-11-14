@@ -4,8 +4,8 @@
 VERSION = 0
 PATCHLEVEL = 3
 SUBLEVEL = 0
-EXTRAVERSION = -beta
-# EXTRAVERSION := -beta-git-$(shell git log -1 --format=%h)
+# EXTRAVERSION = -beta
+EXTRAVERSION := -beta-git-$(shell git log -1 --format=%h)
 NAME =
 
 ######
