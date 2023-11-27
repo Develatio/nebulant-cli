@@ -46,6 +46,7 @@ require (
 	github.com/aws/smithy-go v1.16.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/creack/pty v1.1.21 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/hetznercloud/hcloud-go v1.50.0 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect

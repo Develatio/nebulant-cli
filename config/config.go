@@ -69,6 +69,9 @@ var FrontOriginPre string = "https://builder.nebulant.dev"
 // DEBUG conf
 var DEBUG bool = false
 
+// PARANOICDEBUG conf
+var PARANOICDEBUG bool = false
+
 // PROFILING conf
 var PROFILING bool = false
 
@@ -99,6 +102,7 @@ var ServerModeFlag *bool
 var AddrFlag *string
 var VersionFlag *bool
 var DebugFlag *bool
+var ParanoicDebugFlag *bool
 var Ipv6Flag *bool
 var DisableColorFlag *bool
 var UpgradeAssetsFlag *bool

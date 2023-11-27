@@ -106,7 +106,6 @@ func Selectable(prompt string, options []string) (int, error) {
 func openMultilineStdout() {
 	if mls == nil {
 		mls = &MultilineStdout{}
-
 		mls.SetMainStdout(Stdout)
 		mls.Init()
 		log.SetOutput(mls)

@@ -26,13 +26,12 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"os/user"
-	"runtime"
 	"strconv"
 	"strings"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/ipc"
+	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/joho/godotenv"
 )
@@ -128,60 +127,11 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	if p.Entrypoint == nil || p.Entrypoint != nil && len(strings.Replace(*p.Entrypoint, " ", "", -1)) <= 0 {
-		var shell string
-		switch runtime.GOOS {
-		case "windows":
-			shell = os.Getenv("COMSPEC")
-			if len(shell) <= 0 {
-				shell = "cmd.exe"
-			}
-		case "darwin":
-			user, err := user.Current()
-			if err != nil {
-				return nil, err
-			}
-			argv, err := util.CommandLineToArgv("dscl /Search -read \"/Users/" + user.Username + "\" UserShell")
-			if err != nil {
-				return nil, err
-			}
-			out, err := exec.Command(argv[0], argv[1:]...).Output() // #nosec G204 -- allowed here
-			if err != nil {
-				return nil, err
-			}
-			shell = string(out)
-			shell = strings.Replace(shell, "UserShell: ", "", 1)
-			shell = strings.Trim(shell, "\n")
-			if len(shell) <= 0 {
-				shell = "/bin/zsh"
-			}
-		case "linux", "openbsd", "freebsd":
-			user, err := user.Current()
-			if err != nil {
-				return nil, err
-			}
-			out, err := exec.Command("getent", "passwd", user.Uid).Output() // #nosec G204 -- allowed here
-			if err != nil {
-				return nil, err
-			}
-			parts := strings.SplitN(string(out), ":", 7)
-			if len(parts) < 7 || parts[0] == "" || parts[0][0] == '+' || parts[0][0] == '-' {
-				return nil, fmt.Errorf("cannot determine OS shell")
-			}
-			shell = parts[6]
-			shell = strings.Trim(shell, "\n")
-			if len(shell) <= 0 {
-				shell = "/bin/bash"
-			}
+		shell, err := term.DetermineOsShell()
+		if err != nil {
+			return nil, err
 		}
-		ss := strings.Split(string(shell), string(os.PathSeparator))
-		rr := ss[len(ss)-1]
-		rr = strings.ToLower(rr)
-		switch rr {
-		case "zsh", "bash", "tcsh", "csh", "ksh", "ash", "rc", "bash.exe":
-			shell = shell + " -c"
-		case "cmd.exe":
-			shell = shell + " /c"
-		}
+
 		p.Entrypoint = &shell
 		p.CommandAsSingleArg = true
 	}

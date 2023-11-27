@@ -41,6 +41,9 @@ const InfoLevel = 20
 // DebugLevel const
 const DebugLevel = 10
 
+// DebugLevel const
+const ParanoicDebugLevel = 5
+
 // NotsetLevel const
 const NotsetLevel = 0
 
@@ -333,6 +336,10 @@ func Log(level int, m *string, ei *string, ai *string, ti *string, raw bool) {
 	if !config.DEBUG && level == DebugLevel {
 		return
 	}
+	if !config.PARANOICDEBUG && level == ParanoicDebugLevel {
+		return
+	}
+
 	bdata := &BusData{
 		TypeID:   BusDataTypeLog,
 		M:        m,
@@ -541,6 +548,11 @@ func (l *Logger) ByteLogInfo(b []byte) {
 // LogDebug func
 func (l *Logger) LogDebug(s string) {
 	Log(DebugLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
+}
+
+// ParanoicLogDebug func
+func (l *Logger) ParanoicLogDebug(s string) {
+	Log(ParanoicDebugLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
 }
 
 type DummyLogger struct {

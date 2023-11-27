@@ -340,6 +340,23 @@ L:
 				break L
 			}
 
+			///// debug
+			if s.CurrentAction.BreakPoint {
+				s.logger.LogInfo("Breakpoint found, starting debugger")
+				bkp := &breakPoint{
+					end:   make(chan bool),
+					stage: s,
+				}
+				// TODO: dettect if there is already a debugger running
+				dbg := NewDebugger(bkp)
+				err := dbg.Serve()
+				if next := s.PostAction(nil, err); !next {
+					break L
+				}
+				continue
+			}
+			///// debug
+
 			// Get provider for current action
 			provider, err := s.GetProvider(s.CurrentAction.Provider)
 			if err != nil {

@@ -94,12 +94,13 @@ L:
 
 func (c *ConsoleLogger) setDefaultTheme() {
 	prefxmap = map[int]string{
-		CriticalLevel: " " + term.White + term.BGRed + " " + term.EmojiSet["FaceScreamingInFear"] + " CRITICAL ERROR " + term.Reset,
-		ErrorLevel:    " " + term.White + term.BGRed + " " + term.EmojiSet["PoliceCarLight"] + " ERROR " + term.Reset,
-		WarningLevel:  " " + term.Black + term.BGYellow + " " + term.EmojiSet["Construction"] + " WARNING " + term.Reset,
-		InfoLevel:     " " + term.Blue + "»" + term.Magenta + "»" + term.Reset,
-		DebugLevel:    " " + term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
-		NotsetLevel:   "( · ) ",
+		CriticalLevel:      " " + term.White + term.BGRed + " " + term.EmojiSet["FaceScreamingInFear"] + " CRITICAL ERROR " + term.Reset,
+		ErrorLevel:         " " + term.White + term.BGRed + " " + term.EmojiSet["PoliceCarLight"] + " ERROR " + term.Reset,
+		WarningLevel:       " " + term.Black + term.BGYellow + " " + term.EmojiSet["Construction"] + " WARNING " + term.Reset,
+		InfoLevel:          " " + term.Blue + "»" + term.Magenta + "»" + term.Reset,
+		DebugLevel:         " " + term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
+		ParanoicDebugLevel: " " + term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
+		NotsetLevel:        "( · ) ",
 	}
 }
 

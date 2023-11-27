@@ -196,6 +196,21 @@ var commands map[string]*nbcommand = map[string]*nbcommand{
 			os.Exit(exitCode)
 		},
 	},
+	"debugger": {
+		upgradeTerm:   true,
+		welcomeMsg:    true,
+		initProviders: false,
+		help:          "  debugger\t\t" + term.EmojiSet["FaceWithMonocle"] + " connect to running debugger\n",
+		sec:           secruntime,
+		run: func() {
+			exitCode, err := subcom.DebuggerCmd()
+			if err != nil {
+				cast.LogErr(err.Error(), nil)
+				cast.SBus.Close().Wait()
+			}
+			os.Exit(exitCode)
+		},
+	},
 }
 
 func main() {
@@ -241,6 +256,7 @@ func main() {
 
 	config.VersionFlag = flag.Bool("v", false, "Show version and exit.")
 	config.DebugFlag = flag.Bool("x", false, "Enable debug.")
+	config.ParanoicDebugFlag = flag.Bool("xx", false, "Enable paranoic debug.")
 	config.Ipv6Flag = flag.Bool("6", false, "Force ipv6")
 	config.DisableColorFlag = flag.Bool("c", false, "Disable colors.")
 	config.ForceTerm = flag.Bool("ft", false, "Force terminal. Bypass no-term detection.")
@@ -289,6 +305,10 @@ func main() {
 	// Debug
 	if *config.DebugFlag {
 		config.DEBUG = true
+	}
+	if *config.ParanoicDebugFlag {
+		config.DEBUG = true
+		config.PARANOICDEBUG = true
 	}
 
 	sc := flag.Arg(0)

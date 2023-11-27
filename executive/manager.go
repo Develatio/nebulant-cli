@@ -418,8 +418,8 @@ L:
 				// add extra sleep
 				time.Sleep(1 * time.Second)
 			} else {
-				m.Logger.LogDebug("[Manager] " + strconv.Itoa(len(m.stages)) + " stages running")
-				m.Logger.LogDebug("[Manager] " + strconv.Itoa(len(m.syncThreads)) + " stages waiting join")
+				m.Logger.ParanoicLogDebug("[Manager] " + strconv.Itoa(len(m.stages)) + " stages running")
+				m.Logger.ParanoicLogDebug("[Manager] " + strconv.Itoa(len(m.syncThreads)) + " stages waiting join")
 			}
 
 			time.Sleep(1 * time.Second)
