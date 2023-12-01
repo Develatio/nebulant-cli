@@ -43,17 +43,18 @@ func newBar() {
 	}
 }
 
-func parseTestsFs() (*flag.FlagSet, error) {
+func parseTestsFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("debugterm", flag.ExitOnError)
-	err := fs.Parse(flag.Args()[1:])
+	fs.SetOutput(cmdline.Output())
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func DebugtermCmd() (int, error) {
-	_, err := parseTestsFs()
+func DebugtermCmd(cmdline *flag.FlagSet) (int, error) {
+	_, err := parseTestsFs(cmdline)
 	if err != nil {
 		return 1, err
 	}

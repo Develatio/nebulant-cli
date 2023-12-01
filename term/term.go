@@ -92,6 +92,9 @@ func isTerminal() bool {
 	if config.ForceTerm != nil && *config.ForceTerm {
 		return true
 	}
+	if config.ForceNoTerm {
+		return false
+	}
 	return term.IsTerminal(int(os.Stdout.Fd()))
 }
 
@@ -135,6 +138,8 @@ func Print(a ...interface{}) (n int, err error) {
 	return fmt.Fprint(Stdout, a...)
 }
 
+// I know, this is too intrusive
+// way to check emoji support
 func configEmojiSupport() error {
 	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {

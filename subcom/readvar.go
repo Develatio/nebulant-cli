@@ -33,22 +33,23 @@ import (
 // true: all errors are printed
 var strict *bool
 
-func parseReadVar() (*flag.FlagSet, error) {
+func parseReadVar(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("readvar", flag.ExitOnError)
+	fs.SetOutput(cmdline.Output())
 	strict = fs.Bool("strict", false, "Force err msg instead empty string")
 	fs.Usage = func() {
 		fmt.Fprint(fs.Output(), "\nUsage: nebulant readvar [variable name] [flags]\n")
 		PrintDefaults(fs)
 	}
-	err := fs.Parse(flag.Args()[1:])
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func ReadvarCmd() (int, error) {
-	_, err := parseReadVar()
+func ReadvarCmd(cmdline *flag.FlagSet) (int, error) {
+	_, err := parseReadVar(cmdline)
 	if err != nil {
 		return 1, err
 	}

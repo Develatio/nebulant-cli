@@ -26,24 +26,25 @@ import (
 
 var forceupdate *bool
 
-func parseUpdate() (*flag.FlagSet, error) {
+func parseUpdate(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("update", flag.ExitOnError)
+	fs.SetOutput(cmdline.Output())
 	forceupdate = fs.Bool("f", false, "force update")
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant update [options]\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
+		fmt.Fprintf(cmdline.Output(), "\nOptions:\n")
 		PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	err := fs.Parse(flag.Args()[1:])
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func UpdateCmd() (int, error) {
-	_, err := parseUpdate()
+func UpdateCmd(cmdline *flag.FlagSet) (int, error) {
+	_, err := parseUpdate(cmdline)
 	if err != nil {
 		return 1, err
 	}

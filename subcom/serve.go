@@ -26,15 +26,16 @@ import (
 	"github.com/develatio/nebulant-cli/executive"
 )
 
-func parseServeFs() (*flag.FlagSet, error) {
+func parseServeFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
+	fs.SetOutput(cmdline.Output())
 	config.AddrFlag = fs.String("b", config.SERVER_ADDR+":"+config.SERVER_PORT, "Bind addr:port (ipv4) or [::1]:port (ipv6)")
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant serve [options]\n")
 		fmt.Fprintf(fs.Output(), "\nOptions:\n")
 		PrintDefaults(fs)
 	}
-	err := fs.Parse(flag.Args()[1:])
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
@@ -62,8 +63,8 @@ func parseServeFs() (*flag.FlagSet, error) {
 	return fs, nil
 }
 
-func ServeCmd() (int, error) {
-	_, err := parseServeFs()
+func ServeCmd(cmdline *flag.FlagSet) (int, error) {
+	_, err := parseServeFs(cmdline)
 	if err != nil {
 		return 1, err
 	}

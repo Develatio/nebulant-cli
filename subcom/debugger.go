@@ -63,16 +63,17 @@ func (i *ioWSrw) Read(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func parseDebuggFs() (*flag.FlagSet, error) {
+func parseDebuggFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("debugterm", flag.ExitOnError)
-	err := fs.Parse(flag.Args()[1:])
+	fs.SetOutput(cmdline.Output())
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func DebuggerCmd() (int, error) {
+func DebuggerCmd(cmdline *flag.FlagSet) (int, error) {
 
 	u := url.URL{Scheme: "ws", Host: "localhost:6565", Path: ""}
 	log.Printf("connecting to %s", u.String())

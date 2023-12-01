@@ -1,7 +1,5 @@
-//go:build !js
-
 // Nebulant
-// Copyright (C) 2022  Develatio Technologies S.L.
+// Copyright (C) 2023  Develatio Technologies S.L.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -16,28 +14,28 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package term
+package cli
 
 import (
-	"fmt"
-	"os"
+	"flag"
 
-	"github.com/chzyer/readline"
-	"github.com/manifoldco/promptui"
+	nebulant_term "github.com/develatio/nebulant-cli/term"
+	"golang.org/x/term"
 )
 
-// from readline.std_windows.go
-// Stdin = NewRawReader()
-// Stdout = NewANSIWriter(Stdout)
-// Stderr = NewANSIWriter(Stderr)
+func NSTerm(cmdline *flag.FlagSet) (int, error) {
+	// raw term, pty will be emulated
+	oldState, err := term.MakeRaw(int(nebulant_term.GenuineOsStdin.Fd()))
+	if err != nil {
+		panic(err)
+	}
+	defer term.Restore(int(nebulant_term.GenuineOsStdin.Fd()), oldState)
 
-var GenuineOsStdout *os.File = os.Stdout
-var GenuineOsStderr *os.File = os.Stderr
-var GenuineOsStdin *os.File = os.Stdin
+	vpty := NewVirtpty()
+	vpty.OpenMustar(nebulant_term.GenuineOsStdin, nebulant_term.GenuineOsStdout)
+	vstdin, vstdout := vpty.OpenSluva(false)
 
-var Stdout = readline.Stdout
-var Stderr = readline.Stderr
-var Stdin = readline.Stdin
-var CharBell = []byte(fmt.Sprintf("%c", readline.CharBell))[0]
-var ErrInterrupt = promptui.ErrInterrupt
-var ErrEOF = promptui.ErrEOF
+	defer vpty.Close()
+
+	return NSShell(vstdin, vstdout)
+}

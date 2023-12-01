@@ -25,21 +25,22 @@ import (
 	"github.com/develatio/nebulant-cli/executive"
 )
 
-func parseRunFs() (*flag.FlagSet, error) {
+func parseRunFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
+	fs.SetOutput(cmdline.Output())
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant run [path or nebulant:// protocol] [--varname=varvalue --varname=varvalue]\n")
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	err := fs.Parse(flag.Args()[1:])
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func RunCmd() (int, error) {
-	fs, err := parseRunFs()
+func RunCmd(cmdline *flag.FlagSet) (int, error) {
+	fs, err := parseRunFs(cmdline)
 	if err != nil {
 		return 1, err
 	}

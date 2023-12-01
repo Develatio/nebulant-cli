@@ -112,6 +112,8 @@ var ForceTerm *bool
 var BuildAssetIndexFlag *string
 var ForceUpgradeAssetsNoDownloadFlag *bool
 
+var ForceNoTerm = false
+
 func AppHomePath() string {
 	var userHomePath string
 	if runtime.GOOS == "windows" {
