@@ -64,7 +64,7 @@ func (i *ioWSrw) Read(p []byte) (n int, err error) {
 }
 
 func parseDebuggFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("debugterm", flag.ExitOnError)
+	fs := flag.NewFlagSet("debugterm", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
 	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {

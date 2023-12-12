@@ -27,7 +27,7 @@ import (
 var forceupdate *bool
 
 func parseUpdate(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("update", flag.ExitOnError)
+	fs := flag.NewFlagSet("update", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
 	forceupdate = fs.Bool("f", false, "force update")
 	fs.Usage = func() {

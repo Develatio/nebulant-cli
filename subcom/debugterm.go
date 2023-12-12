@@ -44,7 +44,7 @@ func newBar() {
 }
 
 func parseTestsFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("debugterm", flag.ExitOnError)
+	fs := flag.NewFlagSet("debugterm", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
 	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {

@@ -26,7 +26,7 @@ import (
 )
 
 func parseRunFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("run", flag.ExitOnError)
+	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant run [path or nebulant:// protocol] [--varname=varvalue --varname=varvalue]\n")

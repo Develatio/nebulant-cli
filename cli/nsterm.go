@@ -18,6 +18,8 @@ package cli
 
 import (
 	"flag"
+	"io"
+	"os"
 
 	nebulant_term "github.com/develatio/nebulant-cli/term"
 	"golang.org/x/term"
@@ -31,11 +33,52 @@ func NSTerm(cmdline *flag.FlagSet) (int, error) {
 	}
 	defer term.Restore(int(nebulant_term.GenuineOsStdin.Fd()), oldState)
 
-	vpty := NewVirtpty()
-	vpty.OpenMustar(nebulant_term.GenuineOsStdin, nebulant_term.GenuineOsStdout)
-	vstdin, vstdout := vpty.OpenSluva(false)
+	vpty := NewVirtPTY()
+	mfd := vpty.MustarFD()
+	go func() {
+		// fmt.Println("stdin on")
+		io.Copy(mfd, os.Stdin)
+		// fmt.Println("stdin off")
+	}()
+	go func() {
+		// fmt.Println("stdout on")
+		io.Copy(os.Stdout, mfd)
+		// fmt.Println("stdout off")
+	}()
+	// WIP, TODO: send this ldisc to
+	// shell or leave shell to set it
+	// to allow shell handle line buffer
+	// TODO: bring defaultldisc hability
+	// to work with line buff
+	// ldisc := &DefaultLdisc{}
+	// vpty.SetLDisc(ldisc)
+	// vpty.OpenMustar(nebulant_term.GenuineOsStdin, nebulant_term.GenuineOsStdout)
+	// vstdin, vstdout := vpty.OpenSluva(false)
 
-	defer vpty.Close()
+	sfd := vpty.SluvaFD()
 
-	return NSShell(vstdin, vstdout)
+	defer mfd.Close()
+	defer sfd.Close()
+
+	// fmt.Println("running shell")
+	return NSShell(vpty, sfd, sfd)
 }
+
+// func NSTerm2(cmdline *flag.FlagSet) (int, error) {
+// 	// raw term, pty will be emulated
+// 	oldState, err := term.MakeRaw(int(nebulant_term.GenuineOsStdin.Fd()))
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	defer term.Restore(int(nebulant_term.GenuineOsStdin.Fd()), oldState)
+
+// 	vpty := NewVirtpty()
+// 	loldisc := driver.LocalOSLDisc{}
+// 	loldisc.Open(vpty)
+// 	vpty.OpenMustar(nebulant_term.GenuineOsStdin, nebulant_term.GenuineOsStdout)
+// 	vstdin, vstdout := vpty.OpenSluva(false)
+
+// 	defer vpty.Close()
+
+// 	return NSShell(vstdin, vstdout)
+// }

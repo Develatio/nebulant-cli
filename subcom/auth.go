@@ -25,7 +25,7 @@ import (
 )
 
 func parseAuthFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("auth", flag.ExitOnError)
+	fs := flag.NewFlagSet("auth", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant auth [command] [options]\n")

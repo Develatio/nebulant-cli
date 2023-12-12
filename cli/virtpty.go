@@ -27,31 +27,105 @@ import (
 	"unicode/utf8"
 )
 
-func LFtoCRLF(data []byte) []byte {
-	p := data
-	m := bytes.Count(data, []byte{10})
-	if m > 0 {
-		l := len(data)
-		p = make([]byte, l+m)
-		e := -1
-		for i := 0; i < len(data); i++ {
-			e++
-			p[e] = data[i]
-			if data[i] != 10 {
-				continue
-			}
-			// data_i == 10
-			if i == 0 || (i > 0 && data[i-1] != 13) {
-				p[e] = 13
-				e++
-				p[e] = 10
-				continue
-			}
-		}
-		p = p[:e+1]
-	}
-	return p
+type LDisc interface {
+	// Call from Shell/Program:
+	Open(*VPTY)
+	Close()
+	// read from vpty (master/keyboard/buff)
+	Read()
+	//
+	// Sent data to tty device (stdout)
+	Write()
+	//
+	IOctl()
+
+	// Call from vpty
+	ReceiveBuff()
 }
+
+/*
+struct tty_ldisc_ops {
+	char	*name;
+	int	num;
+
+	//  The following routines are called from above.
+	//  (i.e., by the program or module accessing the TTY device):
+
+	 // The function open() is called as soon as the TTY device switches to this line discipline.
+	int	(*open)(struct tty_struct *tty);
+
+	// The function close() is called when the current TTY line discipline is deactivated.
+	// This happens when a TTY device switches from this line discipline into another one
+	// (where the device is first reset to the standard line discipline N_TTX by the Linux
+	// kernel) and when the TTY device itself is closed.
+	void	(*close)(struct tty_struct *tty);
+
+	void	(*flush_buffer)(struct tty_struct *tty);
+
+	// The function read() is called when a program wants to read data from the TTY device.
+	ssize_t	(*read)(struct tty_struct *tty, struct file *file, u8 *buf, size_t nr, void **cookie, unsigned long offset);
+
+	// The function write() is called when a program wants to send data to the TTY device.
+	ssize_t	(*write)(struct tty_struct *tty, struct file *file, const u8 *buf, size_t nr);
+
+	// The function ioctl() is called when a program uses the system call ioctl() to change the
+	// configuration of the TTY line discipline or of the actual TTY device, but only provided
+	// that the higher-layer generic driver for TTY devices was unable to process the ioctl()
+	// call (as is the case, for example, when the device switches to another TTY line discipline).
+	int	(*ioctl)(struct tty_struct *tty, unsigned int cmd, unsigned long arg);
+
+	int	(*compat_ioctl)(struct tty_struct *tty, unsigned int cmd, unsigned long arg);
+	void	(*set_termios)(struct tty_struct *tty, const struct ktermios *old);
+	__poll_t (*poll)(struct tty_struct *tty, struct file *file, struct poll_table_struct *wait);
+	void	(*hangup)(struct tty_struct *tty);
+
+
+	//  The following routines are called from below.
+	//  (i.e., from the actual device driver of the TTY device)
+
+	// The function receive_buf() is called when the device driver has received data and wants to
+	// forward this data to the higher-layer program (i.e., to the driver of the TTY line discipline
+	// in this case). The parameters passed include the address and length of data.
+	void	(*receive_buf)(struct tty_struct *tty, const u8 *cp, const u8 *fp, size_t count);
+
+	// The function write_wakeup() optionally can be called by the device driver as soon as it has
+	// finished sending a data block and is ready to accept more data. However, this happens only
+	// provided that it has been explicitly requested by the flag TTY_DO_WRITE_WAKEUP
+	void	(*write_wakeup)(struct tty_struct *tty);
+
+	void	(*dcd_change)(struct tty_struct *tty, bool active);
+	size_t	(*receive_buf2)(struct tty_struct *tty, const u8 *cp, const u8 *fp, size_t count);
+	void	(*lookahead_buf)(struct tty_struct *tty, const u8 *cp, const u8 *fp, size_t count);
+
+	struct  module *owner;
+};
+*/
+
+// func LFtoCRLF(data []byte) []byte {
+// 	p := data
+// 	m := bytes.Count(data, []byte{10})
+// 	if m > 0 {
+// 		l := len(data)
+// 		p = make([]byte, l+m)
+// 		e := -1
+// 		for i := 0; i < len(data); i++ {
+// 			e++
+// 			p[e] = data[i]
+// 			if data[i] != 10 {
+// 				continue
+// 			}
+// 			// data_i == 10
+// 			if i == 0 || (i > 0 && data[i-1] != 13) {
+// 				p[e] = 13
+// 				e++
+// 				p[e] = 10
+// 				continue
+// 			}
+// 		}
+// 		p = p[:e+1]
+// 	}
+// 	return p
+// }
 
 type inTranslator struct {
 	on bool
@@ -130,8 +204,13 @@ type VPTY struct {
 	mu sync.Mutex
 	// in theory, sluva should translate in/out
 	sluva  *port
+	ldisc  LDisc
 	mustar *port
 	errors []error
+}
+
+func (v *VPTY) SetLDisc(ldisc LDisc) {
+	v.ldisc = ldisc
 }
 
 func (v *VPTY) addErr(err error) {
@@ -188,53 +267,6 @@ func (v *VPTY) startRaw() {
 	defer v.sluva.in.Close()
 }
 
-// func escCollect(esc_time time.Time, reader *bufio.Reader) ([]rune, rune, error) {
-// 	var esc_seq []rune = make([]rune, 0)
-// 	// first read should be 91 [
-// 	char, _, err := reader.ReadRune()
-// 	if err != nil {
-// 		return nil, char, err
-// 	}
-// 	if char == 91 && time.Since(esc_time).Microseconds() < 512 {
-// 		esc_seq = append(esc_seq, char)
-// 	} else {
-// 		return esc_seq, char, nil
-// 	}
-
-// 	for {
-// 		char, _, err := reader.ReadRune()
-// 		if err != nil {
-// 			return nil, char, err
-// 		}
-// 		if time.Since(esc_time).Microseconds() < 512 {
-// 			esc_seq = append(esc_seq, char)
-// 		} else {
-// 			return esc_seq, char, nil
-// 		}
-// 	}
-// }
-
-// func escCollect(esc_time time.Time, reader *bufio.Reader) ([]rune, rune, error) {
-// 	reader.Peek()
-// 	var esc_seq []rune = make([]rune, 0)
-// 	select {
-// 	case char, _, err := <-reader.ReadRune():
-// 		//
-// 	default:
-// 	}
-// }
-
-func (v *VPTY) groundEscParse(esc_seq []rune) []rune {
-	switch string(esc_seq) {
-	case "[?25l":
-		// make cursor invisible
-		// do nothing
-		return make([]rune, 0)
-	default:
-		return esc_seq
-	}
-}
-
 func (v *VPTY) startLDisc() {
 	go func() {
 		_, err := io.Copy(v.mustar.out, v.sluva.in)
@@ -243,6 +275,7 @@ func (v *VPTY) startLDisc() {
 		}
 	}()
 
+	// prompt buff
 	var bff []byte
 	buff := bytes.NewBuffer(bff)
 

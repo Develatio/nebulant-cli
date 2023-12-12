@@ -34,7 +34,7 @@ import (
 var strict *bool
 
 func parseReadVar(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("readvar", flag.ExitOnError)
+	fs := flag.NewFlagSet("readvar", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
 	strict = fs.Bool("strict", false, "Force err msg instead empty string")
 	fs.Usage = func() {

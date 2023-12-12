@@ -29,7 +29,7 @@ import (
 )
 
 func parseAssetsFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("assets", flag.ExitOnError)
+	fs := flag.NewFlagSet("assets", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets [command] [options]\n")
@@ -47,7 +47,7 @@ func parseAssetsFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 }
 
 func parseAssetsUpgradeFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("upgrade", flag.ExitOnError)
+	fs := flag.NewFlagSet("upgrade", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
 	config.ForceUpgradeAssetsFlag = fs.Bool("u", false, "Force upgrade assets. Download prebuild-index.")
 	config.ForceUpgradeAssetsNoDownloadFlag = fs.Bool("uu", false, "Force upgrade assets. Skip download prebuild-index and build locally.")
@@ -66,7 +66,7 @@ func parseAssetsUpgradeFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 }
 
 func parseAssetsBuildFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("build", flag.ExitOnError)
+	fs := flag.NewFlagSet("build", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
 	fs.String("f", "", "Input file. Ej. -f ./file.json")
 	fs.String("a", "", "Asset ID. Ej. -a aws_images")
@@ -86,7 +86,7 @@ func parseAssetsBuildFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 }
 
 func parseAssetsSearchFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("search", flag.ExitOnError)
+	fs := flag.NewFlagSet("search", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
 	fs.String("a", "", "\tSearch into the `asset` ID. Ej. aws_images")
 	fs.String("t", "", "\tSearch term")

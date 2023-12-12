@@ -17,7 +17,6 @@
 package cli
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -29,22 +28,52 @@ import (
 	"github.com/develatio/nebulant-cli/util"
 )
 
-var cursorUp string = "\033[A"
-var cursorDown string = "\033[B"
+func run(vpty *VPTY2, s string, stdin io.ReadCloser, stdout io.WriteCloser) (int, error) {
+	argslice, err := util.CommandLineToArgv(s)
+	if err != nil {
+		stdout.Write([]byte(err.Error()))
+	}
 
-// var cursorRight string = "\033[C"
-// var cursorLeft string = "\033[D"
+	cmdline := flag.NewFlagSet(argslice[0], flag.ContinueOnError)
+	cmdline.SetOutput(stdout)
+	ConfArgs(cmdline)
+	err = cmdline.Parse(argslice)
+	if err != nil {
+		return 1, err
+	}
+	sc := cmdline.Arg(0)
 
-func NSShell(stdin io.ReadCloser, stdout io.WriteCloser) (int, error) {
+	if cmd, exists := NBLCommands[sc]; exists {
+		cmd.upgradeTerm = false // prevent set raw term
+		cmd.welcomeMsg = false  // prevent welcome msg
+		err := PrepareCmd(cmd)
+		if err != nil {
+			return 1, err
+		}
+		// finally run command
+		return cmd.run(cmdline)
+	}
+	return 127, fmt.Errorf(fmt.Sprintf("?? unknown cmd %v\n", cmdline.Arg(0)))
+}
+
+func NSShell(vpty *VPTY2, stdin io.ReadCloser, stdout io.WriteCloser) (int, error) {
 	// override term.Stdout (readline.Stdout) by stdout arg
 	// this term.Stdout is used by log package and term.Print*
 	// the cast.ConsoleLogger also uses term.Print* and log
 	// package.
 
+	// init default line discipline
+	// with line buff editor
+	ldisc := NewDefaultLdisc()
+	vpty.SetLDisc(ldisc)
+
+	// set vpty stdout as term.Stdout
+	// and restore previous conf at exit
 	prev_term_stdout := term.Stdout
 	defer func() { term.Stdout = prev_term_stdout }()
 	term.Stdout = stdout
 
+	// same with stderr
 	prev_term_stderr := term.Stderr
 	defer func() { term.Stderr = prev_term_stderr }()
 	term.Stderr = stdout
@@ -54,115 +83,84 @@ func NSShell(stdin io.ReadCloser, stdout io.WriteCloser) (int, error) {
 	defer func() { config.ForceNoTerm = false }()
 	config.ForceNoTerm = true
 
+	// upgrade term
 	term.UpgradeTerm()
-
-	reader := bufio.NewReader(stdin)
-	var lin, prompt string
-	var err error
 
 	var shellhistory []string
 	var shellhistoryidx int = -1
 	PS1 := []byte("NBShell> ")
 
-L:
 	for {
+		stdout.Write([]byte(term.CursorToColZero + term.EraseEntireLine))
 		stdout.Write(PS1)
+		stdout.Write([]byte(string(ldisc.RuneBuff)))
 	L2:
 		for {
-			lin = ""
-			for {
-				lin, err = reader.ReadString('\n')
+			esc := <-ldisc.ESC
+			switch string(esc) {
+			case CursorUp: // ESC arrow up
+				shellhistoryidx--
+				if shellhistoryidx < 0 {
+					shellhistoryidx = 0
+				}
+				tcmd := shellhistory[shellhistoryidx]
+				ldisc.SetBuff(tcmd)
+				break L2
+			case CursorDown: // ESC arrow down
+				shellhistoryidx++
+				if shellhistoryidx > len(shellhistory)-1 {
+					shellhistoryidx = len(shellhistory) - 1
+					ldisc.SetBuff("")
+					break L2 // force re-prompt PS1
+				}
+				tcmd := shellhistory[shellhistoryidx]
+				ldisc.SetBuff(tcmd)
+				break L2
+			case CarriageReturn:
+				stdout.Write([]byte("\n"))
+				p := make([]byte, len(ldisc.RuneBuff))
+				n, err := stdin.Read(p)
 				if err != nil {
-					stdout.Write([]byte("out of for"))
 					return 1, err
 				}
-				// stdout.Write([]byte("readed line: " + lin))
-				break
-			}
 
-			// 27 = esc
-			if lin[0] == 27 || lin == "\n" {
-				esc := strings.TrimSuffix(lin, "\n")
-				switch esc {
-				case cursorUp: // ESC arrow up
-					shellhistoryidx--
-					if shellhistoryidx < 0 {
-						shellhistoryidx = 0
-					}
-					prompt = shellhistory[shellhistoryidx]
-					stdout.Write([]byte("\r" + term.EraseEntireLine))
-					stdout.Write(PS1)
-					stdout.Write([]byte(prompt))
-					continue
-				case cursorDown: // ESC arrow up
-					// stdout.Write([]byte("history up\n"))
-					shellhistoryidx++
-					if shellhistoryidx > len(shellhistory)-1 {
-						shellhistoryidx = len(shellhistory) - 1
-						stdout.Write([]byte("\r" + term.EraseEntireLine))
-						break L2
-					}
-					prompt = shellhistory[shellhistoryidx]
-					stdout.Write([]byte("\r" + term.EraseEntireLine))
-					stdout.Write(PS1)
-					stdout.Write([]byte(prompt))
-					continue
-				case "":
-					stdout.Write([]byte("running history command\n"))
-				default:
-					stdout.Write([]byte(fmt.Sprintf("unknown special instruction %v\n", []byte(esc))))
-				}
-			} else {
-				prompt = strings.TrimSuffix(lin, "\n")
-			}
-
-			shellhistory = append(shellhistory, prompt)
-			shellhistoryidx = len(shellhistory)
-
-			stdout.Write([]byte("> " + prompt + ";\n"))
-			// internal commands
-			switch prompt {
-			case "exit":
-				stdout.Write([]byte("should exit from shell\n"))
-				break L
-			case "\n":
-				stdout.Write([]byte("\n"))
-			default:
-				// ln := lin[:len(lin)-1] // rm \n
-				argslice, err := util.CommandLineToArgv(prompt)
-				if err != nil {
-					stdout.Write([]byte(err.Error()))
-				}
-
-				cmdline := flag.NewFlagSet(argslice[0], flag.ContinueOnError)
-				cmdline.SetOutput(stdout)
-				ConfArgs(cmdline)
-				cmdline.Parse(argslice)
-				sc := cmdline.Arg(0)
-
-				if cmd, exists := NBLCommands[sc]; exists {
-					cmd.upgradeTerm = false // prevent set raw term
-					cmd.welcomeMsg = false  // prevent welcome msg
-					err := PrepareCmd(cmd)
-					if err != nil {
-						stdout.Write([]byte(err.Error()))
-						break L2
-					}
-					// finally run command
-					exitcode, err := cmd.run(cmdline)
-					if err != nil {
-						stdout.Write([]byte(err.Error()))
-						// cast.SBus.Close().Wait()
-					}
-					stdout.Write([]byte(fmt.Sprintf("out with exitcode %d\n", exitcode)))
+				// just \n or \r, skip
+				if n <= 1 {
+					ldisc.SetBuff("")
 					break L2
 				}
-				stdout.Write([]byte(fmt.Sprintf("unknown cmd %v\n", []byte(prompt))))
+
+				s := string(p)
+				s = strings.TrimSuffix(s, "\n")
+				s = strings.TrimSuffix(s, "\r")
+
+				shellhistory = append(shellhistory, s)
+				shellhistoryidx = len(shellhistory)
+
+				ldisc.SetBuff("")
+
+				// built in :)
+				if s == "exit" {
+					return 0, nil
+				}
+
+				// built in ;)
+				if s == "help" {
+					s = "--help"
+				}
+
+				// run command
+				ecode, err := run(vpty, s, stdin, stdout)
+				if err != nil {
+					stdout.Write([]byte(err.Error()))
+					stdout.Write([]byte(fmt.Sprintf("Exitcode %v", ecode)))
+				}
+				// end of run command
+
+				break L2 // force re-prompt PS1
 			}
-			break L2
 		}
 	}
-	return 0, nil
 }
 
 func init() {
