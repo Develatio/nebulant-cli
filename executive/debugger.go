@@ -11,6 +11,7 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/develatio/nebulant-cli/cast"
+	"github.com/develatio/nebulant-cli/nsterm"
 	"github.com/develatio/nebulant-cli/term"
 	"github.com/gorilla/websocket"
 )
@@ -72,10 +73,18 @@ func (c *debugger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		cmdQueue: make(chan []byte, 525),
 		conn:     conn,
 		qq:       c.qq,
+		vpty:     nsterm.NewVirtPTY(),
 	}
+
+	// for wsock client
+	// stdin and stdout for xterm.js
+	// mfd := clnt.vpty.MustarFD()
+	// // file descriptor for app
+	// sfd := clnt.vpty.SluvaFD()
+
 	// c.clients = append(c.clients, clnt)
 	clnt.Write([]byte(term.Magenta + "Nebulant debug. Hello :)\r\nhow are you?\r\n" + term.Reset))
-	go clnt.Prompt()
+	go clnt.start()
 
 }
 
@@ -220,6 +229,47 @@ type client struct {
 	stoppipe chan struct{}
 	// w io.Writer
 	// r io.Reader
+	vpty *nsterm.VPTY2
+}
+
+func (c *client) start() {
+	ldisc := nsterm.NewDefaultLdisc()
+	c.vpty.SetLDisc(ldisc)
+
+	// for wsock client
+	// stdin and stdout for xterm.js
+	mfd := c.vpty.MustarFD()
+	go func() {
+		io.Copy(mfd, c)
+		fmt.Println("out of c to mfd")
+	}()
+	go func() {
+		io.Copy(c, mfd)
+		fmt.Println("out of mfd to c")
+	}()
+
+	// file descriptor for app
+	sfd := c.vpty.SluvaFD()
+	_, err := nsterm.NSShell(c.vpty, sfd, sfd)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	// PS1 := []byte("(DBG) NBShell> ")
+
+	// for {
+	// 	stdout.Write([]byte(term.CursorToColZero + term.EraseEntireLine))
+	// 	stdout.Write(PS1)
+	// 	stdout.Write([]byte(string(ldisc.RuneBuff)))
+	// L2:
+	// 	for {
+	// 		esc := <-ldisc.ESC
+	// 		if esc != nsterm.CarriageReturn {
+	// 			continue
+	// 		}
+
+	// 	}
+
 }
 
 func (c *client) Write(p []byte) (int, error) {
@@ -244,29 +294,22 @@ func (c *client) Write(p []byte) (int, error) {
 }
 
 func (c *client) Read(p []byte) (n int, err error) {
-	cast.LogDebug("DEPRECATED", nil)
-	return 0, nil
+	_, m, err := c.conn.ReadMessage()
+	if err != nil {
+		return 0, err
+	}
 
-	// L:
-	//
-	//	for {
-	//		select { // Loop until a case ocurrs.
-	//		case <-c.stoppipe:
-	//			cast.LogDebug("Out of pipe read", nil)
-	//			break L
-	//		default:
-	//			n, err = c.pipeBuff.Read(p)
-	//			if err == io.EOF {
-	//				continue
-	//			}
-	//			if err != nil {
-	//				cast.LogErr(errors.Join(fmt.Errorf("cannot read from pipe buff"), err).Error(), nil)
-	//				return 0, err
-	//			}
-	//			return n, err
-	//		}
-	//	}
-	//	return 0, nil
+	ml := len(m)
+	pl := len(p)
+	fl := ml
+	if ml > pl {
+		fl = pl
+	}
+	for i := 0; i < fl; i++ {
+		p[i] = m[i]
+	}
+
+	return len(p), nil
 }
 
 func (c *client) PipeRead() error {

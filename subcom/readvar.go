@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/develatio/nebulant-cli/ipc"
+	"github.com/develatio/nebulant-cli/subsystem"
 )
 
 // strict *bool by default is false
@@ -39,7 +40,7 @@ func parseReadVar(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	strict = fs.Bool("strict", false, "Force err msg instead empty string")
 	fs.Usage = func() {
 		fmt.Fprint(fs.Output(), "\nUsage: nebulant readvar [variable name] [flags]\n")
-		PrintDefaults(fs)
+		subsystem.PrintDefaults(fs)
 	}
 	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {

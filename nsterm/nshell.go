@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package cli
+package nsterm
 
 import (
 	"flag"
@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 )
@@ -36,22 +37,22 @@ func run(vpty *VPTY2, s string, stdin io.ReadCloser, stdout io.WriteCloser) (int
 
 	cmdline := flag.NewFlagSet(argslice[0], flag.ContinueOnError)
 	cmdline.SetOutput(stdout)
-	ConfArgs(cmdline)
+	subsystem.ConfArgs(cmdline)
 	err = cmdline.Parse(argslice)
 	if err != nil {
 		return 1, err
 	}
 	sc := cmdline.Arg(0)
 
-	if cmd, exists := NBLCommands[sc]; exists {
-		cmd.upgradeTerm = false // prevent set raw term
-		cmd.welcomeMsg = false  // prevent welcome msg
-		err := PrepareCmd(cmd)
+	if cmd, exists := subsystem.NBLCommands[sc]; exists {
+		cmd.UpgradeTerm = false // prevent set raw term
+		cmd.WelcomeMsg = false  // prevent welcome msg
+		err := subsystem.PrepareCmd(cmd)
 		if err != nil {
 			return 1, err
 		}
 		// finally run command
-		return cmd.run(cmdline)
+		return cmd.Run(cmdline)
 	}
 	return 127, fmt.Errorf(fmt.Sprintf("?? unknown cmd %v\n", cmdline.Arg(0)))
 }
@@ -161,8 +162,4 @@ func NSShell(vpty *VPTY2, stdin io.ReadCloser, stdout io.WriteCloser) (int, erro
 			}
 		}
 	}
-}
-
-func init() {
-	NBLCommands["shell"].run = NSTerm
 }

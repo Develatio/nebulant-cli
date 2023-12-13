@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/develatio/nebulant-cli/cast"
+	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/update"
 )
 
@@ -33,7 +34,7 @@ func parseUpdate(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant update [options]\n")
 		fmt.Fprintf(cmdline.Output(), "\nOptions:\n")
-		PrintDefaults(fs)
+		subsystem.PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
 	err := fs.Parse(cmdline.Args()[1:])

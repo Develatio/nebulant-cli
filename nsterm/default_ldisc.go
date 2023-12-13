@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package cli
+package nsterm
 
 import (
 	"bytes"
@@ -107,6 +107,10 @@ func (d *DefaultLdisc) ReceiveMustarBuff(n int) {
 		d.ERR <- err
 		return
 	}
+
+	// sometimes a term uses maxread to store
+	// data and send here mostly empty data_b
+	data_b = bytes.TrimRight(data_b, "\x00")
 
 	data_s := string(data_b)
 	data_r, _ := utf8.DecodeRune(data_b)

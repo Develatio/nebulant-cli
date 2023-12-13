@@ -24,6 +24,7 @@ import (
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/subsystem"
 )
 
 func parseServeFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
@@ -33,7 +34,7 @@ func parseServeFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant serve [options]\n")
 		fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		PrintDefaults(fs)
+		subsystem.PrintDefaults(fs)
 	}
 	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {

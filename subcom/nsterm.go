@@ -14,13 +14,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package cli
+package subcom
 
 import (
 	"flag"
 	"io"
 	"os"
 
+	"github.com/develatio/nebulant-cli/nsterm"
 	nebulant_term "github.com/develatio/nebulant-cli/term"
 	"golang.org/x/term"
 )
@@ -33,7 +34,7 @@ func NSTerm(cmdline *flag.FlagSet) (int, error) {
 	}
 	defer term.Restore(int(nebulant_term.GenuineOsStdin.Fd()), oldState)
 
-	vpty := NewVirtPTY()
+	vpty := nsterm.NewVirtPTY()
 	mfd := vpty.MustarFD()
 	go func() {
 		// fmt.Println("stdin on")
@@ -61,24 +62,5 @@ func NSTerm(cmdline *flag.FlagSet) (int, error) {
 	defer sfd.Close()
 
 	// fmt.Println("running shell")
-	return NSShell(vpty, sfd, sfd)
+	return nsterm.NSShell(vpty, sfd, sfd)
 }
-
-// func NSTerm2(cmdline *flag.FlagSet) (int, error) {
-// 	// raw term, pty will be emulated
-// 	oldState, err := term.MakeRaw(int(nebulant_term.GenuineOsStdin.Fd()))
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	defer term.Restore(int(nebulant_term.GenuineOsStdin.Fd()), oldState)
-
-// 	vpty := NewVirtpty()
-// 	loldisc := driver.LocalOSLDisc{}
-// 	loldisc.Open(vpty)
-// 	vpty.OpenMustar(nebulant_term.GenuineOsStdin, nebulant_term.GenuineOsStdout)
-// 	vstdin, vstdout := vpty.OpenSluva(false)
-
-// 	defer vpty.Close()
-
-// 	return NSShell(vstdin, vstdout)
-// }

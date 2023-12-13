@@ -26,6 +26,7 @@ import (
 	"github.com/develatio/nebulant-cli/assets"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/subsystem"
 )
 
 func parseAssetsFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
@@ -55,7 +56,7 @@ func parseAssetsUpgradeFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets upgrade [options]\n")
 		fmt.Fprintf(fs.Output(), "\nLookup for new assets upgrade\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
-		PrintDefaults(fs)
+		subsystem.PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
 	err := fs.Parse(cmdline.Args()[2:])
@@ -75,7 +76,7 @@ func parseAssetsBuildFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets build [options]\n")
 		fmt.Fprintf(fs.Output(), "\nLocally build asset index\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
-		PrintDefaults(fs)
+		subsystem.PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
 	err := fs.Parse(cmdline.Args()[2:])
@@ -97,7 +98,7 @@ func parseAssetsSearchFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets search [options]\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
-		PrintDefaults(fs)
+		subsystem.PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
 	err := fs.Parse(cmdline.Args()[2:])
