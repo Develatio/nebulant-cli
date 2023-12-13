@@ -58,7 +58,6 @@ func (pp *pipe) Read(p []byte) (n int, err error) {
 			return nn, nil
 		}
 		return copy(p, b), nil
-
 	}
 }
 

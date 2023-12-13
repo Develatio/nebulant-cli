@@ -20,10 +20,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 
-	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
@@ -45,6 +43,11 @@ func run(vpty *VPTY2, s string, stdin io.ReadCloser, stdout io.WriteCloser) (int
 	sc := cmdline.Arg(0)
 
 	if cmd, exists := subsystem.NBLCommands[sc]; exists {
+		// TODO: implement:
+		// prev_ldisc = vpty.GetLDisc()
+		// vpty.SetLDisc(NewRawLdisc())
+		// defer vpty.SetLDisc(prev_ldisc)
+
 		cmd.UpgradeTerm = false // prevent set raw term
 		cmd.WelcomeMsg = false  // prevent welcome msg
 		err := subsystem.PrepareCmd(cmd)
@@ -63,6 +66,9 @@ func NSShell(vpty *VPTY2, stdin io.ReadCloser, stdout io.WriteCloser) (int, erro
 	// the cast.ConsoleLogger also uses term.Print* and log
 	// package.
 
+	// init raw ldisc to be used on command call
+	// rawldisc := NewRawLdisc()
+
 	// init default line discipline
 	// with line buff editor
 	ldisc := NewDefaultLdisc()
@@ -70,22 +76,22 @@ func NSShell(vpty *VPTY2, stdin io.ReadCloser, stdout io.WriteCloser) (int, erro
 
 	// set vpty stdout as term.Stdout
 	// and restore previous conf at exit
-	prev_term_stdout := term.Stdout
-	defer func() { term.Stdout = prev_term_stdout }()
-	term.Stdout = stdout
+	// prev_term_stdout := term.Stdout
+	// defer func() { term.Stdout = prev_term_stdout }()
+	// term.Stdout = stdout
 
-	// same with stderr
-	prev_term_stderr := term.Stderr
-	defer func() { term.Stderr = prev_term_stderr }()
-	term.Stderr = stdout
+	// // same with stderr
+	// prev_term_stderr := term.Stderr
+	// defer func() { term.Stderr = prev_term_stderr }()
+	// term.Stderr = stdout
 
-	log.SetOutput(stdout)
+	// log.SetOutput(stdout)
 
-	defer func() { config.ForceNoTerm = false }()
-	config.ForceNoTerm = true
+	// defer func() { config.ForceNoTerm = false }()
+	// config.ForceNoTerm = true
 
-	// upgrade term
-	term.UpgradeTerm()
+	// // upgrade term
+	// term.UpgradeTerm()
 
 	var shellhistory []string
 	var shellhistoryidx int = -1
@@ -120,6 +126,7 @@ func NSShell(vpty *VPTY2, stdin io.ReadCloser, stdout io.WriteCloser) (int, erro
 			case CarriageReturn:
 				stdout.Write([]byte("\n"))
 				p := make([]byte, len(ldisc.RuneBuff))
+				ldisc.SetBuff("")
 				n, err := stdin.Read(p)
 				if err != nil {
 					return 1, err
@@ -127,7 +134,6 @@ func NSShell(vpty *VPTY2, stdin io.ReadCloser, stdout io.WriteCloser) (int, erro
 
 				// just \n or \r, skip
 				if n <= 1 {
-					ldisc.SetBuff("")
 					break L2
 				}
 
@@ -137,8 +143,6 @@ func NSShell(vpty *VPTY2, stdin io.ReadCloser, stdout io.WriteCloser) (int, erro
 
 				shellhistory = append(shellhistory, s)
 				shellhistoryidx = len(shellhistory)
-
-				ldisc.SetBuff("")
 
 				// built in :)
 				if s == "exit" {
@@ -152,6 +156,7 @@ func NSShell(vpty *VPTY2, stdin io.ReadCloser, stdout io.WriteCloser) (int, erro
 
 				// run command
 				ecode, err := run(vpty, s, stdin, stdout)
+
 				if err != nil {
 					stdout.Write([]byte(err.Error()))
 					stdout.Write([]byte(fmt.Sprintf("Exitcode %v", ecode)))

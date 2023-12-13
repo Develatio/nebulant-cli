@@ -19,7 +19,6 @@ package nsterm
 import (
 	"errors"
 	"io"
-	"sync"
 )
 
 type nopWriteCloser struct {
@@ -114,12 +113,10 @@ type PortFD struct {
 }
 
 func (fd *PortFD) Read(p []byte) (n int, err error) {
-	// fmt.Println("fd read", fd.name)
 	return fd.r.Read(p)
 }
 
 func (fd *PortFD) Write(p []byte) (n int, err error) {
-	// fmt.Println("fd write", fd.name)
 	return fd.w.Write(p)
 }
 
@@ -142,12 +139,15 @@ type Port struct {
 }
 
 type VPTY2 struct {
-	mu sync.Mutex
+	// mu sync.Mutex
 	// in theory, sluva should translate in/out
 	sluva  *Port
 	ldisc  Ldisc
 	mustar *Port
 	errors []error
+	// external FD
+	// sluvaFD  *PortFD
+	// mustarFD *PortFD
 }
 
 func (v *VPTY2) sluvaWriteTick(n int) {
@@ -159,8 +159,13 @@ func (v *VPTY2) mustarWriteTick(n int) {
 }
 
 func (v *VPTY2) SetLDisc(ldisc Ldisc) {
-	// TODO: disable previous ldisc
-	v.ldisc = ldisc
+	if v.ldisc != nil {
+		err := v.ldisc.Close()
+		if err != nil {
+			v.errors = append(v.errors, err)
+		}
+	}
+
 	mfd := &PortFD{
 		name: "Mustar FD for ldisc (mustar in_r out_w)",
 		r:    v.mustar.in_r,  // <- v.mustar.in_w
@@ -168,11 +173,14 @@ func (v *VPTY2) SetLDisc(ldisc Ldisc) {
 	}
 	sfd := &PortFD{
 		name: "Sluva FD for ldisc (sluva in_r out_w)",
-		r:    v.sluva.in_r, //
+		r:    v.sluva.in_r,
 		w:    v.sluva.out_w,
 	}
+
 	ldisc.SetMustarFD(mfd)
 	ldisc.SetSluvaFD(sfd)
+
+	v.ldisc = ldisc
 	// fmt.Println("setted ldisc")
 }
 
@@ -197,8 +205,8 @@ func (v *VPTY2) MustarFD() *PortFD {
 	}
 }
 
-func (v *VPTY2) addErr(err error) {
-	v.mu.Lock()
-	defer v.mu.Unlock()
-	v.errors = append(v.errors, err)
-}
+// func (v *VPTY2) addErr(err error) {
+// 	// v.mu.Lock()
+// 	// defer v.mu.Unlock()
+// 	v.errors = append(v.errors, err)
+// }

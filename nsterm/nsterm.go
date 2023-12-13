@@ -45,40 +45,11 @@ func NSTerm(cmdline *flag.FlagSet) (int, error) {
 		io.Copy(os.Stdout, mfd)
 		// fmt.Println("stdout off")
 	}()
-	// WIP, TODO: send this ldisc to
-	// shell or leave shell to set it
-	// to allow shell handle line buffer
-	// TODO: bring defaultldisc hability
-	// to work with line buff
-	// ldisc := &DefaultLdisc{}
-	// vpty.SetLDisc(ldisc)
-	// vpty.OpenMustar(nebulant_term.GenuineOsStdin, nebulant_term.GenuineOsStdout)
-	// vstdin, vstdout := vpty.OpenSluva(false)
 
 	sfd := vpty.SluvaFD()
 
 	defer mfd.Close()
 	defer sfd.Close()
 
-	// fmt.Println("running shell")
 	return NSShell(vpty, sfd, sfd)
 }
-
-// func NSTerm2(cmdline *flag.FlagSet) (int, error) {
-// 	// raw term, pty will be emulated
-// 	oldState, err := term.MakeRaw(int(nebulant_term.GenuineOsStdin.Fd()))
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	defer term.Restore(int(nebulant_term.GenuineOsStdin.Fd()), oldState)
-
-// 	vpty := NewVirtpty()
-// 	loldisc := driver.LocalOSLDisc{}
-// 	loldisc.Open(vpty)
-// 	vpty.OpenMustar(nebulant_term.GenuineOsStdin, nebulant_term.GenuineOsStdout)
-// 	vstdin, vstdout := vpty.OpenSluva(false)
-
-// 	defer vpty.Close()
-
-// 	return NSShell(vstdin, vstdout)
-// }
