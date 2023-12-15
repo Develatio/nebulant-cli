@@ -30,7 +30,7 @@ import (
 )
 
 func ActionValidator(action *blueprint.Action) error {
-	if action.Provider != "hetzner" {
+	if action.Provider != "hetznerCloud" {
 		return nil
 	}
 	al, exists := actors.ActionFuncMap[action.ActionName]
