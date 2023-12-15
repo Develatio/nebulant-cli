@@ -26,6 +26,11 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type findOneServerParameters struct {
+	Name *string `json:"name"`
+	ID   *int64  `json:"id"`
+}
+
 func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcloud.ServerCreateOpts{}
@@ -100,27 +105,37 @@ func FindServers(ctx *ActionContext) (*base.ActionOutput, error) {
 }
 
 func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
-	aout, err := FindServers(ctx)
+	input := &findOneServerParameters{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if input.Name == nil && input.ID == nil {
+		return nil, fmt.Errorf("find one server: please set id or name")
+	}
+
+	var response *hcloud.Response
+	var err error
+	if input.ID != nil {
+		_, response, err = ctx.HClient.Server.GetByID(context.Background(), *input.ID)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		_, response, err = ctx.HClient.Server.GetByName(context.Background(), *input.Name)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	output := &schema.ServerGetResponse{}
+	err = UnmarshallHCloudToSchema(response, output)
 	if err != nil {
 		return nil, err
 	}
-	if ctx.Rehearsal {
-		return nil, nil
-	}
-	if len(aout.Records) <= 0 {
-		return nil, fmt.Errorf("no server found")
-	}
-	raw := aout.Records[0].Value.(*schema.ServerListResponse)
-	found := len(raw.Servers)
-	if found > 1 {
-		return nil, fmt.Errorf("too many results")
-	}
-	if found <= 0 {
-		return nil, fmt.Errorf("no server found")
-	}
-	id := fmt.Sprintf("%v", raw.Servers[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.Servers[0], &id)
-	return aout, nil
+	sid := fmt.Sprintf("%v", output.Server.ID)
+	return base.NewActionOutput(ctx.Action, output.Server, &sid), nil
 }
 
 func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
