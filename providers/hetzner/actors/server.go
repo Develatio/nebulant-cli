@@ -156,10 +156,8 @@ func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
 			return nil, fmt.Errorf("no server found")
 		}
 
-		output := &schema.ServerGetResponse{}
-		output.Server = raw.Servers[0]
-		sid := fmt.Sprintf("%v", output.Server.ID)
-		return base.NewActionOutput(ctx.Action, output.Server, &sid), nil
+		sid := fmt.Sprintf("%v", raw.Servers[0].ID)
+		return base.NewActionOutput(ctx.Action, raw.Servers[0], &sid), nil
 	}
 }
 
