@@ -26,6 +26,11 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type NetworkListResponseWithMeta struct {
+	*schema.NetworkListResponse
+	Meta schema.Meta `json:"meta"`
+}
+
 func CreateNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcloud.NetworkCreateOpts{}
@@ -95,7 +100,7 @@ func FindNetworks(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.NetworkListResponse{}
+	output := &NetworkListResponseWithMeta{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
@@ -110,7 +115,7 @@ func FindOneNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no network found")
 	}
-	raw := aout.Records[0].Value.(*schema.NetworkListResponse)
+	raw := aout.Records[0].Value.(*NetworkListResponseWithMeta)
 	found := len(raw.Networks)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")

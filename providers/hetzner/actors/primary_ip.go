@@ -30,6 +30,11 @@ type unassignPrimaryIPParameters struct {
 	ID int64 `json:"id" validate:"required"`
 }
 
+type PrimaryIPListResultWithMeta struct {
+	*schema.PrimaryIPListResult
+	Meta schema.Meta `json:"meta"`
+}
+
 func CreatePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcloud.PrimaryIPCreateOpts{}
@@ -99,7 +104,7 @@ func FindPrimaryIPs(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.PrimaryIPListResult{}
+	output := &PrimaryIPListResultWithMeta{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
@@ -114,7 +119,7 @@ func FindOnePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no primary ip found")
 	}
-	raw := aout.Records[0].Value.(*schema.PrimaryIPListResult)
+	raw := aout.Records[0].Value.(*PrimaryIPListResultWithMeta)
 	found := len(raw.PrimaryIPs)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")

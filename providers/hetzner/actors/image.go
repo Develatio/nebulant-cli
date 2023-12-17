@@ -26,6 +26,11 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type ImageListResponseWithMeta struct {
+	*schema.ImageListResponse
+	Meta schema.Meta `json:"meta"`
+}
+
 func DeleteImage(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only Image.ID attr are really used
@@ -77,7 +82,7 @@ func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.ImageListResponse{}
+	output := &ImageListResponseWithMeta{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
@@ -92,7 +97,7 @@ func FindOneImage(ctx *ActionContext) (*base.ActionOutput, error) {
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no image found")
 	}
-	raw := aout.Records[0].Value.(*schema.ImageListResponse)
+	raw := aout.Records[0].Value.(*ImageListResponseWithMeta)
 	found := len(raw.Images)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")

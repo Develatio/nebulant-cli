@@ -31,6 +31,11 @@ type volumeAttachParameters struct {
 	Volume     *hcloud.Volume          `json:"volume" validate:"required"` // only Volume.ID is really used
 }
 
+type VolumeListResponseWithMeta struct {
+	*schema.VolumeListResponse
+	Meta schema.Meta `json:"meta"`
+}
+
 func CreateVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcloud.VolumeCreateOpts{}
@@ -100,7 +105,7 @@ func FindVolumes(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.VolumeListResponse{}
+	output := &VolumeListResponseWithMeta{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
@@ -115,7 +120,7 @@ func FindOneVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no volume found")
 	}
-	raw := aout.Records[0].Value.(*schema.VolumeListResponse)
+	raw := aout.Records[0].Value.(*VolumeListResponseWithMeta)
 	found := len(raw.Volumes)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")

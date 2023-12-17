@@ -26,6 +26,11 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type LocationListResponseWithMeta struct {
+	*schema.LocationListResponse
+	Meta schema.Meta `json:"meta"`
+}
+
 func FindLocations(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &hcloud.LocationListOpts{}
 
@@ -42,7 +47,7 @@ func FindLocations(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.LocationListResponse{}
+	output := &LocationListResponseWithMeta{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
@@ -57,7 +62,7 @@ func FindOneLocation(ctx *ActionContext) (*base.ActionOutput, error) {
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no location found")
 	}
-	raw := aout.Records[0].Value.(*schema.LocationListResponse)
+	raw := aout.Records[0].Value.(*LocationListResponseWithMeta)
 	found := len(raw.Locations)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")

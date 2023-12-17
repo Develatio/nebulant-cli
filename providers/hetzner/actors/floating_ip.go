@@ -18,6 +18,7 @@ package actors
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -119,7 +120,12 @@ func FindOneFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	output := &schema.FloatingIPGetResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	err = UnmarshallHCloudToSchema(response, output)
+	if err != nil {
+		return nil, err
+	}
+	sid := fmt.Sprintf("%v", output.FloatingIP.ID)
+	return base.NewActionOutput(ctx.Action, output.FloatingIP, &sid), nil
 }
 
 func AssignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
