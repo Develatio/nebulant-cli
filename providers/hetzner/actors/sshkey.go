@@ -26,6 +26,11 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type SSHKeyListResponseWithMeta struct {
+	*schema.SSHKeyListResponse
+	Meta schema.Meta `json:"meta"`
+}
+
 func CreateSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcloud.SSHKeyCreateOpts{}
@@ -95,7 +100,7 @@ func FindSSHKeys(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.SSHKeyListResponse{}
+	output := &SSHKeyListResponseWithMeta{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
@@ -110,7 +115,7 @@ func FindOneSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no ssh key found")
 	}
-	raw := aout.Records[0].Value.(*schema.SSHKeyListResponse)
+	raw := aout.Records[0].Value.(*SSHKeyListResponseWithMeta)
 	found := len(raw.SSHKeys)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")

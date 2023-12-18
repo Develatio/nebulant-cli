@@ -36,6 +36,11 @@ type loadbalancerDetachFromNetworkParameters struct {
 	LoadBalancer *hcloud.LoadBalancer                     `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
 }
 
+type LoadBalancerListResponseWithMeta struct {
+	*schema.LoadBalancerListResponse
+	Meta schema.Meta `json:"meta"`
+}
+
 func CreateLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcloud.LoadBalancerCreateOpts{}
@@ -105,7 +110,7 @@ func FindLoadBalancers(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.LoadBalancerListResponse{}
+	output := &LoadBalancerListResponseWithMeta{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
@@ -120,7 +125,7 @@ func FindOneLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no load balancer found")
 	}
-	raw := aout.Records[0].Value.(*schema.LoadBalancerListResponse)
+	raw := aout.Records[0].Value.(*LoadBalancerListResponseWithMeta)
 	found := len(raw.LoadBalancers)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")

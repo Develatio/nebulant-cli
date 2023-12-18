@@ -26,6 +26,11 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type DatacenterListResponseWithMeta struct {
+	*schema.DatacenterListResponse
+	Meta schema.Meta `json:"meta"`
+}
+
 func FindDatacenters(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &hcloud.DatacenterListOpts{}
 
@@ -42,7 +47,7 @@ func FindDatacenters(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.DatacenterListResponse{}
+	output := &DatacenterListResponseWithMeta{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 

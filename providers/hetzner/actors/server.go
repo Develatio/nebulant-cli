@@ -27,8 +27,13 @@ import (
 )
 
 type findOneServerParameters struct {
-	Name *string `json:"name"`
-	ID   *int64  `json:"id"`
+	hcloud.ServerListOpts
+	ID *int64 `json:"id"`
+}
+
+type ServerListResponseWithMeta struct {
+	*schema.ServerListResponse
+	Meta schema.Meta `json:"meta"`
 }
 
 func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -100,7 +105,7 @@ func FindServers(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.ServerListResponse{}
+	output := &ServerListResponseWithMeta{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
@@ -111,31 +116,49 @@ func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	if input.Name == nil && input.ID == nil {
-		return nil, fmt.Errorf("find one server: please set id or name")
-	}
-
-	var response *hcloud.Response
-	var err error
 	if input.ID != nil {
-		_, response, err = ctx.HClient.Server.GetByID(context.Background(), *input.ID)
+		if ctx.Rehearsal {
+			return nil, nil
+		}
+		_, response, err := ctx.HClient.Server.GetByID(context.Background(), *input.ID)
 		if err != nil {
 			return nil, err
 		}
+		output := &schema.ServerGetResponse{}
+		err = UnmarshallHCloudToSchema(response, output)
+		if err != nil {
+			return nil, err
+		}
+		sid := fmt.Sprintf("%v", output.Server.ID)
+		return base.NewActionOutput(ctx.Action, output.Server, &sid), nil
 	} else {
-		_, response, err = ctx.HClient.Server.GetByName(context.Background(), *input.Name)
+		aout, err := FindServers(ctx)
 		if err != nil {
 			return nil, err
 		}
-	}
 
-	output := &schema.ServerGetResponse{}
-	err = UnmarshallHCloudToSchema(response, output)
-	if err != nil {
-		return nil, err
+		if ctx.Rehearsal {
+			return nil, nil
+		}
+
+		if len(aout.Records) <= 0 {
+			return nil, fmt.Errorf("no server found")
+		}
+
+		raw := aout.Records[0].Value.(*ServerListResponseWithMeta)
+		found := len(raw.Servers)
+
+		if found > 1 {
+			return nil, fmt.Errorf("too many results")
+		}
+
+		if found <= 0 {
+			return nil, fmt.Errorf("no server found")
+		}
+
+		sid := fmt.Sprintf("%v", raw.Servers[0].ID)
+		return base.NewActionOutput(ctx.Action, raw.Servers[0], &sid), nil
 	}
-	sid := fmt.Sprintf("%v", output.Server.ID)
-	return base.NewActionOutput(ctx.Action, output.Server, &sid), nil
 }
 
 func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {

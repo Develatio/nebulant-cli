@@ -26,6 +26,11 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type ISOListResponseWithMeta struct {
+	*schema.ISOListResponse
+	Meta schema.Meta `json:"meta"`
+}
+
 func FindISOs(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &hcloud.ISOListOpts{}
 
@@ -42,7 +47,7 @@ func FindISOs(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.ISOListResponse{}
+	output := &ISOListResponseWithMeta{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
@@ -57,7 +62,7 @@ func FindOneISO(ctx *ActionContext) (*base.ActionOutput, error) {
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no iso found")
 	}
-	raw := aout.Records[0].Value.(*schema.ISOListResponse)
+	raw := aout.Records[0].Value.(*ISOListResponseWithMeta)
 	found := len(raw.ISOs)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")

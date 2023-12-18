@@ -41,6 +41,11 @@ type setRulesParameters struct {
 	Firewall *hcloud.Firewall            `json:"firewall" validate:"required"` // only Firewall.ID is really used
 }
 
+type FirewallListResponseWithMeta struct {
+	*schema.FirewallListResponse
+	Meta schema.Meta `json:"meta"`
+}
+
 func CreateFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcloud.FirewallCreateOpts{}
@@ -110,7 +115,7 @@ func FindFirewalls(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.FirewallListResponse{}
+	output := &FirewallListResponseWithMeta{}
 	return GenericHCloudOutput(ctx, response, output)
 }
 
@@ -125,7 +130,7 @@ func FindOneFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 	if len(aout.Records) <= 0 {
 		return nil, fmt.Errorf("no firewall found")
 	}
-	raw := aout.Records[0].Value.(*schema.FirewallListResponse)
+	raw := aout.Records[0].Value.(*FirewallListResponseWithMeta)
 	found := len(raw.Firewalls)
 	if found > 1 {
 		return nil, fmt.Errorf("too many results")

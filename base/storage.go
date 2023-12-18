@@ -165,7 +165,7 @@ type StorageRecord struct {
 	RawSource  interface{}               `json:"-"`
 	Value      interface{}               `json:"value"`
 	PlainValue map[string]*AttrTreeValue `json:"-"`
-	JSONValue  []byte                    `json:"rawjson"`
+	JSONValue  []byte                    `json:"-"`
 	IsString   bool                      `json:"-"`
 	Fail       bool                      `json:"fail"`
 	Error      error                     `json:"-"`
