@@ -23,6 +23,7 @@ import (
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/subsystem"
 )
 
 func parseRunFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
@@ -39,8 +40,8 @@ func parseRunFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	return fs, nil
 }
 
-func RunCmd(cmdline *flag.FlagSet) (int, error) {
-	fs, err := parseRunFs(cmdline)
+func RunCmd(nblc *subsystem.NBLcommand) (int, error) {
+	fs, err := parseRunFs(nblc.CommandLine())
 	if err != nil {
 		return 1, err
 	}

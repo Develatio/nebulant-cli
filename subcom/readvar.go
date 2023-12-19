@@ -49,8 +49,8 @@ func parseReadVar(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	return fs, nil
 }
 
-func ReadvarCmd(cmdline *flag.FlagSet) (int, error) {
-	_, err := parseReadVar(cmdline)
+func ReadvarCmd(nblc *subsystem.NBLcommand) (int, error) {
+	_, err := parseReadVar(nblc.CommandLine())
 	if err != nil {
 		return 1, err
 	}

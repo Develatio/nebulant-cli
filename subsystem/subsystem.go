@@ -20,6 +20,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"runtime"
 	"sort"
 	"strings"
@@ -49,7 +50,26 @@ type NBLcommand struct {
 	InitProviders bool
 	Help          string
 	Sec           SCType
-	Run           func(*flag.FlagSet) (int, error)
+	//
+	Call    func(*NBLcommand) (int, error)
+	cmdline *flag.FlagSet
+	Stdin   io.ReadCloser
+	Stdout  io.WriteCloser
+}
+
+func (n *NBLcommand) Run(cmdline *flag.FlagSet) (int, error) {
+	n.cmdline = cmdline
+	if n.Stdin == nil {
+		n.Stdin = term.Stdin
+	}
+	if n.Stdout == nil {
+		n.Stdout = term.Stdout
+	}
+	return n.Call(n)
+}
+
+func (n *NBLcommand) CommandLine() *flag.FlagSet {
+	return n.cmdline
 }
 
 var NBLCommands map[string]*NBLcommand

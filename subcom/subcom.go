@@ -17,7 +17,6 @@
 package subcom
 
 import (
-	"flag"
 	"fmt"
 
 	"github.com/develatio/nebulant-cli/interactive"
@@ -33,7 +32,7 @@ func RegisterSubcommands() {
 			InitProviders: true,
 			Help:          "  serve\t\t\t" + term.EmojiSet["TridentEmblem"] + " Start server mode\n",
 			Sec:           subsystem.SecMain,
-			Run:           ServeCmd,
+			Call:          ServeCmd,
 		},
 		"run": {
 			UpgradeTerm:   true,
@@ -41,7 +40,7 @@ func RegisterSubcommands() {
 			InitProviders: true,
 			Help:          "  run\t\t\t" + term.EmojiSet["RunningShoe"] + " Run blueprint form file or net\n",
 			Sec:           subsystem.SecMain,
-			Run:           RunCmd,
+			Call:          RunCmd,
 		},
 		"assets": {
 			UpgradeTerm:   true,
@@ -49,7 +48,7 @@ func RegisterSubcommands() {
 			InitProviders: false,
 			Help:          "  assets\t\t" + term.EmojiSet["Squid"] + " Handle cli assets\n",
 			Sec:           subsystem.SecMain,
-			Run:           AssetsCmd,
+			Call:          AssetsCmd,
 		},
 		"interactive": {
 			UpgradeTerm:   true,
@@ -57,9 +56,9 @@ func RegisterSubcommands() {
 			InitProviders: true,
 			Help:          "  interactive\t\t" + term.EmojiSet["Television"] + " Start interactive menu\n",
 			Sec:           subsystem.SecMain,
-			Run: func(cmdline *flag.FlagSet) (int, error) {
+			Call: func(nblc *subsystem.NBLcommand) (int, error) {
 				// Interactive mode
-				err := interactive.Loop()
+				err := interactive.Loop(nblc)
 				if err != nil {
 					if err == term.ErrInterrupt {
 						fmt.Println("^C")
@@ -89,7 +88,7 @@ func RegisterSubcommands() {
 			InitProviders: false,
 			Help:          "  auth\t\t\t" + term.EmojiSet["Key"] + " Server authentication\n",
 			Sec:           subsystem.SecMain,
-			Run:           AuthCmd,
+			Call:          AuthCmd,
 		},
 		"debugterm": {
 			UpgradeTerm:   true,
@@ -97,7 +96,7 @@ func RegisterSubcommands() {
 			InitProviders: false,
 			Help:          "",
 			Sec:           subsystem.SecHidden,
-			Run:           DebugtermCmd,
+			Call:          DebugtermCmd,
 		},
 		"update": {
 			UpgradeTerm:   true,
@@ -105,7 +104,7 @@ func RegisterSubcommands() {
 			InitProviders: false,
 			Help:          "  update\t\t" + term.EmojiSet["Squid"] + " Update the cli to the latest version\n",
 			Sec:           subsystem.SecMain,
-			Run:           UpdateCmd,
+			Call:          UpdateCmd,
 		},
 		"readvar": {
 			UpgradeTerm:   false,
@@ -113,7 +112,7 @@ func RegisterSubcommands() {
 			InitProviders: false,
 			Help:          "  readvar\t\t" + term.EmojiSet["FaceWithMonocle"] + " Read blueprint variable value during runtime\n",
 			Sec:           subsystem.SecRuntime,
-			Run:           ReadvarCmd,
+			Call:          ReadvarCmd,
 		},
 		"debugger": {
 			UpgradeTerm:   true,
@@ -121,7 +120,7 @@ func RegisterSubcommands() {
 			InitProviders: false,
 			Help:          "  debugger\t\t" + term.EmojiSet["FaceWithMonocle"] + " connect to running debugger\n",
 			Sec:           subsystem.SecRuntime,
-			Run:           DebuggerCmd,
+			Call:          DebuggerCmd,
 		},
 		"shell": {
 			UpgradeTerm:   false,
@@ -129,7 +128,7 @@ func RegisterSubcommands() {
 			InitProviders: false,
 			Help:          "  debugger\t\t" + term.EmojiSet["FaceWithMonocle"] + " connect to running debugger\n",
 			Sec:           subsystem.SecRuntime,
-			Run:           NSTerm,
+			Call:          NSTerm,
 		},
 	}
 }

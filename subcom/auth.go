@@ -22,6 +22,7 @@ import (
 
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/subsystem"
 )
 
 func parseAuthFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
@@ -41,7 +42,8 @@ func parseAuthFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	return fs, nil
 }
 
-func AuthCmd(cmdline *flag.FlagSet) (int, error) {
+func AuthCmd(nblc *subsystem.NBLcommand) (int, error) {
+	cmdline := nblc.CommandLine()
 	fs, err := parseAuthFs(cmdline)
 	if err != nil {
 		return 1, err

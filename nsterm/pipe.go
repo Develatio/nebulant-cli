@@ -30,6 +30,7 @@ type pipe struct {
 }
 
 func (pp *pipe) Write(p []byte) (n int, err error) {
+	// fmt.Println("-> buff", bytes.TrimRight(p, "\x00"))
 	pp.buff <- p
 	return len(p), nil
 }
@@ -43,10 +44,12 @@ func (pp *pipe) Read(p []byte) (n int, err error) {
 	select {
 	case r := <-pp.remain:
 		if len(r) > len(p) {
+			// fmt.Println("<- buff", bytes.TrimRight(r, "\x00"))
 			nn := copy(p, r)
 			pp.remain <- r[nn:]
 			return nn, nil
 		}
+		// fmt.Println("<- buff", bytes.TrimRight(r, "\x00"))
 		return copy(p, r), nil
 	case <-pp.done:
 		return 0, io.EOF
@@ -55,8 +58,10 @@ func (pp *pipe) Read(p []byte) (n int, err error) {
 		if len(b) > len(p) {
 			nn := copy(p, b)
 			pp.remain <- b[nn:]
+			// fmt.Println("<- buff", bytes.TrimRight(b, "\x00"))
 			return nn, nil
 		}
+		// fmt.Println("<- buff", bytes.TrimRight(b, "\x00"))
 		return copy(p, b), nil
 	}
 }

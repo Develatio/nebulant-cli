@@ -96,7 +96,7 @@ type WriteCloserTicker struct {
 }
 
 func (t *WriteCloserTicker) Write(p []byte) (n int, err error) {
-	// fmt.Println("write tick")
+	// fmt.Println("write tick", bytes.TrimRight(p, "\x00"))
 	n, err = t.w.Write(p)
 	t.ticker(n)
 	return n, err
@@ -182,6 +182,10 @@ func (v *VPTY2) SetLDisc(ldisc Ldisc) {
 
 	v.ldisc = ldisc
 	// fmt.Println("setted ldisc")
+}
+
+func (v *VPTY2) GetLDisc() (ldisc Ldisc) {
+	return v.ldisc
 }
 
 // SluvaFD file descriptor for shell/app

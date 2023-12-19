@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/develatio/nebulant-cli/cast"
+	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/term"
 )
 
@@ -53,8 +54,8 @@ func parseTestsFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	return fs, nil
 }
 
-func DebugtermCmd(cmdline *flag.FlagSet) (int, error) {
-	_, err := parseTestsFs(cmdline)
+func DebugtermCmd(nblc *subsystem.NBLcommand) (int, error) {
+	_, err := parseTestsFs(nblc.CommandLine())
 	if err != nil {
 		return 1, err
 	}

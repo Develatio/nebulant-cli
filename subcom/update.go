@@ -44,8 +44,8 @@ func parseUpdate(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	return fs, nil
 }
 
-func UpdateCmd(cmdline *flag.FlagSet) (int, error) {
-	_, err := parseUpdate(cmdline)
+func UpdateCmd(nblc *subsystem.NBLcommand) (int, error) {
+	_, err := parseUpdate(nblc.CommandLine())
 	if err != nil {
 		return 1, err
 	}

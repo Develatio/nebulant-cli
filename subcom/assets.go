@@ -108,7 +108,8 @@ func parseAssetsSearchFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	return fs, nil
 }
 
-func AssetsCmd(cmdline *flag.FlagSet) (int, error) {
+func AssetsCmd(nblc *subsystem.NBLcommand) (int, error) {
+	cmdline := nblc.CommandLine()
 	fs, err := parseAssetsFs(cmdline)
 	if err != nil {
 		return 1, err

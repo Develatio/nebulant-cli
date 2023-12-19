@@ -17,14 +17,14 @@
 package subcom
 
 import (
-	"bufio"
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"net/url"
 	"os"
 
+	ws "github.com/develatio/nebulant-cli/netproto/websocket"
+	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/gorilla/websocket"
 	"golang.org/x/term"
 )
@@ -32,36 +32,48 @@ import (
 var MAXWRITESIZE = 1024
 var MAXREADSIZE = 1024
 
-type ioWSrw struct {
-	conn *websocket.Conn
-}
+// type ioWSrw struct {
+// 	conn *websocket.Conn
+// }
 
-func (i *ioWSrw) Write(p []byte) (int, error) {
-	err := i.conn.WriteMessage(websocket.TextMessage, p)
-	if err != nil {
-		return 0, err
-	}
-	return len(p), nil
-}
+// func (i *ioWSrw) Write(p []byte) (int, error) {
+// 	if len(p) > MAXREADSIZE {
+// 		err := i.conn.WriteMessage(websocket.BinaryMessage, p[:MAXREADSIZE-1])
+// 		if err != nil {
+// 			return MAXREADSIZE, err
+// 		}
+// 		n, err := i.Write(p[MAXREADSIZE:])
+// 		if err != nil {
+// 			return MAXREADSIZE + n, err
+// 		}
+// 		return MAXREADSIZE + n, nil
+// 	}
+// 	err := i.conn.WriteMessage(websocket.BinaryMessage, p)
+// 	if err != nil {
+// 		return len(p), err
+// 	}
+// 	return len(p), nil
 
-func (i *ioWSrw) Read(p []byte) (n int, err error) {
-	_, m, err := i.conn.ReadMessage()
-	if err != nil {
-		return 0, err
-	}
+// }
 
-	ml := len(m)
-	pl := len(p)
-	fl := ml
-	if ml > pl {
-		fl = pl
-	}
-	for i := 0; i < fl; i++ {
-		p[i] = m[i]
-	}
+// func (i *ioWSrw) Read(p []byte) (n int, err error) {
+// 	_, m, err := i.conn.ReadMessage()
+// 	if err != nil {
+// 		return 0, err
+// 	}
 
-	return len(p), nil
-}
+// 	ml := len(m)
+// 	pl := len(p)
+// 	fl := ml
+// 	if ml > pl {
+// 		fl = pl
+// 	}
+// 	for i := 0; i < fl; i++ {
+// 		p[i] = m[i]
+// 	}
+
+// 	return len(p), nil
+// }
 
 func parseDebuggFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("debugterm", flag.ContinueOnError)
@@ -73,7 +85,7 @@ func parseDebuggFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	return fs, nil
 }
 
-func DebuggerCmd(cmdline *flag.FlagSet) (int, error) {
+func DebuggerCmd(nblc *subsystem.NBLcommand) (int, error) {
 
 	u := url.URL{Scheme: "ws", Host: "localhost:6565", Path: ""}
 	log.Printf("connecting to %s", u.String())
@@ -84,10 +96,6 @@ func DebuggerCmd(cmdline *flag.FlagSet) (int, error) {
 		return 1, err
 	}
 	defer c.Close()
-
-	iows := &ioWSrw{
-		conn: c,
-	}
 
 	// 	done := make(chan struct{})
 
@@ -110,63 +118,73 @@ func DebuggerCmd(cmdline *flag.FlagSet) (int, error) {
 	// 	// defer lin.Close()
 
 	//L:
-	fmt.Println("looping")
-	// raw term
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		panic(err)
-	}
-	defer term.Restore(0, oldState)
-	os.Setenv("TERM", "vt100")
+	// fmt.Println("looping")
+	// // raw term
 
-	go func() {
-		// var bff []byte
-		// var buff = bytes.NewBuffer(bff)
-		reader := bufio.NewReader(os.Stdin)
-		for {
-			char, _, err := reader.ReadRune()
-			if err != nil {
-				fmt.Println("ERRRRRR 1")
-				return
-			}
-			// buff.WriteRune(char)
-			// fmt.Println("writing to iows", char)
-			// fmt.Printf("Rune read: %d", char)
-			// fmt.Println("----")
-			iows.Write([]byte(string(char)))
+	if _, isFD := nblc.Stdin.(*os.File); isFD {
+		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+			panic(err)
 		}
-
-	}()
-
-	for {
-		// bff := make([]byte, MAXREADSIZE)
-		// _, err := iows.Read(bff)
-		// if err != nil {
-		// 	return 1, err
-		// }
-		// fmt.Println(bff)
-		// fmt.Printf("v:%v d:%d s:%s", bff, bff, bff)
-		// fmt.Printf("%s", bff)
-		io.Copy(os.Stdout, iows)
-		// switch buff.String() {
-		// case "exit":
-		// 	err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		// 	if err != nil {
-		// 		log.Println("write close:", err)
-		// 		return 1, err
-		// 	}
-		// 	select {
-		// 	case <-done:
-		// 	case <-time.After(time.Second):
-		// 	}
-		// 	break L
-		// default:
-		// 	err := c.WriteMessage(websocket.BinaryMessage, buff.Bytes())
-		// 	if err != nil {
-		// 		log.Println("err:", err)
-		// 	}
-		// }
+		defer term.Restore(0, oldState)
 	}
+
+	// os.Setenv("TERM", "vt100")
+
+	wsrw := ws.NewWebSocketReadWriteCloser(c)
+
+	go io.Copy(nblc.Stdout, wsrw)
+	io.Copy(wsrw, nblc.Stdin)
+	return 0, nil
+
+	// go func() {
+	// 	// var bff []byte
+	// 	// var buff = bytes.NewBuffer(bff)
+	// 	reader := bufio.NewReader(os.Stdin)
+	// 	for {
+	// 		char, _, err := reader.ReadRune()
+	// 		if err != nil {
+	// 			fmt.Println("ERRRRRR 1")
+	// 			return
+	// 		}
+	// 		// buff.WriteRune(char)
+	// 		// fmt.Println("writing to iows", char)
+	// 		// fmt.Printf("Rune read: %d", char)
+	// 		// fmt.Println("----")
+	// 		iows.Write([]byte(string(char)))
+	// 	}
+
+	// }()
+
+	// for {
+	// 	// bff := make([]byte, MAXREADSIZE)
+	// 	// _, err := iows.Read(bff)
+	// 	// if err != nil {
+	// 	// 	return 1, err
+	// 	// }
+	// 	// fmt.Println(bff)
+	// 	// fmt.Printf("v:%v d:%d s:%s", bff, bff, bff)
+	// 	// fmt.Printf("%s", bff)
+	// 	io.Copy(os.Stdout, iows)
+	// 	// switch buff.String() {
+	// 	// case "exit":
+	// 	// 	err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	// 	// 	if err != nil {
+	// 	// 		log.Println("write close:", err)
+	// 	// 		return 1, err
+	// 	// 	}
+	// 	// 	select {
+	// 	// 	case <-done:
+	// 	// 	case <-time.After(time.Second):
+	// 	// 	}
+	// 	// 	break L
+	// 	// default:
+	// 	// 	err := c.WriteMessage(websocket.BinaryMessage, buff.Bytes())
+	// 	// 	if err != nil {
+	// 	// 		log.Println("err:", err)
+	// 	// 	}
+	// 	// }
+	// }
 	//
 	// return 0, nil
 }

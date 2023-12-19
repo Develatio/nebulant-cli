@@ -17,15 +17,68 @@
 package nsterm
 
 import (
-	"flag"
+	"bufio"
+	"errors"
+	"fmt"
 	"io"
 	"os"
+	"time"
 
+	"github.com/develatio/nebulant-cli/subsystem"
 	nebulant_term "github.com/develatio/nebulant-cli/term"
 	"golang.org/x/term"
 )
 
-func NSTerm(cmdline *flag.FlagSet) (int, error) {
+// I+D+I
+var HandleScapeMode = false
+
+func readESCstdin(mfd *PortFD) {
+	reader := bufio.NewReader(os.Stdin)
+	_c := make(chan rune, 10)
+	_e := make(chan error, 10)
+
+	go func() {
+		for {
+			ccc, _, eee := reader.ReadRune()
+			if eee != nil {
+				_e <- eee
+				continue
+			}
+			_c <- ccc
+		}
+	}()
+
+	for {
+		select {
+		case char := <-_c:
+			// ESC sequence
+			if char == 27 {
+				// collect
+				time.Sleep(512 * time.Microsecond)
+				esq_seq_size := len(_c)
+				if esq_seq_size > 0 {
+					esc_seq := []rune{27}
+					for i := 0; i < esq_seq_size; i++ {
+						esc_seq = append(esc_seq, <-_c)
+					}
+					esc_seq = append(esc_seq, []rune("\n")...)
+					// write back entire esc secuence
+					mfd.Write([]byte(string(esc_seq)))
+					continue
+				}
+				// write esc char
+				mfd.Write([]byte(string(char)))
+				continue
+			}
+		case _err := <-_e:
+			mfd.Write([]byte(errors.Join(fmt.Errorf("term read err"), _err).Error()))
+		default:
+			<-time.After(100 * time.Microsecond)
+		}
+	}
+}
+
+func NSTerm(nblc *subsystem.NBLcommand) (int, error) {
 	// raw term, pty will be emulated
 	oldState, err := term.MakeRaw(int(nebulant_term.GenuineOsStdin.Fd()))
 	if err != nil {
@@ -35,15 +88,17 @@ func NSTerm(cmdline *flag.FlagSet) (int, error) {
 
 	vpty := NewVirtPTY()
 	mfd := vpty.MustarFD()
+
+	if HandleScapeMode {
+		go func() {
+			io.Copy(mfd, os.Stdin)
+		}()
+	} else {
+		// capture escape sequences
+		go readESCstdin(mfd)
+	}
 	go func() {
-		// fmt.Println("stdin on")
-		io.Copy(mfd, os.Stdin)
-		// fmt.Println("stdin off")
-	}()
-	go func() {
-		// fmt.Println("stdout on")
 		io.Copy(os.Stdout, mfd)
-		// fmt.Println("stdout off")
 	}()
 
 	sfd := vpty.SluvaFD()

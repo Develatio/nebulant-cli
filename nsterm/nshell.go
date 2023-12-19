@@ -43,10 +43,11 @@ func run(vpty *VPTY2, s string, stdin io.ReadCloser, stdout io.WriteCloser) (int
 	sc := cmdline.Arg(0)
 
 	if cmd, exists := subsystem.NBLCommands[sc]; exists {
-		// TODO: implement:
-		// prev_ldisc = vpty.GetLDisc()
-		// vpty.SetLDisc(NewRawLdisc())
-		// defer vpty.SetLDisc(prev_ldisc)
+		// TODO: implement raw requirement per command
+		// and set raw only if needed
+		prev_ldisc := vpty.GetLDisc()
+		vpty.SetLDisc(NewRawLdisc())
+		defer vpty.SetLDisc(prev_ldisc)
 
 		cmd.UpgradeTerm = false // prevent set raw term
 		cmd.WelcomeMsg = false  // prevent welcome msg
@@ -54,6 +55,8 @@ func run(vpty *VPTY2, s string, stdin io.ReadCloser, stdout io.WriteCloser) (int
 		if err != nil {
 			return 1, err
 		}
+		cmd.Stdin = stdin
+		cmd.Stdout = stdout
 		// finally run command
 		return cmd.Run(cmdline)
 	}
@@ -61,37 +64,8 @@ func run(vpty *VPTY2, s string, stdin io.ReadCloser, stdout io.WriteCloser) (int
 }
 
 func NSShell(vpty *VPTY2, stdin io.ReadCloser, stdout io.WriteCloser) (int, error) {
-	// override term.Stdout (readline.Stdout) by stdout arg
-	// this term.Stdout is used by log package and term.Print*
-	// the cast.ConsoleLogger also uses term.Print* and log
-	// package.
-
-	// init raw ldisc to be used on command call
-	// rawldisc := NewRawLdisc()
-
-	// init default line discipline
-	// with line buff editor
 	ldisc := NewDefaultLdisc()
 	vpty.SetLDisc(ldisc)
-
-	// set vpty stdout as term.Stdout
-	// and restore previous conf at exit
-	// prev_term_stdout := term.Stdout
-	// defer func() { term.Stdout = prev_term_stdout }()
-	// term.Stdout = stdout
-
-	// // same with stderr
-	// prev_term_stderr := term.Stderr
-	// defer func() { term.Stderr = prev_term_stderr }()
-	// term.Stderr = stdout
-
-	// log.SetOutput(stdout)
-
-	// defer func() { config.ForceNoTerm = false }()
-	// config.ForceNoTerm = true
-
-	// // upgrade term
-	// term.UpgradeTerm()
 
 	var shellhistory []string
 	var shellhistoryidx int = -1

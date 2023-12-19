@@ -17,16 +17,16 @@
 package subcom
 
 import (
-	"flag"
 	"io"
 	"os"
 
 	"github.com/develatio/nebulant-cli/nsterm"
+	"github.com/develatio/nebulant-cli/subsystem"
 	nebulant_term "github.com/develatio/nebulant-cli/term"
 	"golang.org/x/term"
 )
 
-func NSTerm(cmdline *flag.FlagSet) (int, error) {
+func NSTerm(nblc *subsystem.NBLcommand) (int, error) {
 	// raw term, pty will be emulated
 	oldState, err := term.MakeRaw(int(nebulant_term.GenuineOsStdin.Fd()))
 	if err != nil {
