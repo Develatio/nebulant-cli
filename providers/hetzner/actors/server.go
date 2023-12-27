@@ -100,6 +100,11 @@ func FindServers(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
 	_, response, err := ctx.HClient.Server.List(context.Background(), *input)
 	if err != nil {
 		return nil, err
@@ -119,6 +124,10 @@ func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	if input.ID != nil {
 		if ctx.Rehearsal {
 			return nil, nil
+		}
+		err := ctx.Store.DeepInterpolation(input)
+		if err != nil {
+			return nil, err
 		}
 		_, response, err := ctx.HClient.Server.GetByID(context.Background(), *input.ID)
 		if err != nil {

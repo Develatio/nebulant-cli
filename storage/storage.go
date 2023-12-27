@@ -512,8 +512,22 @@ func (s *Store) recursiveInterpolation(v reflect.Value, il map[interface{}]bool)
 			}
 		}
 	case reflect.String:
-		return fmt.Errorf("unhandled deep interpolation string")
-
+		ifce := v.Interface()
+		strv := fmt.Sprintf("%s", ifce)
+		strva := fmt.Sprintf("%s", ifce)
+		err := s.Interpolate(&strv)
+		if err != nil {
+			return err
+		}
+		if strv == strva {
+			// prevent not needed interpolation
+			return nil
+		}
+		// prevent panic
+		if !v.CanSet() {
+			return fmt.Errorf("unhandled deep interpolation string %v", strv)
+		}
+		v.SetString(strv)
 	}
 	return nil
 }
