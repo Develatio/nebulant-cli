@@ -18,7 +18,9 @@ package actors
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -26,9 +28,22 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type hcVolumeWrap struct {
+	*hcloud.Volume
+	ID *string `validate:"required"`
+}
+
 type volumeAttachParameters struct {
 	AttachOpts hcloud.VolumeAttachOpts `json:"attach_opts" validate:"required"`
-	Volume     *hcloud.Volume          `json:"volume" validate:"required"` // only Volume.ID is really used
+	Volume     *hcVolumeWrap           `json:"volume" validate:"required"` // only Volume.ID is really used
+}
+
+func (v *hcVolumeWrap) unwrap() (*hcloud.Volume, error) {
+	int64id, err := strconv.ParseInt(*v.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+	}
+	return &hcloud.Volume{ID: int64id}, nil
 }
 
 type VolumeListResponseWithMeta struct {
@@ -65,7 +80,7 @@ func CreateVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only Volume.ID attr are really used
-	input := &hcloud.Volume{}
+	input := &hcVolumeWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -80,7 +95,12 @@ func DeleteVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, err = ctx.HClient.Volume.Delete(context.Background(), input)
+	hvol, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = ctx.HClient.Volume.Delete(context.Background(), hvol)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +164,17 @@ func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	_, response, err := ctx.HClient.Volume.AttachWithOpts(context.Background(), input.Volume, input.AttachOpts)
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	hvol, err := input.Volume.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Volume.AttachWithOpts(context.Background(), hvol, input.AttachOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +185,7 @@ func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 
 func DetachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	// only volume.ID is really used
-	input := &hcloud.Volume{}
+	input := &hcVolumeWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -165,7 +195,17 @@ func DetachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	_, response, err := ctx.HClient.Volume.Detach(context.Background(), input)
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	hvol, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Volume.Detach(context.Background(), hvol)
 	if err != nil {
 		return nil, err
 	}
