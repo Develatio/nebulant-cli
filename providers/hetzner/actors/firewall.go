@@ -18,7 +18,9 @@ package actors
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -26,19 +28,32 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type hcFirewallWrap struct {
+	*hcloud.Firewall
+	ID *string `validate:"required"`
+}
+
+func (v *hcFirewallWrap) unwrap() (*hcloud.Firewall, error) {
+	int64id, err := strconv.ParseInt(*v.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+	}
+	return &hcloud.Firewall{ID: int64id}, nil
+}
+
 type applyResourcesParameters struct {
 	Resources []hcloud.FirewallResource `json:"resources" validate:"required"`
-	Firewall  *hcloud.Firewall          `json:"firewall" validate:"required"` // only Firewall.ID is really used
+	Firewall  *hcFirewallWrap           `json:"firewall" validate:"required"` // only Firewall.ID is really used
 }
 
 type removeResourcesParameters struct {
 	Resources []hcloud.FirewallResource `json:"resources" validate:"required"`
-	Firewall  *hcloud.Firewall          `json:"firewall" validate:"required"` // only Firewall.ID is really used
+	Firewall  *hcFirewallWrap           `json:"firewall" validate:"required"` // only Firewall.ID is really used
 }
 
 type setRulesParameters struct {
 	Opts     hcloud.FirewallSetRulesOpts `json:"opts" validate:"required"`
-	Firewall *hcloud.Firewall            `json:"firewall" validate:"required"` // only Firewall.ID is really used
+	Firewall *hcFirewallWrap             `json:"firewall" validate:"required"` // only Firewall.ID is really used
 }
 
 type FirewallListResponseWithMeta struct {
@@ -75,7 +90,7 @@ func CreateFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only Firewall.ID attr are really used
-	input := &hcloud.Firewall{}
+	input := &hcFirewallWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -90,7 +105,12 @@ func DeleteFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, err = ctx.HClient.Firewall.Delete(context.Background(), input)
+	hfwall, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = ctx.HClient.Firewall.Delete(context.Background(), hfwall)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +174,17 @@ func ApplyToResourcesFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	_, response, err := ctx.HClient.Firewall.ApplyResources(context.Background(), input.Firewall, input.Resources)
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	hfwall, err := input.Firewall.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Firewall.ApplyResources(context.Background(), hfwall, input.Resources)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +204,17 @@ func RemoveFromResourcesFirewall(ctx *ActionContext) (*base.ActionOutput, error)
 		return nil, nil
 	}
 
-	_, response, err := ctx.HClient.Firewall.RemoveResources(context.Background(), input.Firewall, input.Resources)
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	hfwall, err := input.Firewall.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Firewall.RemoveResources(context.Background(), hfwall, input.Resources)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +234,17 @@ func SetRulesFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	_, response, err := ctx.HClient.Firewall.SetRules(context.Background(), input.Firewall, input.Opts)
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	hfwall, err := input.Firewall.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Firewall.SetRules(context.Background(), hfwall, input.Opts)
 	if err != nil {
 		return nil, err
 	}

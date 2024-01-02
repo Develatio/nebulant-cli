@@ -18,7 +18,9 @@ package actors
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -26,20 +28,33 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type hcFloatingIPWrap struct {
+	*hcloud.FloatingIP
+	ID *string `validate:"required"`
+}
+
+func (v *hcFloatingIPWrap) unwrap() (*hcloud.FloatingIP, error) {
+	int64id, err := strconv.ParseInt(*v.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+	}
+	return &hcloud.FloatingIP{ID: int64id}, nil
+}
+
 type findOneFloatingIPParameters struct {
 	IdOrName *string `json:"id_or_name" validate:"required"`
 }
 
 type assignFloatingIPParameters struct {
 	// Only FloatingIP.ID is really ussed
-	FloatingIP *hcloud.FloatingIP `json:"floating_ip" validate:"required"`
+	FloatingIP *hcFloatingIPWrap `json:"floating_ip" validate:"required"`
 	// only Server.ID is really ussed
 	Server *hcloud.Server `json:"server" validate:"required"`
 }
 
 type unassignFloatingIPParameters struct {
 	// Only FloatingIP.ID is really ussed
-	FloatingIP *hcloud.FloatingIP `json:"floating_ip" validate:"required"`
+	FloatingIP *hcFloatingIPWrap `json:"floating_ip" validate:"required"`
 }
 
 // CreateFloatingIP func
@@ -73,7 +88,7 @@ func DeleteFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only FloatingIP.ID attr are really used
 	// https://github.com/hetznercloud/hcloud-go/blob/v2.3.0/hcloud/floating_ip.go#L279
-	input := &hcloud.FloatingIP{}
+	input := &hcFloatingIPWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -88,7 +103,12 @@ func DeleteFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, err = ctx.HClient.FloatingIP.Delete(context.Background(), input)
+	hfip, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = ctx.HClient.FloatingIP.Delete(context.Background(), hfip)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +165,12 @@ func AssignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.FloatingIP.Assign(context.Background(), input.FloatingIP, input.Server)
+	hfip, err := input.FloatingIP.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.FloatingIP.Assign(context.Background(), hfip, input.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +196,12 @@ func UnassignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.FloatingIP.Unassign(context.Background(), input.FloatingIP)
+	hfip, err := input.FloatingIP.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.FloatingIP.Unassign(context.Background(), hfip)
 	if err != nil {
 		return nil, err
 	}

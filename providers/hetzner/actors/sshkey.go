@@ -18,13 +18,28 @@ package actors
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
+
+type hcSSHKeyWrap struct {
+	*hcloud.SSHKey
+	ID *string `validate:"required"`
+}
+
+func (v *hcSSHKeyWrap) unwrap() (*hcloud.SSHKey, error) {
+	int64id, err := strconv.ParseInt(*v.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+	}
+	return &hcloud.SSHKey{ID: int64id}, nil
+}
 
 type SSHKeyListResponseWithMeta struct {
 	*schema.SSHKeyListResponse
@@ -60,7 +75,7 @@ func CreateSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only SSHKey.ID attr is really used
-	input := &hcloud.SSHKey{}
+	input := &hcSSHKeyWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -75,7 +90,12 @@ func DeleteSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, err = ctx.HClient.SSHKey.Delete(context.Background(), input)
+	hsshkey, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = ctx.HClient.SSHKey.Delete(context.Background(), hsshkey)
 	if err != nil {
 		return nil, err
 	}

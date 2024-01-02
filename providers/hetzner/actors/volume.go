@@ -33,17 +33,17 @@ type hcVolumeWrap struct {
 	ID *string `validate:"required"`
 }
 
-type volumeAttachParameters struct {
-	AttachOpts hcloud.VolumeAttachOpts `json:"attach_opts" validate:"required"`
-	Volume     *hcVolumeWrap           `json:"volume" validate:"required"` // only Volume.ID is really used
-}
-
 func (v *hcVolumeWrap) unwrap() (*hcloud.Volume, error) {
 	int64id, err := strconv.ParseInt(*v.ID, 10, 64)
 	if err != nil {
 		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
 	}
 	return &hcloud.Volume{ID: int64id}, nil
+}
+
+type volumeAttachParameters struct {
+	AttachOpts hcloud.VolumeAttachOpts `json:"attach_opts" validate:"required"`
+	Volume     *hcVolumeWrap           `json:"volume" validate:"required"` // only Volume.ID is really used
 }
 
 type VolumeListResponseWithMeta struct {
