@@ -1,10 +1,28 @@
+// Nebulant
+// Copyright (C) 2024  Develatio Technologies S.L.
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 package executive
 
 import (
 	"fmt"
 	"io"
 	"net/http"
+	"os/exec"
 
+	"github.com/creack/pty"
 	"github.com/develatio/nebulant-cli/cast"
 	ws "github.com/develatio/nebulant-cli/netproto/websocket"
 	"github.com/develatio/nebulant-cli/nsterm"
@@ -32,17 +50,11 @@ func NewDebugger(breakpoint *breakPoint) *debugger {
 }
 
 type debugger struct {
-	manager *Manager
-	// execInstruction   chan *ExecCtrlInstruction
+	manager           *Manager
 	breakPoints       []*breakPoint
 	currentBreakPoint *breakPoint
-	//
-	// stdin  io.Reader
-	// stdout io.Writer
-	// stderr io.Writer
-	//
-	qq   chan *client
-	stop chan struct{}
+	qq                chan *client
+	stop              chan struct{}
 }
 
 func (d *debugger) Serve() error {
@@ -65,7 +77,7 @@ func (d *debugger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	clnt := &client{
 		conn: conn,
-		qq:   d.qq,
+		dbg:  d,
 		vpty: nsterm.NewVirtPTY(),
 		wsrw: ws.NewWebSocketReadWriteCloser(conn),
 	}
@@ -74,93 +86,80 @@ func (d *debugger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	go clnt.start()
 }
 
-// func (d *debugger) ExecCmd(cc *client) {
-// 	// p := make([]byte, 250)
-// 	// n, err := cc.Read(p)
-// 	// if err != nil {
-// 	// 	cast.LogErr(errors.Join(fmt.Errorf("err reading client data"), err).Error(), nil)
-// 	// }
-// 	// if n <= 0 {
-// 	// 	return
-// 	// }
+func (d *debugger) ExecCmd(cc *client, cmd string) {
+	cast.LogDebug(fmt.Sprintf("processing command %s", cmd), nil)
+	clientFD := cc.GetFD()
 
-// 	defer func() { go cc.Prompt() }()
-// 	cmd := <-cc.cmdQueue
-// 	cast.LogDebug(fmt.Sprintf("processing command %s", cmd), nil)
-// 	fmt.Println(cmd)
-// 	switch string(cmd) {
-// 	case "shell":
-// 		cc.stoppipe = make(chan struct{})
-// 		defer close(cc.stoppipe)
-// 		shell, err := term.DetermineOsShell()
-// 		if err != nil {
-// 			cast.LogErr(err.Error(), nil)
-// 			cc.Write([]byte(err.Error()))
-// 			return
-// 		}
-// 		cmd := exec.Command(shell)
-// 		f, err := pty.Start(cmd)
+	switch string(cmd) {
+	case "shell":
+		// cc.stoppipe = make(chan struct{})
+		// defer close(cc.stoppipe)
 
-// 		// f, err := os.OpenFile(filepath.Join("/dev", "tty"), unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0o620)
-// 		// if err != nil {
-// 		// 	cast.LogErr(err.Error(), nil)
-// 		// 	cc.Write([]byte(err.Error()))
-// 		// 	return
-// 		// }
+		shell, err := term.DetermineOsShell()
+		if err != nil {
+			cast.LogErr(err.Error(), nil)
+			fmt.Fprintln(clientFD, err.Error())
+			return
+		}
+		cmd := exec.Command(shell)
+		f, err := pty.Start(cmd)
+		if err != nil {
+			cast.LogErr(err.Error(), nil)
+			fmt.Fprintln(clientFD, err.Error())
+			return
+		}
 
-// 		// cmd.Env = append(os.Environ(), "TERM=vt100")
-// 		// pipe, err := cmd.StdinPipe()
-// 		if err != nil {
-// 			cast.LogErr(err.Error(), nil)
-// 			cc.Write([]byte(err.Error()))
-// 			return
-// 		}
-// 		cc.stdinPipe = f
-// 		// cmd.Stdin = f
-// 		// stdin, err := cmd.StdinPipe()
-// 		// if err != nil {
-// 		// 	cast.LogErr(err.Error(), nil)
-// 		// 	cc.Write([]byte(err.Error()))
-// 		// }
-// 		//		cc.stdinPipe = stdin
+		fmt.Fprintln(clientFD, "initializing local shell...")
 
-// 		// cmd.Stdout = cc
-// 		// cmd.Stderr = cc
-// 		// cmd.Stdin = os.Stdin
-// 		// cmd.Stdout = os.Stdout
-// 		// cmd.Stderr = os.Stderr
+		cc.Raw(true)
+		defer cc.Raw(false)
 
-// 		cast.LogDebug(fmt.Sprintf("Running shell %v", shell), nil)
-// 		go cc.PipeRead()
-// 		io.Copy(cc, f)
-// 		if err != nil {
-// 			cast.LogErr(err.Error(), nil)
-// 			cc.Write([]byte(err.Error()))
-// 			return
-// 		}
-// 		cast.LogDebug(fmt.Sprintf("Stop of shell %v", shell), nil)
-// 	default:
-// 		cast.LogDebug("Unknown command "+string(cmd), nil)
-// 		cc.Write([]byte("Unknown command " + string(cmd)))
-// 	}
+		cast.LogDebug(fmt.Sprintf("Running shell %v", shell), nil)
 
-// 	// cast.LogDebug(fmt.Sprintf("New cmd from client: %s", p), nil)
-// 	// cc.Write([]byte("Procesando...\n\r"))
-// 	// time.Sleep(1 * time.Second)
-// 	// cc.Write([]byte("resultado1\n\rresultado2\n\r"))
-// 	// time.Sleep(1 * time.Second)
-// }
+		go func() { _, _ = io.Copy(f, clientFD) }()
+		_, err = io.Copy(clientFD, f)
+		if err != nil {
+			cast.LogErr(err.Error(), nil)
+			fmt.Fprintln(clientFD, err.Error())
+			return
+		}
+		cast.LogDebug(fmt.Sprintf("Stop of shell %v", shell), nil)
+	default:
+		cast.LogDebug("Unknown command "+string(cmd), nil)
+		fmt.Fprintln(clientFD, "Unknown command "+string(cmd))
+	}
+}
 
 type client struct {
+	dbg  *debugger
 	conn *websocket.Conn
 	wsrw io.ReadWriteCloser
-	qq   chan *client
 	vpty *nsterm.VPTY2
+	// default ldisc, used in Raw(false)
+	ldisc   nsterm.Ldisc
+	sluvaFD *nsterm.PortFD
+}
+
+// func (c *client) Write(p []byte) (n int, err error) {
+// 	return c.stdout.Write(p)
+// }
+
+func (c *client) Raw(activate bool) {
+	if activate {
+		c.vpty.SetLDisc(nsterm.NewRawLdisc())
+		return
+	}
+	c.vpty.SetLDisc(c.ldisc)
+}
+
+func (c *client) GetFD() io.ReadWriteCloser {
+	return c.sluvaFD
 }
 
 func (c *client) start() {
 	ldisc := nsterm.NewDefaultLdisc()
 	c.vpty.SetLDisc(ldisc)
+	c.ldisc = ldisc
 
 	// for wsock client
 	// stdin and stdout for xterm.js
@@ -176,15 +175,34 @@ func (c *client) start() {
 
 	// file descriptor for app
 	sfd := c.vpty.SluvaFD()
+	c.sluvaFD = sfd
 
 	// welcome msg to debug session
 	sfd.Write([]byte(term.Magenta + "Nebulant debug. Hello :)\r\nhow are you?\r\n" + term.Reset))
 
-	// start shell
-	// TODO: start debug program
-	_, err := nsterm.NSShell(c.vpty, sfd, sfd)
-	if err != nil {
-		fmt.Println(err.Error())
+	prmpt := nsterm.NewPrompt(c.vpty, sfd, sfd)
+	prmpt.SetPS1("Nebulant dbg> ")
+	for {
+		s, err := prmpt.ReadLine()
+		if err != nil {
+			// TODO: disconnect with err
+		}
+		if s == nil {
+			// no command
+			continue
+		}
+
+		// built in :)
+		if *s == "exit" {
+			// TODO: disconnect
+		}
+
+		// built in ;)
+		if *s == "help" {
+			// show debug help
+		}
+
+		c.dbg.ExecCmd(c, *s)
 	}
 }
 

@@ -88,6 +88,10 @@ type Ldisc interface {
 	// mustar/sluva writes
 	ReceiveMustarBuff(int)
 	ReceiveSluvaBuff(int)
+	//
+	ReadRuneBuff() []rune
+	SetBuff(s string)
+	GetESC() chan string
 }
 
 type WriteCloserTicker struct {

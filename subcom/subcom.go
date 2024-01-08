@@ -126,7 +126,7 @@ func RegisterSubcommands() {
 			UpgradeTerm:   false,
 			WelcomeMsg:    true,
 			InitProviders: false,
-			Help:          "  debugger\t\t" + term.EmojiSet["FaceWithMonocle"] + " connect to running debugger\n",
+			Help:          "  shell\t\t" + term.EmojiSet["FaceWithMonocle"] + " run interactive shell\n",
 			Sec:           subsystem.SecRuntime,
 			Call:          NSTerm,
 		},

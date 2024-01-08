@@ -73,6 +73,14 @@ type DefaultLdisc struct {
 	ESCSet map[string]string
 }
 
+func (d *DefaultLdisc) GetESC() chan string {
+	return d.ESC
+}
+
+func (d *DefaultLdisc) ReadRuneBuff() []rune {
+	return d.RuneBuff
+}
+
 func (d *DefaultLdisc) SetMustarFD(fd io.ReadWriteCloser) {
 	d.mustarFD = fd
 }

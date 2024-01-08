@@ -64,6 +64,15 @@ func (r *RawLdisc) ReceiveSluvaBuff(n int) {
 	}
 }
 
+// NOOP
+func (r *RawLdisc) ReadRuneBuff() []rune { return nil }
+
+// NOOP
+func (r *RawLdisc) SetBuff(s string) {}
+
+// NOOP
+func (r *RawLdisc) GetESC() chan string { return nil }
+
 func (r *RawLdisc) IOctl() {
 
 }
