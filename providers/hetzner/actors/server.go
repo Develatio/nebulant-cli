@@ -18,7 +18,9 @@ package actors
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -26,9 +28,22 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type hcServerWrap struct {
+	*hcloud.Server
+	ID *string `validate:"required"`
+}
+
+func (v *hcServerWrap) unwrap() (*hcloud.Server, error) {
+	int64id, err := strconv.ParseInt(*v.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+	}
+	return &hcloud.Server{ID: int64id}, nil
+}
+
 type findOneServerParameters struct {
 	hcloud.ServerListOpts
-	ID *int64 `json:"id"`
+	ID *string `json:"id"`
 }
 
 type ServerListResponseWithMeta struct {
@@ -65,7 +80,7 @@ func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only Server.ID attr are really used
-	input := &hcloud.Server{}
+	input := &hcServerWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -80,7 +95,12 @@ func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Server.DeleteWithResult(context.Background(), input)
+	hsrv, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Server.DeleteWithResult(context.Background(), hsrv)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +149,11 @@ func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		if err != nil {
 			return nil, err
 		}
-		_, response, err := ctx.HClient.Server.GetByID(context.Background(), *input.ID)
+		int64id, err := strconv.ParseInt(*input.ID, 10, 64)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *input.ID), err)
+		}
+		_, response, err := ctx.HClient.Server.GetByID(context.Background(), int64id)
 		if err != nil {
 			return nil, err
 		}
@@ -173,7 +197,7 @@ func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
 func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only Server.ID are really used
-	input := &hcloud.Server{}
+	input := &hcServerWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -188,7 +212,12 @@ func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Server.Poweron(context.Background(), input)
+	hsrv, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Server.Poweron(context.Background(), hsrv)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +229,7 @@ func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
 func PowerOffServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only Server.ID are really used
-	input := &hcloud.Server{}
+	input := &hcServerWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -215,7 +244,12 @@ func PowerOffServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Server.Poweroff(context.Background(), input)
+	hsrv, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Server.Poweroff(context.Background(), hsrv)
 	if err != nil {
 		return nil, err
 	}

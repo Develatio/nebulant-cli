@@ -18,13 +18,28 @@ package actors
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
+
+type hcNetworkWrap struct {
+	*hcloud.Network
+	ID *string `validate:"required"`
+}
+
+func (v *hcNetworkWrap) unwrap() (*hcloud.Network, error) {
+	int64id, err := strconv.ParseInt(*v.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+	}
+	return &hcloud.Network{ID: int64id}, nil
+}
 
 type NetworkListResponseWithMeta struct {
 	*schema.NetworkListResponse
@@ -60,7 +75,7 @@ func CreateNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only Network.ID attr are really used
-	input := &hcloud.Network{}
+	input := &hcNetworkWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -75,7 +90,12 @@ func DeleteNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, err = ctx.HClient.Network.Delete(context.Background(), input)
+	hnet, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = ctx.HClient.Network.Delete(context.Background(), hnet)
 	if err != nil {
 		return nil, err
 	}

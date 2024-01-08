@@ -106,7 +106,7 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"find_volumes":   {F: FindVolumes, N: NextOKKO},
 	"findone_volume": {F: FindOneVolume, N: NextOKKO},
 	"attach_volume":  {F: AttachVolume, N: NextOKKO},
-	"dettach_volume": {F: DetachVolume, N: NextOKKO},
+	"detach_volume":  {F: DetachVolume, N: NextOKKO},
 
 	"find_datacenters":   {F: FindDatacenters, N: NextOKKO},
 	"findone_datacenter": {F: FindOneDatacenter, N: NextOKKO},

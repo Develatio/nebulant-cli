@@ -18,7 +18,9 @@ package actors
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -26,8 +28,63 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type hcPrimaryIPCreateOptsWrap struct {
+	*hcloud.PrimaryIPCreateOpts
+	AssigneeID *string
+}
+
+func (v *hcPrimaryIPCreateOptsWrap) unwrap() (*hcloud.PrimaryIPCreateOpts, error) {
+	output := &hcloud.PrimaryIPCreateOpts{
+		AssigneeType: v.AssigneeType,
+		AutoDelete:   v.AutoDelete,
+		Datacenter:   v.Datacenter,
+		Labels:       v.Labels,
+		Name:         v.Name,
+		Type:         v.Type,
+	}
+	if v.AssigneeID == nil {
+		return output, nil
+	}
+	int64aid, err := strconv.ParseInt(*v.AssigneeID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.AssigneeID), err)
+	}
+	return &hcloud.PrimaryIPCreateOpts{AssigneeID: &int64aid}, nil
+}
+
+type hcPrimaryIPAssignOptsWrap struct {
+	*hcloud.PrimaryIPAssignOpts
+	ID         *string `validate:"required"`
+	AssigneeID *string `validate:"required"`
+}
+
+func (v *hcPrimaryIPAssignOptsWrap) unwrap() (*hcloud.PrimaryIPAssignOpts, error) {
+	int64id, err := strconv.ParseInt(*v.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+	}
+	int64aid, err := strconv.ParseInt(*v.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+	}
+	return &hcloud.PrimaryIPAssignOpts{ID: int64id, AssigneeID: int64aid}, nil
+}
+
+type hcPrimaryIPWrap struct {
+	*hcloud.PrimaryIP
+	ID *string `validate:"required"`
+}
+
+func (v *hcPrimaryIPWrap) unwrap() (*hcloud.PrimaryIP, error) {
+	int64id, err := strconv.ParseInt(*v.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+	}
+	return &hcloud.PrimaryIP{ID: int64id}, nil
+}
+
 type unassignPrimaryIPParameters struct {
-	ID int64 `json:"id" validate:"required"`
+	ID string `json:"id" validate:"required"`
 }
 
 type PrimaryIPListResultWithMeta struct {
@@ -37,7 +94,7 @@ type PrimaryIPListResultWithMeta struct {
 
 func CreatePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	input := &hcloud.PrimaryIPCreateOpts{}
+	input := &hcPrimaryIPCreateOptsWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -52,7 +109,12 @@ func CreatePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.PrimaryIP.Create(context.Background(), *input)
+	hipcreateopts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.PrimaryIP.Create(context.Background(), *hipcreateopts)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +126,7 @@ func CreatePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeletePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only PrimaryIP.ID attr are really used
-	input := &hcloud.PrimaryIP{}
+	input := &hcPrimaryIPWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -79,7 +141,12 @@ func DeletePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, err = ctx.HClient.PrimaryIP.Delete(context.Background(), input)
+	hip, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = ctx.HClient.PrimaryIP.Delete(context.Background(), hip)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +200,7 @@ func FindOnePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 }
 
 func AssignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
-	input := hcloud.PrimaryIPAssignOpts{}
+	input := hcPrimaryIPAssignOptsWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -143,7 +210,17 @@ func AssignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	_, response, err := ctx.HClient.PrimaryIP.Assign(context.Background(), input)
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	hipassignopts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.PrimaryIP.Assign(context.Background(), *hipassignopts)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +241,12 @@ func UnassignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	_, response, err := ctx.HClient.PrimaryIP.Unassign(context.Background(), input.ID)
+	int64id, err := strconv.ParseInt(input.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", input.ID), err)
+	}
+
+	_, response, err := ctx.HClient.PrimaryIP.Unassign(context.Background(), int64id)
 	if err != nil {
 		return nil, err
 	}

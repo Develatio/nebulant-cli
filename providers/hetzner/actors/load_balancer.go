@@ -18,7 +18,9 @@ package actors
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -26,14 +28,27 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type hcLoadBalancerWrap struct {
+	*hcloud.LoadBalancer
+	ID *string `validate:"required"`
+}
+
+func (v *hcLoadBalancerWrap) unwrap() (*hcloud.LoadBalancer, error) {
+	int64id, err := strconv.ParseInt(*v.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+	}
+	return &hcloud.LoadBalancer{ID: int64id}, nil
+}
+
 type loadbalancerAttachToNetworkParameters struct {
 	AttachOpts   hcloud.LoadBalancerAttachToNetworkOpts `json:"opts" validate:"required"`
-	LoadBalancer *hcloud.LoadBalancer                   `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
+	LoadBalancer *hcLoadBalancerWrap                    `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
 }
 
 type loadbalancerDetachFromNetworkParameters struct {
 	DetachOpts   hcloud.LoadBalancerDetachFromNetworkOpts `json:"opts" validate:"required"`
-	LoadBalancer *hcloud.LoadBalancer                     `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
+	LoadBalancer *hcLoadBalancerWrap                      `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
 }
 
 type LoadBalancerListResponseWithMeta struct {
@@ -70,7 +85,7 @@ func CreateLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 func DeleteLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only LoadBalancer.ID attr is really used
-	input := &hcloud.LoadBalancer{}
+	input := &hcLoadBalancerWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -85,7 +100,12 @@ func DeleteLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, err = ctx.HClient.LoadBalancer.Delete(context.Background(), input)
+	hlb, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = ctx.HClient.LoadBalancer.Delete(context.Background(), hlb)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +169,17 @@ func AttachToNetworkLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error)
 		return nil, nil
 	}
 
-	_, response, err := ctx.HClient.LoadBalancer.AttachToNetwork(context.Background(), input.LoadBalancer, input.AttachOpts)
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	hlb, err := input.LoadBalancer.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.LoadBalancer.AttachToNetwork(context.Background(), hlb, input.AttachOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +199,17 @@ func DetachFromNetworkLoadBalancer(ctx *ActionContext) (*base.ActionOutput, erro
 		return nil, nil
 	}
 
-	_, response, err := ctx.HClient.LoadBalancer.DetachFromNetwork(context.Background(), input.LoadBalancer, input.DetachOpts)
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	hlb, err := input.LoadBalancer.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.LoadBalancer.DetachFromNetwork(context.Background(), hlb, input.DetachOpts)
 	if err != nil {
 		return nil, err
 	}

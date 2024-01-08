@@ -18,13 +18,28 @@ package actors
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
+
+type hcImageWrap struct {
+	*hcloud.Image
+	ID *string `validate:"required"`
+}
+
+func (v *hcImageWrap) unwrap() (*hcloud.Image, error) {
+	int64id, err := strconv.ParseInt(*v.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+	}
+	return &hcloud.Image{ID: int64id}, nil
+}
 
 type ImageListResponseWithMeta struct {
 	*schema.ImageListResponse
@@ -34,7 +49,7 @@ type ImageListResponseWithMeta struct {
 func DeleteImage(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only Image.ID attr are really used
-	input := &hcloud.Image{}
+	input := &hcImageWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -49,7 +64,12 @@ func DeleteImage(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	response, err := ctx.HClient.Image.Delete(context.Background(), input)
+	himg, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := ctx.HClient.Image.Delete(context.Background(), himg)
 	if err != nil {
 		return nil, err
 	}
