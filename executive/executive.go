@@ -17,6 +17,7 @@
 package executive
 
 import (
+	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 )
 
@@ -78,11 +79,12 @@ type stageReport struct {
 	reportReason    StageReportReason
 	actionID        string
 	actionRunStatus ActionRunStatus
-	LastAction      *blueprint.Action
-	Next            []*blueprint.Action
-	ExitCode        int
-	Error           error
-	Panic           bool
-	PanicValue      interface{}
-	PanicTrace      []byte
+	// LastAction      *blueprint.Action
+	LastActionContext base.IActionContext
+	Next              []*blueprint.Action
+	ExitCode          int
+	Error             error
+	Panic             bool
+	PanicValue        interface{}
+	PanicTrace        []byte
 }

@@ -37,7 +37,7 @@ func (p *testProvider) DumpPrivateVars(freshStore base.IStore) {
 }
 
 // HandleAction func
-func (p *testProvider) HandleAction(action *blueprint.Action) (*base.ActionOutput, error) {
+func (p *testProvider) HandleAction(actx base.IActionContext) (*base.ActionOutput, error) {
 	return nil, nil
 }
 

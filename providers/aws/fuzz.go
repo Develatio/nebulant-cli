@@ -16,7 +16,10 @@
 
 package aws
 
-import "github.com/develatio/nebulant-cli/blueprint"
+import (
+	"github.com/develatio/nebulant-cli/blueprint"
+	"github.com/develatio/nebulant-cli/runtime"
+)
 
 // Fuzz func
 // TODO: #error Currently only Linux is supported. More info: issue #2
@@ -29,8 +32,14 @@ func Fuzz(data []byte) int {
 		return 0
 	}
 
+	irb, err := blueprint.GenerateIRB(bp, &blueprint.IRBGenConfig{})
+	if err != nil {
+		panic(err)
+	}
+	rt := runtime.NewRuntime(irb)
+	actx := rt.NewAContext(nil, &bp.Actions[0])
 	aws := new(Provider)
-	aout, aerr := aws.HandleAction(&bp.Actions[0])
+	aout, aerr := aws.HandleAction(actx)
 	if aerr != nil {
 		if aout != nil {
 			panic("bp != nil on error")

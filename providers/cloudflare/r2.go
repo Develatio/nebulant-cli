@@ -89,7 +89,8 @@ func (p *Provider) DumpPrivateVars(freshStore base.IStore) {
 }
 
 // HandleAction func
-func (p *Provider) HandleAction(action *blueprint.Action) (*base.ActionOutput, error) {
+func (p *Provider) HandleAction(actx base.IActionContext) (*base.ActionOutput, error) {
+	action := actx.GetAction()
 	p.Logger.LogDebug("AWS: Received action " + action.ActionName)
 	err := p.touchSession()
 	if err != nil {

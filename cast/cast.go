@@ -257,6 +257,10 @@ func (s *SystemBus) Start() {
 				}
 			}
 			if (busdata.TypeID == BusDataTypeLog || busdata.TypeID == BusDataTypeStatus) && busdata.ExecutionUUID != nil {
+				// WIP: el filtro de get execution status debería existir?
+				// ocurre un problema que no mola nada: cuando hay un panic
+				// el execution se pone a false y los mensajes con este
+				// execution uuid se mandan a parla
 				if s.ExistsExecution(*busdata.ExecutionUUID) && !s.GetExecutionStatus(*busdata.ExecutionUUID) {
 					continue
 				}
@@ -448,6 +452,9 @@ func PushEventWithExtra(eid int, ei *string, extra map[string]interface{}) {
 	PushBusData(bdata)
 }
 
+// WIP: esto debería ser un sistema de eventos: crear un struct
+// tipo Event aquí en cast y en lugar de usar Push, usar algo así
+// como dispatchEvent(e *Event)
 // PushState func
 func PushState(runningIDs []string, state int, ei *string) {
 	var s = state

@@ -20,6 +20,31 @@ import (
 	"github.com/develatio/nebulant-cli/blueprint"
 )
 
+type ContextType int
+
+const (
+	ContextTypeRegular ContextType = iota // one parent, one child
+	ContextTypeThread                     // one parent, many children
+	ContextTypeJoin                       // many parents, one child
+)
+
+// ActionContext interface
+type IActionContext interface {
+	Type() ContextType
+	Parent(IActionContext)
+	Parents() []IActionContext
+	Child(IActionContext)
+	Children() []IActionContext
+	GetAction() *blueprint.Action
+	SetStore(IStore)
+	GetStore() IStore
+	Done() <-chan struct{}
+	WithCancelCause()
+	Cancel(error)
+	WithRunFunc(func() (*ActionOutput, error))
+	RunAction() (*ActionOutput, error)
+}
+
 // IActor interface
 type IActor interface {
 	RunAction(action *blueprint.Action) (*ActionOutput, error)

@@ -113,44 +113,48 @@ func (r *Registry) IsInStop() bool {
 }
 
 // HandleActionReport func
-func (r *Registry) HandleActionReport(srr *stageReport) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if _, exists := r.runningIDs[srr.actionID]; !exists {
-		r.runningIDs[srr.actionID] = make(map[*Stage]ActionRunStatus)
-	}
-	if srr.actionRunStatus == ActionNotRunning {
-		r.Logger.LogDebug("Registry: Deleting references for ID " + srr.actionID)
-		delete(r.runningIDs[srr.actionID], srr.stage)
-		delete(r.byStageID, srr.stage)
-		if len(r.runningIDs[srr.actionID]) <= 0 {
-			delete(r.runningIDs, srr.actionID)
-		}
-		if srr.LastAction != nil && srr.LastAction.SaveRawResults {
-			store := srr.stage.GetStore()
-			output, err := store.GetActionOutputByActionID(&srr.actionID)
-			if err != nil {
-				return
-			}
-			r.SavedOutputs = append(r.SavedOutputs, output)
-		}
-	} else {
-		r.Logger.LogDebug("Registry: Storing action ID " + srr.actionID)
-		r.runningIDs[srr.actionID][srr.stage] = srr.actionRunStatus
-		r.byStageID[srr.stage] = srr.actionID
-	}
-}
+// func (r *Registry) HandleActionReport(srr *stageReport) {
+// 	r.mu.Lock()
+// 	defer r.mu.Unlock()
+// 	if _, exists := r.runningIDs[srr.actionID]; !exists {
+// 		r.runningIDs[srr.actionID] = make(map[*Stage]ActionRunStatus)
+// 	}
+// 	if srr.actionRunStatus == ActionNotRunning {
+// 		r.Logger.LogDebug("Registry: Deleting references for ID " + srr.actionID)
+// 		delete(r.runningIDs[srr.actionID], srr.stage)
+// 		delete(r.byStageID, srr.stage)
+// 		if len(r.runningIDs[srr.actionID]) <= 0 {
+// 			delete(r.runningIDs, srr.actionID)
+// 		}
+// 		if srr.LastAction != nil && srr.LastAction.SaveRawResults {
+// 			store := srr.stage.GetStore()
+// 			output, err := store.GetActionOutputByActionID(&srr.actionID)
+// 			if err != nil {
+// 				return
+// 			}
+// 			r.SavedOutputs = append(r.SavedOutputs, output)
+// 		}
+// 	} else {
+// 		r.Logger.LogDebug("Registry: Storing action ID " + srr.actionID)
+// 		r.runningIDs[srr.actionID][srr.stage] = srr.actionRunStatus
+// 		r.byStageID[srr.stage] = srr.actionID
+// 	}
+// }
 
-func (r *Registry) publishStatus() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	var ids []string
-	for actionID := range r.runningIDs {
-		ids = append(ids, actionID)
-	}
-	for actionID := range r.waitingIDs {
-		ids = append(ids, actionID)
-	}
-	state := r.managerState
-	cast.PushState(ids, state, r.ExecutionUUID)
-}
+// func (r *Registry) publishStatus() {
+// 	r.mu.Lock()
+// 	defer r.mu.Unlock()
+// 	var ids []string
+// 	for actionID := range r.runningIDs {
+// 		ids = append(ids, actionID)
+// 	}
+// 	// WIP: Con el nuevo código de Runtime y AcitonContext, algunos
+// 	// AddWaitingID han sido borrados, por lo que
+// 	// este código ya no funciona. Necesario extraer la info de
+// 	// Runtime
+// 	for actionID := range r.waitingIDs {
+// 		ids = append(ids, actionID)
+// 	}
+// 	state := r.managerState
+// 	cast.PushState(ids, state, r.ExecutionUUID)
+// }

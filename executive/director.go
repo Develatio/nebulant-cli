@@ -118,6 +118,7 @@ L:
 			extra := make(map[string]interface{})
 			extra["manager"] = manager
 			cast.PushEventWithExtra(cast.EventRegisteredManager, irb.BP.ExecutionUUID, extra)
+			cast.LogDebug("[Director] sending irb to manager...", nil)
 			manager.PrepareIRB(irb)
 			go func() {
 				exit := false
@@ -153,10 +154,12 @@ L:
 				defer func() {
 					d.UnregisterManager <- manager
 				}()
+				cast.LogDebug("Starting manager loop...", nil)
 				err := manager.Run()
 				if err != nil {
 					cast.LogErr(err.Error(), nil)
 				}
+				cast.LogDebug("[Director] manager has end Run()", nil)
 			}()
 		case manager := <-d.UnregisterManager:
 			cast.LogInfo("[Director] Unregistering Manager", nil)
