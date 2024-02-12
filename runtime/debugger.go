@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package executive
+package runtime
 
 import (
 	"fmt"
@@ -36,25 +36,27 @@ var MAXWRITESIZE = 1024
 var MAXREADSIZE = 1024
 
 // Newdebugger func
-func NewDebugger(breakpoint *breakPoint) *debugger {
+func NewDebugger(r *Runtime) *debugger {
 	debugger := &debugger{
-		currentBreakPoint: breakpoint,
-		manager:           breakpoint.stage.manager,
+		// currentBreakPoint: breakpoint,
+		// manager: breakpoint.stage.manager,
 		//
-		qq:   make(chan *client, 100),
-		stop: make(chan struct{}),
+		runtime: r,
+		qq:      make(chan *client, 100),
+		stop:    make(chan struct{}),
 	}
-	debugger.breakPoints = append(debugger.breakPoints, breakpoint)
+	// debugger.breakPoints = append(debugger.breakPoints, breakpoint)
 	Debuggers = append(Debuggers, debugger)
 	return debugger
 }
 
 type debugger struct {
-	manager           *Manager
-	breakPoints       []*breakPoint
-	currentBreakPoint *breakPoint
-	qq                chan *client
-	stop              chan struct{}
+	runtime *Runtime
+	// manager *Manager
+	// breakPoints       []*breakPoint
+	// currentBreakPoint *breakPoint
+	qq   chan *client
+	stop chan struct{}
 }
 
 func (d *debugger) Serve() error {
@@ -91,6 +93,39 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 	clientFD := cc.GetFD()
 
 	switch string(cmd) {
+	case "c":
+		for bkpt := range d.runtime.GetBreakPoints() {
+			bkpt.End()
+		}
+	case "ll":
+		fmt.Fprintln(clientFD, "\tbreak points:")
+		for bkpt := range d.runtime.GetBreakPoints() {
+			actx := bkpt.GetActionContext()
+			parents := actx.Parents()
+			for _, parent := range parents {
+				parents2 := parent.Parents()
+				for _, parent := range parents2 {
+					fmt.Fprintf(clientFD, "\t\t[%s]\n\t\t|\n", parent.GetAction().ActionName)
+				}
+				_act := parent.GetAction()
+				if _act == nil {
+					fmt.Fprintf(clientFD, "\t\t\t[null]\n\t\t\t|\n")
+				}
+				fmt.Fprintf(clientFD, "\t\t\t[%s]\n\t\t\t|\n", parent.GetAction().ActionName)
+			}
+			action := actx.GetAction()
+			fmt.Fprintf(clientFD, "\t-> %p (id:%s)\n", bkpt, action.ActionName)
+		}
+	case "th":
+		threads := d.runtime.GetThreads()
+		for th := range threads {
+			qq := th.GetQueue()
+			fmt.Fprintf(clientFD, "\tthread %p\n", th)
+			for _, actx := range qq {
+				action := actx.GetAction()
+				fmt.Fprintf(clientFD, "\t\t%s\n", action.ActionName)
+			}
+		}
 	case "shell":
 		// cc.stoppipe = make(chan struct{})
 		// defer close(cc.stoppipe)
@@ -204,9 +239,4 @@ func (c *client) start() {
 
 		c.dbg.ExecCmd(c, *s)
 	}
-}
-
-type breakPoint struct {
-	end   chan bool
-	stage *Stage
 }

@@ -1,550 +1,557 @@
-// Nebulant
-// Copyright (C) 2020  Develatio Technologies S.L.
+// // Nebulant
+// // Copyright (C) 2020  Develatio Technologies S.L.
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// // This program is free software: you can redistribute it and/or modify
+// // it under the terms of the GNU Affero General Public License as published by
+// // the Free Software Foundation, either version 3 of the License, or
+// // (at your option) any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// // This program is distributed in the hope that it will be useful,
+// // but WITHOUT ANY WARRANTY; without even the implied warranty of
+// // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// // GNU Affero General Public License for more details.
 
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// // You should have received a copy of the GNU Affero General Public License
+// // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package executive
 
-import (
-	"bytes"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"log"
-	"os"
-	"runtime/debug"
-	"time"
+// import (
+// 	"bytes"
+// 	"encoding/json"
+// 	"errors"
+// 	"fmt"
+// 	"log"
+// 	"os"
+// 	"runtime/debug"
+// 	"time"
 
-	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
-	"github.com/develatio/nebulant-cli/cast"
-	"github.com/develatio/nebulant-cli/config"
-	"github.com/develatio/nebulant-cli/util"
-)
+// 	"github.com/develatio/nebulant-cli/base"
+// 	"github.com/develatio/nebulant-cli/blueprint"
+// 	"github.com/develatio/nebulant-cli/cast"
+// 	"github.com/develatio/nebulant-cli/config"
+// 	"github.com/develatio/nebulant-cli/util"
+// )
 
-// StageStatusID int
-type StageStatusID int
+// // StageStatusID int
+// type StageStatusID int
 
-const (
-	// StageStatusStopped const
-	StageStatusStopped StageStatusID = iota
-	// StageStatusRunning const
-	StageStatusRunning
-	// StageStatusPaused const
-	StageStatusPaused
-)
+// const (
+// 	// StageStatusStopped const
+// 	StageStatusStopped StageStatusID = iota
+// 	// StageStatusRunning const
+// 	StageStatusRunning
+// 	// StageStatusPaused const
+// 	StageStatusPaused
+// )
 
-// NewStage func
-func NewStage(manager *Manager, startPoint base.IActionContext) *Stage {
-	logger := manager.GetLogger()
-	store := startPoint.GetStore()
-	store.SetLogger(logger)
-	// action := startPoint.GetAction()
-	stage := &Stage{
-		// On new Stage, set new Store. To get a duplicated store
-		// call Duplicate method on this stage
-		store:  store,
-		logger: logger,
-		// StartAction:     action,
-		StartActionContext: startPoint,
-		stageStatus:        StageStatusStopped,
-		// CurrentAction:   action,
-		CurrentActionContext: startPoint,
-		manager:              manager,
-		execInstruction:      make(chan *ExecCtrlInstruction, 10),
-	}
-	return stage
-}
+// // NewStage func
+// func NewStage(manager *Manager, startPoint base.IActionContext) *Stage {
+// 	logger := manager.GetLogger()
+// 	store := startPoint.GetStore()
+// 	store.SetLogger(logger)
+// 	// action := startPoint.GetAction()
+// 	stage := &Stage{
+// 		// On new Stage, set new Store. To get a duplicated store
+// 		// call Duplicate method on this stage
+// 		store:  store,
+// 		logger: logger,
+// 		// StartAction:     action,
+// 		StartActionContext: startPoint,
+// 		stageStatus:        StageStatusStopped,
+// 		// CurrentAction:   action,
+// 		CurrentActionContext: startPoint,
+// 		manager:              manager,
+// 		execInstruction:      make(chan *ExecCtrlInstruction, 10),
+// 	}
+// 	return stage
+// }
 
-// Stage struct
-type Stage struct {
-	recoveringStatus bool
-	panicErr         string
-	store            base.IStore
-	logger           base.ILogger
-	manager          *Manager
-	execInstruction  chan *ExecCtrlInstruction
-	// StartAction        *blueprint.Action
-	StartActionContext base.IActionContext
-	// CurrentAction        *blueprint.Action
-	CurrentActionContext base.IActionContext
-	// LastAction           *blueprint.Action
-	LastActionContext base.IActionContext
-	LastActionError   error
-	//
-	stageStatus StageStatusID
-	//
-	stageID        string
-	stageParentsID string
-}
+// // Stage struct
+// type Stage struct {
+// 	recoveringStatus bool
+// 	panicErr         string
+// 	store            base.IStore
+// 	logger           base.ILogger
+// 	manager          *Manager
+// 	execInstruction  chan *ExecCtrlInstruction
+// 	// StartAction        *blueprint.Action
+// 	StartActionContext base.IActionContext
+// 	// CurrentAction        *blueprint.Action
+// 	CurrentActionContext base.IActionContext
+// 	// LastAction           *blueprint.Action
+// 	LastActionContext base.IActionContext
+// 	LastActionError   error
+// 	//
+// 	stageStatus StageStatusID
+// 	//
+// 	stageID        string
+// 	stageParentsID string
+// }
 
-// Divide func splits current stage, one by action in actions
-// attr, the store is duplicated and asociated to ever new
-// stage so every stage gets a fresh copy of current store. A
-// new action context is also generated by every action and
-// setted as StartActionContext to every stage.
-func (s *Stage) Divide(actions []*blueprint.Action) []*Stage {
-	var stages []*Stage
-	var parentsStringSeparator string
-	if s.stageParentsID != "" {
-		parentsStringSeparator = "|"
-	}
-	// WIP: usamos s.LastActionContext porque s.CurrentActionContext se
-	// setea a null antes de iniciar el proceso de división. Se setea a
-	// null porque es la forma en la que stage entiende que no tiene
-	// que ejecutar más actions. Esto obviamente no es el mejor de los
-	// diseños: mejorar
-	actxs := s.manager.Runtime.NewAContextThread(s.LastActionContext, actions)
-	for _, actx := range actxs {
-		// store := s.store.Duplicate()
-		// actx := s.manager.Runtime.NewAContext(action)
-		store := actx.GetStore()
-		stage := &Stage{
-			store: store,
-			// logger should be a new fresh instance of base.ILogger
-			// store.Duplicate should call sotore.logger.Duplicate
-			logger: store.GetLogger(),
-			// StartAction:          actx.GetAction(),
-			StartActionContext: actx,
-			stageStatus:        StageStatusStopped,
-			// CurrentAction:        actx.GetAction(),
-			CurrentActionContext: actx,
-			manager:              s.manager,
-			execInstruction:      make(chan *ExecCtrlInstruction, 10),
-			stageID:              "",
-			stageParentsID:       s.stageParentsID + parentsStringSeparator + s.stageID,
-		}
-		// prevent bad things
-		if s.logger == stage.logger {
-			panic("No fresh copy of logger at stage division")
-		}
+// // Divide func splits current stage, one by action in actions
+// // attr, the store is duplicated and asociated to ever new
+// // stage so every stage gets a fresh copy of current store. A
+// // new action context is also generated by every action and
+// // setted as StartActionContext to every stage.
+// func (s *Stage) Divide(actions []*blueprint.Action) []*Stage {
+// 	var stages []*Stage
+// 	var parentsStringSeparator string
+// 	if s.stageParentsID != "" {
+// 		parentsStringSeparator = "|"
+// 	}
+// 	// WIP: usamos s.LastActionContext porque s.CurrentActionContext se
+// 	// setea a null antes de iniciar el proceso de división. Se setea a
+// 	// null porque es la forma en la que stage entiende que no tiene
+// 	// que ejecutar más actions. Esto obviamente no es el mejor de los
+// 	// diseños: mejorar
+// 	actxs := s.manager.Runtime.NewAContextThread(s.LastActionContext, actions)
+// 	for _, actx := range actxs {
+// 		// store := s.store.Duplicate()
+// 		// actx := s.manager.Runtime.NewAContext(action)
+// 		store := actx.GetStore()
+// 		stage := &Stage{
+// 			store: store,
+// 			// logger should be a new fresh instance of base.ILogger
+// 			// store.Duplicate should call sotore.logger.Duplicate
+// 			logger: store.GetLogger(),
+// 			// StartAction:          actx.GetAction(),
+// 			StartActionContext: actx,
+// 			stageStatus:        StageStatusStopped,
+// 			// CurrentAction:        actx.GetAction(),
+// 			CurrentActionContext: actx,
+// 			manager:              s.manager,
+// 			execInstruction:      make(chan *ExecCtrlInstruction, 10),
+// 			stageID:              "",
+// 			stageParentsID:       s.stageParentsID + parentsStringSeparator + s.stageID,
+// 		}
+// 		// prevent bad things
+// 		if s.logger == stage.logger {
+// 			panic("No fresh copy of logger at stage division")
+// 		}
 
-		stageaddr := fmt.Sprintf("%p", stage)
-		s.logger.LogDebug(s.lpfx() + "New division at addr [" + stageaddr + "]")
-		stages = append(stages, stage)
-	}
+// 		stageaddr := fmt.Sprintf("%p", stage)
+// 		s.logger.LogDebug(s.lpfx() + "New division at addr [" + stageaddr + "]")
+// 		stages = append(stages, stage)
+// 	}
 
-	for _, newstage := range stages {
-		stageaddr := fmt.Sprintf("%p", newstage)
-		s.logger.LogDebug(s.lpfx() + "Division: returning stage[" + stageaddr + "]")
-		newstage.execInstruction <- &ExecCtrlInstruction{
-			Instruction: ExecStart,
-		}
-	}
+// 	for _, newstage := range stages {
+// 		stageaddr := fmt.Sprintf("%p", newstage)
+// 		s.logger.LogDebug(s.lpfx() + "Division: returning stage[" + stageaddr + "]")
+// 		newstage.execInstruction <- &ExecCtrlInstruction{
+// 			Instruction: ExecStart,
+// 		}
+// 	}
 
-	return stages
-}
+// 	return stages
+// }
 
-// GetStore func return the store being used by this stage
-func (s *Stage) GetStore() base.IStore {
-	return s.store
-}
+// // GetStore func return the store being used by this stage
+// func (s *Stage) GetStore() base.IStore {
+// 	return s.store
+// }
 
-func (s *Stage) lpfx() string {
-	if config.DEBUG {
-		return "( Thread )-[" + s.stageParentsID + "]-(" + s.stageID + ")> "
-	}
-	if s.stageParentsID == "" {
-		return "( Main )> "
-	}
-	return "( Thread )> "
-}
+// func (s *Stage) lpfx() string {
+// 	if config.DEBUG {
+// 		return "( Thread )-[" + s.stageParentsID + "]-(" + s.stageID + ")> "
+// 	}
+// 	if s.stageParentsID == "" {
+// 		return "( Main )> "
+// 	}
+// 	return "( Thread )> "
+// }
 
-// SetStageID func
-func (s *Stage) SetStageID(stageID string) {
-	s.stageID = stageID
-	var parentsStringSeparator string
-	if s.stageParentsID != "" {
-		parentsStringSeparator = "|"
-	}
-	s.logger.SetThreadID(s.stageParentsID + parentsStringSeparator + stageID)
-}
+// // SetStageID func
+// func (s *Stage) SetStageID(stageID string) {
+// 	s.stageID = stageID
+// 	var parentsStringSeparator string
+// 	if s.stageParentsID != "" {
+// 		parentsStringSeparator = "|"
+// 	}
+// 	s.logger.SetThreadID(s.stageParentsID + parentsStringSeparator + stageID)
+// }
 
-// GetProvider func
-func (s *Stage) GetProvider(providerName string) (base.IProvider, error) {
-	if s.store.ExistsProvider(providerName) {
-		provider, err := s.store.GetProvider(providerName)
-		if err != nil {
-			return nil, err
-		}
-		return provider, nil
-	}
-	providerInitFunc, initfErr := cast.SBus.GetProviderInitFunc(providerName)
-	if initfErr != nil {
-		return nil, initfErr
-	}
-	provider, providerErr := providerInitFunc(s.store)
-	if providerErr != nil {
-		return nil, providerErr
-	}
-	s.store.StoreProvider(providerName, provider)
-	return provider, nil
-}
+// // // GetProvider func
+// // func (s *Stage) GetProvider(providerName string) (base.IProvider, error) {
+// // 	if s.store.ExistsProvider(providerName) {
+// // 		provider, err := s.store.GetProvider(providerName)
+// // 		if err != nil {
+// // 			return nil, err
+// // 		}
+// // 		return provider, nil
+// // 	}
+// // 	providerInitFunc, initfErr := cast.SBus.GetProviderInitFunc(providerName)
+// // 	if initfErr != nil {
+// // 		return nil, initfErr
+// // 	}
+// // 	provider, providerErr := providerInitFunc(s.store)
+// // 	if providerErr != nil {
+// // 		return nil, providerErr
+// // 	}
+// // 	s.store.StoreProvider(providerName, provider)
+// // 	return provider, nil
+// // }
 
-func (s *Stage) chanStageReport(sr *stageReport) {
-	if s.manager == nil {
-		return
-	}
-	sr.stage = s
-	sr.LastActionContext = s.LastActionContext
-	for i := 0; i <= 10; i++ {
-		select {
-		case s.manager.StageReport <- sr:
-			return
-		default:
-			for {
-				if len(s.manager.StageReport) < 500 {
-					break
-				}
-				time.Sleep(100 * time.Microsecond)
-			}
-		}
-	}
-	// this is really bad. A not resolved flood means broken
-	// execution for some unknown reason.
-	panic(s.lpfx() + "Cannot report to manager due to flood messages. Please reduce the amount of actions.")
-}
+// func (s *Stage) chanStageReport(sr *stageReport) {
+// 	if s.manager == nil {
+// 		return
+// 	}
+// 	sr.stage = s
+// 	sr.LastActionContext = s.LastActionContext
+// 	for i := 0; i <= 10; i++ {
+// 		select {
+// 		case s.manager.StageReport <- sr:
+// 			return
+// 		default:
+// 			for {
+// 				if len(s.manager.StageReport) < 500 {
+// 					break
+// 				}
+// 				time.Sleep(100 * time.Microsecond)
+// 			}
+// 		}
+// 	}
+// 	// this is really bad. A not resolved flood means broken
+// 	// execution for some unknown reason.
+// 	panic(s.lpfx() + "Cannot report to manager due to flood messages. Please reduce the amount of actions.")
+// }
 
-func (s *Stage) setNextAction(action *blueprint.Action) {
-	s.LastActionError = nil
-	s.logger.LogDebug(s.lpfx() + fmt.Sprintf("putting action %v into next exec", action.ActionName))
-	s.CurrentActionContext = s.manager.Runtime.NewAContext(s.LastActionContext, action)
-}
+// func (s *Stage) setNextAction(action *blueprint.Action) {
+// 	s.LastActionError = nil
+// 	s.logger.LogDebug(s.lpfx() + fmt.Sprintf("putting action %v into next exec", action.ActionName))
+// 	s.CurrentActionContext = s.manager.Runtime.NewAContext(s.LastActionContext, action)
+// }
 
-// Init func
-func (s *Stage) Init() {
-	s.logger.LogDebug(s.lpfx() + "Stage init")
-	s.stageStatus = StageStatusStopped
-	exit := false
-	waitcount := 0
+// // Init func
+// func (s *Stage) Init() {
+// 	s.logger.LogDebug(s.lpfx() + "Stage init")
+// 	s.stageStatus = StageStatusStopped
+// 	exit := false
+// 	waitcount := 0
 
-	// Recover from panic
-	defer func() {
-		if r := recover(); r != nil {
-			s.recoveringStatus = true
-			sr := &stageReport{
-				reportReason: StageEndByRunDone,
-				ExitCode:     1,
-				Panic:        true,
-			}
-			switch r := r.(type) {
-			case *util.PanicData:
-				exit = true
-				sr.PanicValue = r.PanicValue
-				sr.PanicTrace = r.PanicTrace
-				s.chanStageReport(sr)
-			default:
-				s.panicErr = fmt.Sprintf("%v", r)
-				s.panicErr = s.panicErr + string(debug.Stack())
-				action := s.CurrentActionContext.GetAction()
-				s.logger.LogDebug(fmt.Sprintf("%s Recovering [%s] [%v] from panic...", s.lpfx(), action.ActionName, action.ActionID))
-				s.execInstruction <- &ExecCtrlInstruction{
-					Instruction: ExecResume,
-				}
-				go s.Init()
-				exit = true
-			}
-		}
-	}()
-	if exit {
-		return
-	}
-L:
-	for { // Infine loop until break L
-		s.logger.LogDebug(s.lpfx() + "  Loop iteration++")
-		select { // Loop until a case event ocurrs.
+// 	// Recover from panic
+// 	defer func() {
+// 		if r := recover(); r != nil {
+// 			s.recoveringStatus = true
+// 			sr := &stageReport{
+// 				reportReason: StageEndByRunDone,
+// 				ExitCode:     1,
+// 				Panic:        true,
+// 			}
+// 			switch r := r.(type) {
+// 			case *util.PanicData:
+// 				exit = true
+// 				sr.PanicValue = r.PanicValue
+// 				sr.PanicTrace = r.PanicTrace
+// 				s.chanStageReport(sr)
+// 			default:
+// 				s.panicErr = fmt.Sprintf("%v", r)
+// 				s.panicErr = s.panicErr + string(debug.Stack())
+// 				action := s.CurrentActionContext.GetAction()
+// 				s.logger.LogDebug(fmt.Sprintf("%s Recovering [%s] [%v] from panic...", s.lpfx(), action.ActionName, action.ActionID))
+// 				s.execInstruction <- &ExecCtrlInstruction{
+// 					Instruction: ExecResume,
+// 				}
+// 				go s.Init()
+// 				exit = true
+// 			}
+// 		}
+// 	}()
+// 	if exit {
+// 		return
+// 	}
+// L:
+// 	for { // Infine loop until break L
+// 		s.logger.LogDebug(s.lpfx() + "  Loop iteration++")
+// 		select { // Loop until a case event ocurrs.
 
-		// Command
-		case eitrn := <-s.execInstruction:
-			switch eitrn.Instruction {
+// 		// Command
+// 		case eitrn := <-s.execInstruction:
+// 			switch eitrn.Instruction {
 
-			// Start stage
-			case ExecStart:
-				s.logger.LogDebug(s.lpfx() + "Received stage start command")
-				if s.CurrentActionContext == nil {
-					s.CurrentActionContext = s.StartActionContext
-				}
-				s.stageStatus = StageStatusRunning
-			// Stop stage
-			case ExecStop:
-				action := s.CurrentActionContext.GetAction()
-				s.logger.LogInfo(fmt.Sprintf("%s Stop received. [%s] [%v] ...", s.lpfx(), action.ActionName, action.ActionID))
-				s.chanStageReport(&stageReport{reportReason: StageEndByRunDone})
-				break L
+// 			// Start stage
+// 			case ExecStart:
+// 				s.logger.LogDebug(s.lpfx() + "Received stage start command")
+// 				if s.CurrentActionContext == nil {
+// 					s.CurrentActionContext = s.StartActionContext
+// 				}
+// 				s.stageStatus = StageStatusRunning
+// 			// Stop stage
+// 			case ExecStop:
+// 				action := s.CurrentActionContext.GetAction()
+// 				s.logger.LogInfo(fmt.Sprintf("%s Stop received. [%s] [%v] ...", s.lpfx(), action.ActionName, action.ActionID))
+// 				s.chanStageReport(&stageReport{reportReason: StageEndByRunDone})
+// 				break L
 
-			// Pause stage
-			case ExecPause:
-				action := s.CurrentActionContext.GetAction()
-				s.logger.LogInfo(fmt.Sprintf("%s Pause received. [%s] [%v] ...", s.lpfx(), action.ActionName, action.ActionID))
-				s.stageStatus = StageStatusPaused
-				s.chanStageReport(&stageReport{reportReason: StagePause})
+// 			// Pause stage
+// 			case ExecPause:
+// 				action := s.CurrentActionContext.GetAction()
+// 				s.logger.LogInfo(fmt.Sprintf("%s Pause received. [%s] [%v] ...", s.lpfx(), action.ActionName, action.ActionID))
+// 				s.stageStatus = StageStatusPaused
+// 				s.chanStageReport(&stageReport{reportReason: StagePause})
 
-			// Resume stage
-			case ExecResume:
-				action := s.CurrentActionContext.GetAction()
-				s.logger.LogInfo(fmt.Sprintf("%s Resume received. [%s] [%v] ...", s.lpfx(), action.ActionName, action.ActionID))
-				s.stageStatus = StageStatusRunning
-				s.chanStageReport(&stageReport{reportReason: StageResume})
+// 			// Resume stage
+// 			case ExecResume:
+// 				action := s.CurrentActionContext.GetAction()
+// 				s.logger.LogInfo(fmt.Sprintf("%s Resume received. [%s] [%v] ...", s.lpfx(), action.ActionName, action.ActionID))
+// 				s.stageStatus = StageStatusRunning
+// 				s.chanStageReport(&stageReport{reportReason: StageResume})
 
-			// Manager out, be free
-			case ExecEmancipation:
-				s.manager = nil
+// 			// Manager out, be free
+// 			case ExecEmancipation:
+// 				s.manager = nil
 
-			// Unknown command
-			default:
-				s.logger.LogErr(s.lpfx() + "Don't know how to handle this instruction")
-			}
+// 			// Unknown command
+// 			default:
+// 				s.logger.LogErr(s.lpfx() + "Don't know how to handle this instruction")
+// 			}
 
-		// Normal flow
-		default:
-			if cast.BInfo.GetLoad() > 10.0 {
-				waitcount++
-				// reduce run speed on high bus load
-				var fa time.Duration = time.Duration(cast.BInfo.GetLoad() * 10.0)
-				// for debug:
-				// fmt.Println("Bus load up 10:", cast.BusLoad, "Sleeping", fa)
-				time.Sleep(fa * time.Millisecond)
-				if waitcount > 100 {
-					fmt.Println("High bus load detected. Waiting load reduction...")
-					waitcount = 0
-				}
-				continue
-			}
-			waitcount = 0
+// 		// Normal flow
+// 		default:
+// 			if cast.BInfo.GetLoad() > 10.0 {
+// 				waitcount++
+// 				// reduce run speed on high bus load
+// 				var fa time.Duration = time.Duration(cast.BInfo.GetLoad() * 10.0)
+// 				// for debug:
+// 				// fmt.Println("Bus load up 10:", cast.BusLoad, "Sleeping", fa)
+// 				time.Sleep(fa * time.Millisecond)
+// 				if waitcount > 100 {
+// 					fmt.Println("High bus load detected. Waiting load reduction...")
+// 					waitcount = 0
+// 				}
+// 				continue
+// 			}
+// 			waitcount = 0
 
-			// After panic, try to recover
-			if s.recoveringStatus {
-				s.recoveringStatus = false
-				if next := s.PostAction(nil, fmt.Errorf(s.panicErr)); !next {
-					break L
-				}
-				s.panicErr = ""
-			}
+// 			// After panic, try to recover
+// 			if s.recoveringStatus {
+// 				s.recoveringStatus = false
+// 				if next := s.PostAction(nil, fmt.Errorf(s.panicErr)); !next {
+// 					break L
+// 				}
+// 				s.panicErr = ""
+// 			}
 
-			// No action loaded or not started stage
-			if s.stageStatus != StageStatusRunning || s.CurrentActionContext == nil {
-				time.Sleep(2 * time.Second)
-				continue
-			}
+// 			// No action loaded or not started stage
+// 			if s.stageStatus != StageStatusRunning || s.CurrentActionContext == nil {
+// 				time.Sleep(2 * time.Second)
+// 				continue
+// 			}
 
-			currentAction := s.CurrentActionContext.GetAction()
+// 			currentAction := s.CurrentActionContext.GetAction()
 
-			debugmsg := ""
-			if config.DEBUG {
-				debugmsg = " [" + currentAction.ActionID + "]"
-			}
-			// Running action Feedback
-			if currentAction.Output != nil {
-				s.logger.LogInfo(s.lpfx() + "Running [" + currentAction.ActionName + " => " + *currentAction.Output + "]" + debugmsg + " ...")
-			} else {
-				s.logger.LogInfo(s.lpfx() + "Running [" + currentAction.ActionName + "]" + debugmsg + " ...")
-			}
+// 			debugmsg := ""
+// 			if config.DEBUG {
+// 				debugmsg = " [" + currentAction.ActionID + "]"
+// 			}
+// 			// Running action Feedback
+// 			if currentAction.Output != nil {
+// 				s.logger.LogInfo(s.lpfx() + "Running [" + currentAction.ActionName + " => " + *currentAction.Output + "]" + debugmsg + " ...")
+// 			} else {
+// 				s.logger.LogInfo(s.lpfx() + "Running [" + currentAction.ActionName + "]" + debugmsg + " ...")
+// 			}
 
-			// Running action comunication to manager
-			s.chanStageReport(&stageReport{
-				reportReason:    StageActionReport,
-				actionID:        currentAction.ActionID,
-				actionRunStatus: ActionRunning,
-			})
+// 			// Running action comunication to manager
+// 			s.chanStageReport(&stageReport{
+// 				reportReason:    StageActionReport,
+// 				actionID:        currentAction.ActionID,
+// 				actionRunStatus: ActionRunning,
+// 			})
 
-			// Join threads. Stop exec and return to manager
-			if currentAction.JoinThreadsPoint {
-				s.LastActionContext = s.CurrentActionContext
-				s.CurrentActionContext = nil
-				s.logger.LogDebug(s.lpfx() + "Thread end by join")
-				s.chanStageReport(&stageReport{
-					reportReason:      StageEndByJoin,
-					LastActionContext: s.LastActionContext,
-				})
-				break L
-			}
+// 			// Join threads. Stop exec and return to manager
+// 			if currentAction.JoinThreadsPoint {
+// 				s.LastActionContext = s.CurrentActionContext
+// 				s.CurrentActionContext = nil
+// 				s.logger.LogDebug(s.lpfx() + "Thread end by join")
+// 				s.chanStageReport(&stageReport{
+// 					reportReason:      StageEndByJoin,
+// 					LastActionContext: s.LastActionContext,
+// 				})
+// 				break L
+// 			}
 
-			///// debug
-			if currentAction.BreakPoint {
-				s.logger.LogInfo("Breakpoint found, starting debugger")
-				bkp := &breakPoint{
-					end:   make(chan bool),
-					stage: s,
-				}
-				// TODO: dettect if there is already a debugger running
-				dbg := NewDebugger(bkp)
-				err := dbg.Serve()
-				if next := s.PostAction(nil, err); !next {
-					break L
-				}
-				continue
-			}
-			///// debug
+// 			///// debug
+// 			// if currentAction.BreakPoint {
+// 			// 	s.logger.LogInfo("Breakpoint found, starting debugger")
+// 			// 	bkp := &breakPoint{
+// 			// 		end:   make(chan bool),
+// 			// 		stage: s,
+// 			// 	}
 
-			// Get provider for current action
-			// provider, err := s.GetProvider(currentAction.Provider)
-			// if err != nil {
-			// 	// Missing provider.
-			// 	log.Panic(err.Error())
-			// }
+// 			// 	//WIP: ahora sería interesante añadir a breakPoint{}
+// 			// 	// el puntero de Runtime para que el prompt pueda
+// 			// 	// ir explorando e interactuando con éste
+// 			// 	//
+// 			// 	// TODO: dettect if there is already a debugger running
+// 			// 	dbg := NewDebugger(bkp)
+// 			// 	err := dbg.Serve()
+// 			// 	if next := s.PostAction(nil, err); !next {
+// 			// 		break L
+// 			// 	}
+// 			// 	continue
+// 			// }
+// 			///// debug
 
-			// var actionErr error
-			// Run action
-			// s.manager.Runtime.Run(s.CurrentActionContext)
-			// actionOutput, actionErr := provider.HandleAction(s.CurrentActionContext)
-			// s.manager.Runtime.Stop(s.CurrentActionContext)
-			actionOutput, actionErr := s.CurrentActionContext.RunAction()
-			// On HandleAction panic, the execution ends here and instead
-			// calling PostAction here, a PostAction is called at start
-			// of this block during recover
-			if actionErr != nil {
-				errm := fmt.Errorf("[%v] [%v] failed", currentAction.ActionName, currentAction.ActionID)
-				actionErr = errors.Join(errm, actionErr)
-			}
-			if next := s.PostAction(actionOutput, actionErr); !next {
-				break L
-			}
-		}
-	}
+// 			// Get provider for current action
+// 			// provider, err := s.GetProvider(currentAction.Provider)
+// 			// if err != nil {
+// 			// 	// Missing provider.
+// 			// 	log.Panic(err.Error())
+// 			// }
 
-	s.logger.LogDebug(s.lpfx() + "Stage out for id " + s.StartActionContext.GetAction().ActionID)
-}
+// 			// var actionErr error
+// 			// Run action
+// 			// s.manager.Runtime.Run(s.CurrentActionContext)
+// 			// actionOutput, actionErr := provider.HandleAction(s.CurrentActionContext)
+// 			// s.manager.Runtime.Stop(s.CurrentActionContext)
+// 			actionOutput, actionErr := s.CurrentActionContext.RunAction()
+// 			// On HandleAction panic, the execution ends here and instead
+// 			// calling PostAction here, a PostAction is called at start
+// 			// of this block during recover
+// 			if actionErr != nil {
+// 				errm := fmt.Errorf("[%v] [%v] failed", currentAction.ActionName, currentAction.ActionID)
+// 				actionErr = errors.Join(errm, actionErr)
+// 			}
+// 			if next := s.PostAction(actionOutput, actionErr); !next {
+// 				break L
+// 			}
+// 		}
+// 	}
 
-func (s *Stage) PostAction(actionOutput *base.ActionOutput, actionErr error) bool {
-	// Debug provides raw output to stdout
-	if s.CurrentActionContext.GetAction().DebugNetwork && actionOutput != nil {
-		for _, record := range actionOutput.Records {
-			var out bytes.Buffer
-			// encode to
-			enc, err := json.Marshal(record.Value)
-			lastAction := s.LastActionContext.GetAction()
-			if err != nil {
-				s.logger.LogDebug(s.lpfx() + "[" + lastAction.ActionID + "] " + err.Error())
-			}
-			if err = json.Indent(&out, enc, "", "\t"); err != nil {
-				s.logger.LogDebug(s.lpfx() + "[" + lastAction.ActionID + "] " + err.Error())
-			}
-			// Do you want to use json data with s.logger?
-			// use out.String() to obtain string value of Buffer bytes
-			if _, err = out.WriteTo(os.Stdout); err != nil {
-				s.logger.LogDebug(s.lpfx() + "[" + lastAction.ActionID + "] " + err.Error())
-			}
-		}
-	}
+// 	s.logger.LogDebug(s.lpfx() + "Stage out for id " + s.StartActionContext.GetAction().ActionID)
+// }
 
-	// Save action output into the store
-	if actionOutput != nil {
-		for idx := 0; idx < len(actionOutput.Records); idx++ {
-			err := s.store.Insert(actionOutput.Records[idx], s.CurrentActionContext.GetAction().Provider)
-			if err != nil {
-				log.Panic(err.Error())
-			}
-		}
-	}
-	if actionErr != nil { // Action error
-		// aerr := actionOutput
-		if actionOutput == nil {
-			actionOutput = base.NewActionOutput(s.CurrentActionContext.GetAction(), nil, nil)
-			actionOutput.Records[0].Fail = true
-			actionOutput.Records[0].Error = actionErr
-			actionOutput.Records[0].Value = actionErr.Error()
-		}
-		for idx := 0; idx < len(actionOutput.Records); idx++ {
-			actionOutput.Records[idx].Fail = true
-			actionOutput.Records[idx].Error = actionErr
-			err := s.store.Insert(actionOutput.Records[idx], s.CurrentActionContext.GetAction().Provider)
-			if err != nil {
-				log.Panic(err.Error())
-			}
-		}
-	}
+// func (s *Stage) PostAction(actionOutput *base.ActionOutput, actionErr error) bool {
+// 	// Debug provides raw output to stdout
+// 	if s.CurrentActionContext.GetAction().DebugNetwork && actionOutput != nil {
+// 		for _, record := range actionOutput.Records {
+// 			var out bytes.Buffer
+// 			// encode to
+// 			enc, err := json.Marshal(record.Value)
+// 			lastAction := s.LastActionContext.GetAction()
+// 			if err != nil {
+// 				s.logger.LogDebug(s.lpfx() + "[" + lastAction.ActionID + "] " + err.Error())
+// 			}
+// 			if err = json.Indent(&out, enc, "", "\t"); err != nil {
+// 				s.logger.LogDebug(s.lpfx() + "[" + lastAction.ActionID + "] " + err.Error())
+// 			}
+// 			// Do you want to use json data with s.logger?
+// 			// use out.String() to obtain string value of Buffer bytes
+// 			if _, err = out.WriteTo(os.Stdout); err != nil {
+// 				s.logger.LogDebug(s.lpfx() + "[" + lastAction.ActionID + "] " + err.Error())
+// 			}
+// 		}
+// 	}
 
-	// Set last action executed data.
-	s.LastActionContext = s.CurrentActionContext
-	s.CurrentActionContext = nil
-	s.LastActionError = actionErr
-	var actions []*blueprint.Action
-	if actionErr != nil { // Action error
-		s.logger.LogDebug(s.lpfx() + "Stage: Action finish KO")
-		provider, err := s.store.GetProvider(s.LastActionContext.GetAction().Provider)
-		if err != nil {
-			// Missing provider.
-			log.Panic(err.Error())
-		}
-		actions, err = provider.OnActionErrorHook(actionOutput)
-		if err != nil {
-			log.Panic(err.Error())
-		}
-		if actions == nil {
-			actions = s.LastActionContext.GetAction().NextAction.NextKo
-		}
-	} else if s.LastActionContext.GetAction().NextAction.ConditionalNext {
-		s.logger.LogDebug(s.lpfx() + "Stage: Action finish OK")
-		if actionOutput.Records[0].Value.(bool) {
-			actions = s.LastActionContext.GetAction().NextAction.NextOkTrue
-		} else {
-			actions = s.LastActionContext.GetAction().NextAction.NextOkFalse
-		}
-	} else { // No action error
-		s.logger.LogDebug(s.lpfx() + "Stage: Action finish OK")
-		actions = s.LastActionContext.GetAction().NextAction.NextOk
-	}
+// 	// This is made now into Runtime
+// 	// Save action output into the store
+// 	// if actionOutput != nil {
+// 	// 	for idx := 0; idx < len(actionOutput.Records); idx++ {
+// 	// 		err := s.store.Insert(actionOutput.Records[idx], s.CurrentActionContext.GetAction().Provider)
+// 	// 		if err != nil {
+// 	// 			log.Panic(err.Error())
+// 	// 		}
+// 	// 	}
+// 	// }
+// 	// if actionErr != nil { // Action error
+// 	// 	// aerr := actionOutput
+// 	// 	if actionOutput == nil {
+// 	// 		actionOutput = base.NewActionOutput(s.CurrentActionContext.GetAction(), nil, nil)
+// 	// 		actionOutput.Records[0].Fail = true
+// 	// 		actionOutput.Records[0].Error = actionErr
+// 	// 		actionOutput.Records[0].Value = actionErr.Error()
+// 	// 	}
+// 	// 	for idx := 0; idx < len(actionOutput.Records); idx++ {
+// 	// 		actionOutput.Records[idx].Fail = true
+// 	// 		actionOutput.Records[idx].Error = actionErr
+// 	// 		err := s.store.Insert(actionOutput.Records[idx], s.CurrentActionContext.GetAction().Provider)
+// 	// 		if err != nil {
+// 	// 			log.Panic(err.Error())
+// 	// 		}
+// 	// 	}
+// 	// }
 
-	// A dupe of logger with the action id.
-	// Useful for builder context.
-	actionLogger := s.logger.Duplicate()
-	actionLogger.SetActionID(s.LastActionContext.GetAction().ActionID)
-	switch len(actions) {
+// 	// Set last action executed data.
+// 	s.LastActionContext = s.CurrentActionContext
+// 	s.CurrentActionContext = nil
+// 	s.LastActionError = actionErr
+// 	var actions []*blueprint.Action
+// 	if actionErr != nil { // Action error
+// 		s.logger.LogDebug(fmt.Sprintf("%s Stage: Action %s finished KO", s.lpfx(), s.LastActionContext.GetAction().ActionName))
+// 		st := s.LastActionContext.GetStore()
+// 		provider, err := st.GetProvider(s.LastActionContext.GetAction().Provider)
+// 		if err != nil {
+// 			// Missing provider.
+// 			log.Panic(errors.Join(err, fmt.Errorf("cannot obtain provider %s", s.LastActionContext.GetAction().Provider)))
+// 		}
+// 		actions, err = provider.OnActionErrorHook(actionOutput)
+// 		if err != nil {
+// 			log.Panic(err.Error())
+// 		}
+// 		if actions == nil {
+// 			actions = s.LastActionContext.GetAction().NextAction.NextKo
+// 		}
+// 	} else if s.LastActionContext.GetAction().NextAction.ConditionalNext {
+// 		s.logger.LogDebug(s.lpfx() + "Stage: Action finish OK")
+// 		if actionOutput.Records[0].Value.(bool) {
+// 			actions = s.LastActionContext.GetAction().NextAction.NextOkTrue
+// 		} else {
+// 			actions = s.LastActionContext.GetAction().NextAction.NextOkFalse
+// 		}
+// 	} else { // No action error
+// 		s.logger.LogDebug(s.lpfx() + "Stage: Action finish OK")
+// 		actions = s.LastActionContext.GetAction().NextAction.NextOk
+// 	}
 
-	// No more actions -> instruct exit
-	case 0:
-		sr := &stageReport{reportReason: StageEndByRunDone}
-		s.logger.LogDebug(s.lpfx() + "[" + s.LastActionContext.GetAction().ActionID + "] Stop ---> X")
-		if s.LastActionError != nil {
-			sr.ExitCode = 1
-			sr.Error = s.LastActionError
-			actionLogger.LogErr(s.LastActionError.Error())
-		}
-		s.logger.LogDebug(s.lpfx() + "No more actions, stop this stage")
-		s.chanStageReport(sr)
-		// end
-		return false
+// 	// A dupe of logger with the action id.
+// 	// Useful for builder context.
+// 	actionLogger := s.logger.Duplicate()
+// 	actionLogger.SetActionID(s.LastActionContext.GetAction().ActionID)
+// 	switch len(actions) {
 
-	// One action received -> continue execution
-	case 1:
-		s.chanStageReport(&stageReport{
-			reportReason:    StageActionReport,
-			actionID:        s.LastActionContext.GetAction().ActionID,
-			actionRunStatus: ActionNotRunning,
-			Next:            []*blueprint.Action{actions[0]},
-		})
-		if s.LastActionError != nil {
-			actionLogger.LogWarn("Caught KO error: " + s.LastActionError.Error())
-		}
-		s.logger.LogDebug(s.lpfx() + "[" + s.LastActionContext.GetAction().ActionID + "] Next ---> " + actions[0].ActionID)
-		s.setNextAction(actions[0])
+// 	// No more actions -> instruct exit
+// 	case 0:
+// 		sr := &stageReport{reportReason: StageEndByRunDone}
+// 		s.logger.LogDebug(s.lpfx() + "[" + s.LastActionContext.GetAction().ActionID + "] Stop ---> X")
+// 		if s.LastActionError != nil {
+// 			sr.ExitCode = 1
+// 			sr.Error = s.LastActionError
+// 			actionLogger.LogErr(s.LastActionError.Error())
+// 		}
+// 		s.logger.LogDebug(s.lpfx() + "No more actions, stop this stage")
+// 		s.chanStageReport(sr)
+// 		// end
+// 		return false
 
-	// Thread init detected -> back to manager
-	default:
-		if s.LastActionError != nil {
-			actionLogger.LogWarn("Caught KO error: " + s.LastActionError.Error())
-		}
-		s.logger.LogDebug(s.lpfx() + "Thread detected")
-		// Inform to manager to split exec
-		s.chanStageReport(&stageReport{
-			reportReason: StageEndByDivision,
-			Next:         actions,
-		})
-		// end
-		return false
-	}
+// 	// One action received -> continue execution
+// 	case 1:
+// 		s.chanStageReport(&stageReport{
+// 			reportReason:    StageActionReport,
+// 			actionID:        s.LastActionContext.GetAction().ActionID,
+// 			actionRunStatus: ActionNotRunning,
+// 			Next:            []*blueprint.Action{actions[0]},
+// 		})
+// 		if s.LastActionError != nil {
+// 			actionLogger.LogWarn("Caught KO error: " + s.LastActionError.Error())
+// 		}
+// 		s.logger.LogDebug(s.lpfx() + "[" + s.LastActionContext.GetAction().ActionID + "] Next ---> " + actions[0].ActionID)
+// 		s.setNextAction(actions[0])
 
-	// Continue
-	return true
-}
+// 	// Thread init detected -> back to manager
+// 	default:
+// 		if s.LastActionError != nil {
+// 			actionLogger.LogWarn("Caught KO error: " + s.LastActionError.Error())
+// 		}
+// 		s.logger.LogDebug(s.lpfx() + "Thread detected")
+// 		// Inform to manager to split exec
+// 		s.chanStageReport(&stageReport{
+// 			reportReason: StageEndByDivision,
+// 			Next:         actions,
+// 		})
+// 		// end
+// 		return false
+// 	}
+
+// 	// Continue
+// 	return true
+// }

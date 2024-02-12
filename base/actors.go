@@ -38,8 +38,12 @@ type IActionContext interface {
 	GetAction() *blueprint.Action
 	SetStore(IStore)
 	GetStore() IStore
+	// SetProvider(IProvider)
+	// GetProvider() IProvider
 	Done() <-chan struct{}
 	WithCancelCause()
+	WithEventListener(*EventListener)
+	EventListener() *EventListener
 	Cancel(error)
 	WithRunFunc(func() (*ActionOutput, error))
 	RunAction() (*ActionOutput, error)

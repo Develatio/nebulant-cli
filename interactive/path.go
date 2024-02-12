@@ -69,7 +69,7 @@ func Path(nblc *subsystem.NBLcommand) error {
 	if err != nil {
 		return err
 	}
-	executive.MDirector.HandleIRB <- irb
+	executive.MDirector.HandleIRB <- &executive.HandleIRBConfig{IRB: irb}
 	executive.MDirector.Wait()
 	executive.MDirector.Clean()
 	return nil

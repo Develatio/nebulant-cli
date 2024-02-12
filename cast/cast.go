@@ -311,11 +311,13 @@ func (s *SystemBus) Start() {
 	}
 }
 
+// WIP: esto lo mismo podríamos moverlo a runtime
 // RegisterProviderInitFunc func
 func (s *SystemBus) RegisterProviderInitFunc(strname string, initfunc base.ProviderInitFunc) {
 	s.providerInitFuncs[strname] = initfunc
 }
 
+// WIP: esto lo mismo podríamos moverlo a runtime
 // GetProviderInitFunc func
 func (s *SystemBus) GetProviderInitFunc(strname string) (base.ProviderInitFunc, error) {
 	if _, exists := s.providerInitFuncs[strname]; exists {

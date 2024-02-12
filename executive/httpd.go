@@ -397,84 +397,91 @@ func (h *Httpd) autocompleteView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fLink := &cast.BusConsumerLink{
-		LogChan:        make(chan *cast.BusData, 100),
-		CommonChan:     make(chan *cast.BusData, 100),
-		AllowEventData: true,
-	}
-	cast.SBusConnect(fLink)
+	// fLink := &cast.BusConsumerLink{
+	// 	LogChan:        make(chan *cast.BusData, 100),
+	// 	CommonChan:     make(chan *cast.BusData, 100),
+	// 	AllowEventData: true,
+	// }
+	// cast.SBusConnect(fLink)
 	// MDirector.RegisterManager <- manager
-	MDirector.HandleIRB <- irb
+	manager := NewManager()
+	manager.PrepareIRB(irb)
+	MDirector.HandleIRB <- &HandleIRBConfig{Manager: manager}
 
 	w.Header().Set("Content-Type", "application/json")
-	var manager *Manager
 
-	for fback := range fLink.CommonChan {
-		// Ignore feedback without exec id
-		if fback.ExecutionUUID == nil {
-			continue
-		}
-		// Ignore messages not from this bp
-		if *fback.ExecutionUUID != *bp.ExecutionUUID {
-			continue
-		}
-		// exit on EOF
-		if fback.TypeID == cast.BusDataTypeEOF {
-			return
-		}
-		// Ignore non-event messages
-		if fback.TypeID != cast.BusDataTypeEvent {
-			continue
-		}
-		// save manager on registered manager event
-		if *fback.EventID == cast.EventRegisteredManager {
-			manager = fback.Extra["manager"].(*Manager)
-			continue
-		}
-		// skip if manager isn't saved
-		if manager == nil {
-			continue
-		}
-		// skip if event isn't EventManagerOut
-		if *fback.EventID != cast.EventManagerOut {
-			continue
-		}
-		// here the manager has ended, get last action result and
-		// bring back throught http
+	// for fback := range fLink.CommonChan {
+	// 	// Ignore feedback without exec id
+	// 	if fback.ExecutionUUID == nil {
+	// 		continue
+	// 	}
+	// 	// Ignore messages not from this bp
+	// 	if *fback.ExecutionUUID != *bp.ExecutionUUID {
+	// 		continue
+	// 	}
+	// 	// exit on EOF
+	// 	if fback.TypeID == cast.BusDataTypeEOF {
+	// 		return
+	// 	}
+	// 	// Ignore non-event messages
+	// 	if fback.TypeID != cast.BusDataTypeEvent {
+	// 		continue
+	// 	}
+	// 	// save manager on registered manager event
+	// 	if *fback.EventID == cast.EventRegisteredManager {
+	// 		manager = fback.Extra["manager"].(*Manager)
+	// 		continue
+	// 	}
+	// 	// skip if manager isn't saved
+	// 	if manager == nil {
+	// 		continue
+	// 	}
+	// 	// skip if event isn't EventManagerOut
+	// 	if *fback.EventID != cast.EventManagerOut {
+	// 		continue
+	// 	}
+	// 	// here the manager has ended, get last action result and
+	// 	// bring back throught http
 
-		status := http.StatusAccepted
+	// eventlistener is ready because we called RegisterIRB before
+	eventlistener := manager.Runtime.NewEventListener()
+	eventlistener.WaitUntil([]base.EventCode{base.RuntimeEndEvent})
 
-		// Extract saved outputs and store into response struct
-		resp := &AutocompleteResponse{}
-		resp.Result = make(map[string][]*base.StorageRecord)
-		outputLen := len(manager.ExternalRegistry.SavedOutputs)
-		for i := 0; i < outputLen; i++ {
-			actionID := manager.ExternalRegistry.SavedOutputs[i].Action.ActionID
-			resp.Result[actionID] = manager.ExternalRegistry.SavedOutputs[i].Records
-			for e := 0; e < len(manager.ExternalRegistry.SavedOutputs[i].Records); e++ {
-				record := manager.ExternalRegistry.SavedOutputs[i].Records[e]
-				if record.Fail {
-					if status == http.StatusAccepted {
-						status = http.StatusBadRequest
-					}
-					_, ok := err.(*base.ProviderAuthError)
-					if ok {
-						status = http.StatusUnauthorized
-					}
-					resp.Fail = true
-					resp.Errors = append(resp.Errors, record.Error.Error())
+	status := http.StatusAccepted
+
+	savedOutputs := manager.Runtime.SavedActionOutputs()
+
+	// Extract saved outputs and store into response struct
+	resp := &AutocompleteResponse{}
+	resp.Result = make(map[string][]*base.StorageRecord)
+	outputLen := len(savedOutputs)
+	for i := 0; i < outputLen; i++ {
+		actionID := savedOutputs[i].Action.ActionID
+		resp.Result[actionID] = savedOutputs[i].Records
+		for e := 0; e < len(savedOutputs[i].Records); e++ {
+			record := savedOutputs[i].Records[e]
+			if record.Fail {
+				if status == http.StatusAccepted {
+					status = http.StatusBadRequest
 				}
+				_, ok := err.(*base.ProviderAuthError)
+				if ok {
+					status = http.StatusUnauthorized
+				}
+				resp.Fail = true
+				resp.Errors = append(resp.Errors, record.Error.Error())
 			}
 		}
-
-		w.WriteHeader(status)
-		err := json.NewEncoder(w).Encode(resp)
-		if err != nil {
-			http.Error(w, "E08 "+err.Error(), http.StatusBadRequest)
-		}
-		break
 	}
-	cast.SBusDisconnect(fLink)
+
+	w.WriteHeader(status)
+	err = json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		http.Error(w, "E08 "+err.Error(), http.StatusBadRequest)
+	}
+	// break
+	//}
+	// cast.SBusDisconnect(fLink)
 }
 
 func (h *Httpd) stopBlueprintView(w http.ResponseWriter, r *http.Request) {
@@ -646,7 +653,7 @@ func (h *Httpd) blueprintView(w http.ResponseWriter, r *http.Request) {
 	}
 	cast.PushEvent(cast.EventManagerPrepareBPEnd, bp.ExecutionUUID)
 
-	MDirector.HandleIRB <- irb
+	MDirector.HandleIRB <- &HandleIRBConfig{IRB: irb}
 	w.WriteHeader(http.StatusAccepted)
 }
 

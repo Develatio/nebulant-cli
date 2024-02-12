@@ -100,4 +100,5 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"write_file":       {F: WriteFile, N: NextOKKO, R: false},
 	// handled by core stage
 	"join_threads": {F: NOOP, N: NextOK, R: false},
+	"debug":        {F: NOOP, N: NextOK, R: false},
 }

@@ -66,7 +66,7 @@ func RunCmd(nblc *subsystem.NBLcommand) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	executive.MDirector.HandleIRB <- irb
+	executive.MDirector.HandleIRB <- &executive.HandleIRBConfig{IRB: irb}
 	executive.MDirector.Wait()
 	return 0, nil
 }

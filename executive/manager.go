@@ -18,7 +18,6 @@ package executive
 
 import (
 	"fmt"
-	"log"
 	"runtime/debug"
 	"strconv"
 	"sync"
@@ -38,10 +37,7 @@ type ManagerStatusID int
 
 // NewManager func
 func NewManager() *Manager {
-	mng := &Manager{
-		internalRegistry: &Registry{},
-		ExternalRegistry: &Registry{},
-	}
+	mng := &Manager{}
 	// init vars calling reset
 	mng.reset()
 	return mng
@@ -63,16 +59,12 @@ type Manager struct {
 	// Logger instance with remote execution uuid configured
 	Logger *cast.Logger
 	// Comunicate Action exec
-	StageReport chan *stageReport
-	// List of active stages
-	stages map[*Stage]string
-	// Place to store stages before bein pushed to run
-	queue []*Stage
+	// StageReport chan *stageReport
 	// A map of threads tracked by &action -> &store
 	syncThreads map[*blueprint.Action]base.IStore
 	//
-	internalRegistry *Registry
-	ExternalRegistry *Registry
+	// internalRegistry *Registry
+	// ExternalRegistry *Registry
 	//
 	Stats *stats
 	mu    sync.Mutex
@@ -88,16 +80,16 @@ func (m *Manager) reset() {
 	defer m.mu.Unlock()
 	m.Runtime = nil
 	m.ExecutionUUID = nil
-	m.StageReport = make(chan *stageReport, 1000)
+	// m.StageReport = make(chan *stageReport, 1000)
 	m.execInstruction = make(chan *ExecCtrlInstruction, 10)
 	m.Stats = &stats{}
 	m.Logger = &cast.Logger{}
-	m.stages = make(map[*Stage]string)
-	m.syncThreads = make(map[*blueprint.Action]base.IStore)
-	m.internalRegistry.reset()
-	m.ExternalRegistry.reset()
-	m.internalRegistry.Logger = m.Logger
-	m.ExternalRegistry.Logger = m.Logger
+	// m.stages = make(map[*Stage]string)
+	// m.syncThreads = make(map[*blueprint.Action]base.IStore)
+	// m.internalRegistry.reset()
+	// m.ExternalRegistry.reset()
+	// m.internalRegistry.Logger = m.Logger
+	// m.ExternalRegistry.Logger = m.Logger
 }
 
 // GetLogger func
@@ -114,68 +106,29 @@ func (m *Manager) PrepareIRB(irb *blueprint.IRBlueprint) {
 	m.IRB = irb
 	m.Runtime = runtime.NewRuntime(irb)
 	m.ExecutionUUID = irb.ExecutionUUID
-	m.internalRegistry.ExecutionUUID = irb.ExecutionUUID
-	m.ExternalRegistry.ExecutionUUID = irb.ExecutionUUID
+	// m.internalRegistry.ExecutionUUID = irb.ExecutionUUID
+	// m.ExternalRegistry.ExecutionUUID = irb.ExecutionUUID
 	if m.ExecutionUUID != nil {
 		re := *m.ExecutionUUID
 		m.Logger.ExecutionUUID = &re
 	}
-	m.internalRegistry.SetManagerState(cast.EventManagerPrepareBPEnd)
-	m.ExternalRegistry.SetManagerState(cast.EventManagerPrepareBPEnd)
+	// m.internalRegistry.SetManagerState(cast.EventManagerPrepareBPEnd)
+	// m.ExternalRegistry.SetManagerState(cast.EventManagerPrepareBPEnd)
 }
+
+// WIP CONTINUACIÓN: eh, parece que manager ya puede mandar cosas a runtime y runtime, aunque
+// sin terminar y con muchos WIP, ya medio gestiona las cosas: hacer que manager se entienda
+// con runtime, sobre todo el status de arrancado/parado/etc, revisar los WIP de runtime
+// y ver cómo comunicar todo para poder interactuar con el debugger
 
 // RunStages func
-func (m *Manager) RunStages(stages []*Stage) {
-	if m.internalRegistry.IsInStop() {
-		// prevent run new stages on manager stop process
-		return
-	}
-	for _, newStage := range stages {
-		stageaddr := fmt.Sprintf("%p", newStage)
-		m.Logger.LogDebug("[Manager] Starting stage[" + stageaddr + "] for action " + newStage.StartActionContext.GetAction().ActionID)
-		if _, exists := m.stages[newStage]; exists {
-			log.Panic("[Manager] Already running stage")
-		}
-
-		m.internalRegistry.QueueAction(newStage.StartActionContext.GetAction().ActionID, newStage)
-		m.ExternalRegistry.QueueAction(newStage.StartActionContext.GetAction().ActionID, newStage)
-
-		m.stages[newStage] = newStage.StartActionContext.GetAction().ActionID
-		m.Stats.stages++
-		newStage.SetStageID(strconv.Itoa(m.Stats.stages))
-		if m.internalRegistry.IsInPause() {
-			newStage.execInstruction <- &ExecCtrlInstruction{
-				Instruction: ExecPause,
-			}
-		} else {
-			newStage.execInstruction <- &ExecCtrlInstruction{
-				Instruction: ExecStart,
-			}
-		}
-
-		go newStage.Init()
-	}
-}
-
-func (m *Manager) EmancipateStages() {
-	for stage := range m.stages {
-		select {
-		case stage.execInstruction <- &ExecCtrlInstruction{
-			Instruction: ExecEmancipation,
-		}:
-		default:
-			// Hey developer!,  what a wonderful day!
-		}
-	}
-}
 
 // Run func
 func (m *Manager) Run() error {
 	exit := false
 	defer func() {
-		m.internalRegistry.SetManagerState(cast.EventManagerOut)
-		m.ExternalRegistry.SetManagerState(cast.EventManagerOut)
-		m.EmancipateStages()
+		// m.internalRegistry.SetManagerState(cast.EventManagerOut)
+		// m.ExternalRegistry.SetManagerState(cast.EventManagerOut)
 		exit = true
 		if r := recover(); r != nil {
 			switch r.(type) {
@@ -196,8 +149,8 @@ func (m *Manager) Run() error {
 	m.Logger.LogDebug("[Manager] Starting...")
 
 	cast.PushEvent(cast.EventManagerStarting, m.ExecutionUUID)
-	m.internalRegistry.SetManagerState(cast.EventManagerStarting)
-	m.ExternalRegistry.SetManagerState(cast.EventManagerStarting)
+	// m.internalRegistry.SetManagerState(cast.EventManagerStarting)
+	// m.ExternalRegistry.SetManagerState(cast.EventManagerStarting)
 	if m.IRB.StartAction == nil {
 		return fmt.Errorf("[Manager] First action id not found")
 	}
@@ -247,211 +200,28 @@ func (m *Manager) Run() error {
 	}
 
 	m.Logger.ParanoicLogDebug(fmt.Sprintf("[Manager] Setting %s as start point", m.IRB.StartAction.ActionName))
+
 	startActionContext := m.Runtime.NewAContext(nil, m.IRB.StartAction)
 	m.Logger.ParanoicLogDebug("after set context")
+	st.SetLogger(m.GetLogger())
 	startActionContext.SetStore(st)
 	m.Logger.ParanoicLogDebug("after set store")
-	m.RunStages([]*Stage{NewStage(m, startActionContext)})
+
+	eventlistener := m.Runtime.NewEventListener()
+	// start to run
+	m.Runtime.NewThread(startActionContext)
+
+	// m.RunStages([]*Stage{NewStage(m, startActionContext)})
 	cast.PushEvent(cast.EventManagerStarted, m.ExecutionUUID)
 	m.Logger.ParanoicLogDebug("after push event")
-	m.internalRegistry.SetManagerState(cast.EventManagerStarted)
-	m.ExternalRegistry.SetManagerState(cast.EventManagerStarted)
+	// m.internalRegistry.SetManagerState(cast.EventManagerStarted)
+	// m.ExternalRegistry.SetManagerState(cast.EventManagerStarted)
 	m.Logger.ParanoicLogDebug("after set manager state")
 	m.Logger.LogDebug("[Manager] Ready")
 	// for run stats
 	startTime := time.Now()
 
-	// Just for debug purposes
-	// go func() {
-	// 	for {
-	// 		log.Println("len: " + fmt.Sprint(len(m.StageReport)))
-	// 		time.Sleep(50 * time.Millisecond)
-	// 	}
-	// }()
-
-L:
-	for { // Infine loop until break L
-		select { // Loop until a case ocurrs.
-		case instruction := <-m.execInstruction:
-			if instruction.ExecutionUUID != nil && *m.ExecutionUUID != *instruction.ExecutionUUID {
-				continue
-			}
-			switch instruction.Instruction {
-			case ExecStart:
-				// m.managerStatus = ManagerStatusRunning
-			case ExecStop:
-				// Perform kill?
-				cast.PushEvent(cast.EventManagerStopping, m.ExecutionUUID)
-				m.internalRegistry.SetManagerState(cast.EventManagerStopping)
-				m.ExternalRegistry.SetManagerState(cast.EventManagerStopping)
-				// WIP: determinar si aquí necesitamos llamar Runtime para
-				// comunicar algún state por evento
-				// m.ExternalRegistry.publishStatus()
-			case ExecPause:
-				cast.PushEvent(cast.EventManagerPausing, m.ExecutionUUID)
-				m.internalRegistry.SetManagerState(cast.EventManagerPausing)
-				m.ExternalRegistry.SetManagerState(cast.EventManagerPausing)
-				// WIP: determinar si aquí necesitamos llamar Runtime para
-				// comunicar algún state por evento
-				// m.ExternalRegistry.publishStatus()
-			case ExecResume:
-				cast.PushEvent(cast.EventManagerResuming, m.ExecutionUUID)
-				m.internalRegistry.SetManagerState(cast.EventManagerResuming)
-				m.ExternalRegistry.SetManagerState(cast.EventManagerResuming)
-				// WIP: determinar si aquí necesitamos llamar Runtime para
-				// comunicar algún state por evento
-				// m.ExternalRegistry.publishStatus()
-			case ExecState:
-				// WIP: determinar si aquí necesitamos llamar Runtime para
-				// comunicar algún state por evento
-				// m.ExternalRegistry.publishStatus()
-				continue // do not propagate state to stage
-			default:
-				m.Logger.LogErr("[Manager] Don't know how to handle this instruction")
-			}
-			// Propagate instruction
-			for stage := range m.stages {
-				select {
-				case stage.execInstruction <- instruction:
-				default:
-					// Hey developer!,  what a wonderful day!
-				}
-			}
-		case sr := <-m.StageReport:
-			stage := sr.stage
-			switch sr.reportReason {
-			case StageActionReport:
-				if sr.actionRunStatus == ActionRunning {
-					// action is currently running
-					m.Stats.actions++
-				}
-				// m.internalRegistry.HandleActionReport(sr)
-				// m.ExternalRegistry.HandleActionReport(sr)
-				// m.ExternalRegistry.publishStatus()
-				continue // prevent stage deletion
-			case StagePause:
-				allPaused := true
-				for stage := range m.stages {
-					// TODO: maybe datarace on write/read: check it
-					if stage.stageStatus != StageStatusPaused {
-						allPaused = false
-						break
-					}
-				}
-				if allPaused {
-					cast.PushEvent(cast.EventManagerPaused, m.ExecutionUUID)
-					m.internalRegistry.SetManagerState(cast.EventManagerPaused)
-					m.ExternalRegistry.SetManagerState(cast.EventManagerPaused)
-					// m.ExternalRegistry.publishStatus()
-				}
-				continue // prevent stage deletion
-			case StageResume:
-				allResumed := true
-				for stage := range m.stages {
-					if stage.stageStatus != StageStatusRunning {
-						allResumed = false
-						break
-					}
-				}
-				if allResumed {
-					cast.PushEvent(cast.EventManagerStarted, m.ExecutionUUID)
-					m.internalRegistry.SetManagerState(cast.EventManagerStarted)
-					m.ExternalRegistry.SetManagerState(cast.EventManagerStarted)
-					// WIP: determinar si aquí necesitamos llamar Runtime para
-					// comunicar algún state por evento
-					// m.ExternalRegistry.publishStatus()
-				}
-				continue // prevent stage deletion
-			case StageEndByDivision:
-				// generate multiple stages splitting
-				// current stage
-				stages := stage.Divide(sr.Next)
-				// qeue stages to be started in next loop iterations
-				m.queue = append(m.queue, stages...)
-			case StageEndByJoin:
-				// this action ctx should be a JoinThread action
-				actx := sr.LastActionContext
-				// join point culd be exec only one time,
-				// so the .Run() will detect it and do
-				// nothing. The store.Merge is done by
-				// runtime.NewAContextJoin
-				m.Runtime.Run(actx)
-			case StageEndByRunDone:
-				if sr.ExitCode > 0 {
-					m.internalRegistry.ExitCode = sr.ExitCode
-					m.ExternalRegistry.ExitCode = sr.ExitCode
-				}
-				if sr.Error != nil {
-					extra := make(map[string]interface{})
-					extra["action_id"] = sr.LastActionContext.GetAction().ActionID
-					extra["action_error"] = sr.Error.Error()
-					cast.PushEventWithExtra(cast.EventActionUnCaughtKO, m.ExecutionUUID, extra)
-				}
-				if sr.Panic {
-					m.Logger.LogDebug("[Manager] Panic in stage, exiting...")
-					inst := &ExecCtrlInstruction{
-						Instruction:   ExecStop,
-						ExecutionUUID: m.ExecutionUUID,
-					}
-					for stage := range m.stages {
-						select {
-						case stage.execInstruction <- inst:
-						default:
-							// Hey developer!,  what a wonderful day!
-						}
-					}
-					panic(&util.PanicData{
-						PanicValue: sr.PanicValue,
-						PanicTrace: sr.PanicTrace,
-					})
-				}
-				m.Logger.LogDebug("[Manager] Stage done")
-			}
-			rpt := &stageReport{
-				stage:             stage,
-				actionRunStatus:   ActionNotRunning,
-				LastActionContext: sr.LastActionContext,
-			}
-			if sr.LastActionContext != nil {
-				lastActionID := sr.LastActionContext.GetAction().ActionID
-				lastActionName := sr.LastActionContext.GetAction().ActionName
-				m.Logger.LogDebug(fmt.Sprintf("[Manager] Destroying stage with last id %s (%s)", lastActionID, lastActionName))
-				rpt.actionID = lastActionID
-			} else {
-				m.Logger.LogDebug("[Manager] Destroying stage ...")
-			}
-
-			delete(m.stages, stage)
-			// m.internalRegistry.HandleActionReport(rpt)
-			// m.ExternalRegistry.HandleActionReport(rpt)
-		default:
-
-			// Push stages to run from queue.
-			// Allow it even in pause mode. The Stages will
-			// start in pause status
-			if len(m.queue) > 0 && len(m.StageReport) < 500 {
-				stages := m.queue
-				m.RunStages(stages)
-				m.queue = []*Stage{}
-			}
-
-			m.checkSyncThreads()
-
-			if m.internalRegistry.IsInPause() {
-				// add extra sleep
-				time.Sleep(1 * time.Second)
-			} else {
-				m.Logger.ParanoicLogDebug("[Manager] " + strconv.Itoa(len(m.stages)) + " stages running")
-				m.Logger.ParanoicLogDebug("[Manager] " + strconv.Itoa(len(m.syncThreads)) + " stages waiting join")
-			}
-
-			time.Sleep(1 * time.Second)
-			if len(m.stages) <= 0 && len(m.Runtime.GetActiveJoinPoints()) <= 0 {
-				m.Logger.LogDebug("[Manager] No more stages left. Exiting Manager...")
-				break L
-			}
-		}
-	}
+	eventlistener.WaitUntil([]base.EventCode{base.RuntimeEndEvent})
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -466,34 +236,8 @@ L:
 	}
 
 	cast.PushEvent(cast.EventManagerOut, m.ExecutionUUID)
-	m.internalRegistry.SetManagerState(cast.EventManagerOut)
-	m.ExternalRegistry.SetManagerState(cast.EventManagerOut)
+	// m.internalRegistry.SetManagerState(cast.EventManagerOut)
+	// m.ExternalRegistry.SetManagerState(cast.EventManagerOut)
 	m.Logger.LogDebug("[Manager] out")
 	return nil
-}
-
-func (m *Manager) checkSyncThreads() {
-	for _, actx := range m.Runtime.GetActiveJoinPoints() {
-		if m.Runtime.IsRunningParentsOf(actx) {
-			continue
-		}
-		m.Logger.LogDebug("[Manager] Join found")
-		m.Runtime.Stop(actx)    // join thread has ended, stop it
-		act := actx.GetAction() // join action
-		var stages []*Stage
-		switch len(act.NextAction.NextOk) {
-		case 0:
-			continue
-		case 1:
-			nactx := m.Runtime.NewAContext(actx, act.NextAction.NextOk[0])
-			stages = append(stages, NewStage(m, nactx))
-		default:
-			nactxs := m.Runtime.NewAContextThread(actx, act.NextAction.NextOk)
-			for _, nactx := range nactxs {
-				stage := NewStage(m, nactx)
-				stages = append(stages, stage)
-			}
-		}
-		m.RunStages(stages)
-	}
 }

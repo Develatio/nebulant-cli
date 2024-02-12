@@ -35,9 +35,7 @@ import (
 
 // JoinThreadsActionName const
 const JoinThreadsActionName = "join_threads"
-
-// const BreakPointActionName = "breakpoint"
-const BreakPointActionName = "panic"
+const BreakPointActionName = "debug"
 
 type wrappedBlueprint struct {
 	ExecutionUUID *string         `json:"execution_uuid"`
