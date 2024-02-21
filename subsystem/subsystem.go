@@ -134,6 +134,8 @@ func PrepareCmd(cmd *NBLcommand) error {
 		cast.SBus.RegisterProviderInitFunc("aws", aws.New)
 		cast.SBus.RegisterProviderInitFunc("azure", azure.New)
 		cast.SBus.RegisterProviderInitFunc("generic", generic.New)
+		cast.SBus.RegisterProviderInitFunc("executionControl", generic.New)
+		cast.SBus.RegisterProviderInitFunc("execution-control", generic.New)
 		cast.SBus.RegisterProviderInitFunc("hetznerCloud", hetzner.New)
 		cast.SBus.RegisterProviderInitFunc("cloudflare", cloudflare.New)
 		blueprint.ActionValidators["providerValidator"] = func(action *blueprint.Action) error {

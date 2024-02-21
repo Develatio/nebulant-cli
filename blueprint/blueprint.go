@@ -35,7 +35,7 @@ import (
 
 // JoinThreadsActionName const
 const JoinThreadsActionName = "join_threads"
-const BreakPointActionName = "debug"
+const DebugActionName = "debug"
 
 type wrappedBlueprint struct {
 	ExecutionUUID *string         `json:"execution_uuid"`
@@ -58,7 +58,7 @@ type Action struct {
 	// Filled internally.
 	Parents          []*Action
 	JoinThreadsPoint bool
-	BreakPoint       bool
+	DebugPoint       bool
 	KnowParentIDs    map[string]bool
 	SafeID           *string
 	// GENERICS //
@@ -392,8 +392,8 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 			irb.Actions[bp.Actions[i].ActionID].JoinThreadsPoint = true
 			irb.JoinThreadPoints[bp.Actions[i].ActionID] = irb.Actions[bp.Actions[i].ActionID]
 		}
-		if irb.Actions[bp.Actions[i].ActionID].ActionName == BreakPointActionName {
-			irb.Actions[bp.Actions[i].ActionID].BreakPoint = true
+		if irb.Actions[bp.Actions[i].ActionID].ActionName == DebugActionName {
+			irb.Actions[bp.Actions[i].ActionID].DebugPoint = true
 		}
 	}
 

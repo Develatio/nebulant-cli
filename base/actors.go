@@ -21,11 +21,19 @@ import (
 )
 
 type ContextType int
+type ActionContextRunStatus int
 
 const (
 	ContextTypeRegular ContextType = iota // one parent, one child
 	ContextTypeThread                     // one parent, many children
 	ContextTypeJoin                       // many parents, one child
+)
+
+const (
+	RunStatusReady ActionContextRunStatus = iota
+	RunStatusArranging
+	RunStatusRunning
+	RunStatusDone
 )
 
 // ActionContext interface
@@ -35,6 +43,8 @@ type IActionContext interface {
 	Parents() []IActionContext
 	Child(IActionContext)
 	Children() []IActionContext
+	IsThreadPoint() bool
+	IsJoinPoint() bool
 	GetAction() *blueprint.Action
 	SetStore(IStore)
 	GetStore() IStore
@@ -47,6 +57,8 @@ type IActionContext interface {
 	Cancel(error)
 	WithRunFunc(func() (*ActionOutput, error))
 	RunAction() (*ActionOutput, error)
+	SetRunStatus(ActionContextRunStatus)
+	GetRunStatus() ActionContextRunStatus
 }
 
 // IActor interface
