@@ -18,10 +18,13 @@ package subcom
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	ws "github.com/develatio/nebulant-cli/netproto/websocket"
 	"github.com/develatio/nebulant-cli/subsystem"
@@ -76,8 +79,12 @@ var MAXREADSIZE = 1024
 // }
 
 func parseDebuggFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("debugterm", flag.ContinueOnError)
+	fs := flag.NewFlagSet("debugger", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "\nUsage: nebulant debugger <addr>\n")
+		fmt.Fprintf(fs.Output(), "\n\n")
+	}
 	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
@@ -86,11 +93,38 @@ func parseDebuggFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 }
 
 func DebuggerCmd(nblc *subsystem.NBLcommand) (int, error) {
+	cmdline := nblc.CommandLine()
+	fs, err := parseDebuggFs(cmdline)
+	if err != nil {
+		return 1, err
+	}
+	// ver si podemos exponer esta info en el sistema de envs
+	// para extraerlo automáticamente sin necesidad
+	// de indicar el host
+	addr := cmdline.Arg(1)
+	if len(addr) <= 0 {
+		fs.Usage()
+		return 1, fmt.Errorf("please, provide addr")
+	}
+	addr = strings.ToLower(addr)
+	addr, _ = strings.CutPrefix(addr, "ws://")
+	addr, _ = strings.CutPrefix(addr, "http://")
+	addr, _ = strings.CutPrefix(addr, "https://")
+	addr, _ = strings.CutPrefix(addr, "wss://")
 
-	u := url.URL{Scheme: "ws", Host: "localhost:6565", Path: ""}
+	u, err := url.Parse(fmt.Sprintf("ws://%s", addr))
+	if err != nil {
+		fs.Usage()
+		return 1, err
+	}
+	u.Scheme = "ws"
+	// u := url.URL{Scheme: "ws", Host: uu.Host, Path: ""}
 	log.Printf("connecting to %s", u.String())
 
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	// WIP: ver cómo determinar esto
+	headers := make(http.Header)
+	headers.Add("Origin", "localhost")
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), headers)
 	c.SetReadLimit(int64(MAXREADSIZE))
 	if err != nil {
 		return 1, err

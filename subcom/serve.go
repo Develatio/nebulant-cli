@@ -76,11 +76,10 @@ func ServeCmd(nblc *subsystem.NBLcommand) (int, error) {
 		cast.LogErr(err.Error(), nil)
 		panic(err.Error())
 	}
-	executive.InitServerMode(config.SERVER_ADDR, config.SERVER_PORT)
-
-	executive.ServerWaiter.Wait() // None to wait if server mode is disabled
-	if executive.ServerError != nil {
-		return 2, executive.ServerError
+	errc := executive.InitServerMode()
+	err = <-errc
+	if err != nil {
+		return 2, err
 	}
 	executive.MDirector.Wait() // None to wait if director has stoped
 	return 0, nil

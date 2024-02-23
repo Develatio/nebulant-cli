@@ -79,10 +79,10 @@ L:
 				term.PrintErr(err.Error() + "\n")
 				continue
 			}
-			executive.InitServerMode(config.SERVER_ADDR, config.SERVER_PORT)
-			executive.ServerWaiter.Wait()
-			if executive.ServerError != nil {
-				term.PrintErr(executive.ServerError.Error() + "\n")
+			errc := executive.InitServerMode()
+			err = <-errc
+			if err != nil {
+				term.PrintErr(err.Error() + "\n")
 				continue
 			}
 			executive.MDirector.Wait()
@@ -104,10 +104,10 @@ L:
 				term.PrintErr(err.Error() + "\n")
 				continue
 			}
-			executive.InitServerMode(config.SERVER_ADDR, config.SERVER_PORT)
-			executive.ServerWaiter.Wait()
-			if executive.ServerError != nil {
-				term.PrintErr(executive.ServerError.Error() + "\n")
+			errc := executive.InitServerMode()
+			err = <-errc
+			if err != nil {
+				term.PrintErr(err.Error() + "\n")
 				continue
 			}
 			executive.MDirector.Wait()

@@ -28,6 +28,7 @@ import (
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/cast"
 	ws "github.com/develatio/nebulant-cli/netproto/websocket"
+	"github.com/develatio/nebulant-cli/nhttpd"
 	"github.com/develatio/nebulant-cli/nsterm"
 	"github.com/develatio/nebulant-cli/term"
 	"github.com/google/shlex"
@@ -70,15 +71,25 @@ type debugger struct {
 	cursor base.IActionContext
 	qq     chan *client
 	stop   chan struct{}
+	close  chan error
 }
 
 func (d *debugger) Serve() error {
 	// TODO: lookup for available port
-	return http.ListenAndServe("localhost:6565", d)
+	// return http.ListenAndServe("localhost:6565", d)
+	// WIP: este ejecution UUID queremos que sea así?
+	// qué pasa cuando dos usuarios ejecutan el mismo BP
+	// en el mismo cli?
+	id := d.runtime.irb.ExecutionUUID
+	srv := nhttpd.GetServer()
+	srv.AddView(`/debugger/`+*id, d.debuggerView)
+	d.close = srv.ServeIfNot()
+	cast.LogInfo(fmt.Sprintf("New debugger started at %s/debugger/%s", srv.GetAddr(), *id), nil)
+	err := <-d.close
+	return err
 }
 
-func (d *debugger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	cast.LogInfo("Debug client in", nil)
+func (d *debugger) debuggerView(w http.ResponseWriter, r *http.Request, matches [][]string) {
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  MAXREADSIZE,
 		WriteBufferSize: MAXWRITESIZE,
