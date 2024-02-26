@@ -30,13 +30,45 @@ import (
 	"github.com/develatio/nebulant-cli/config"
 )
 
-func ValidateOrigin(r *http.Request) bool {
+var server = &Httpd{urls: make(map[*regexp.Regexp]ViewFunc), validOrigins: make(map[string]bool)}
+
+func GetServer() *Httpd {
+	return server
+}
+
+type ViewFunc func(w http.ResponseWriter, r *http.Request, matches [][]string)
+
+// Httpd struct
+type Httpd struct {
+	validOrigins map[string]bool
+	on           bool
+	srv          *http.Server
+	errors       []error
+	consumers    []chan error
+	urls         map[*regexp.Regexp]ViewFunc
+}
+
+func (h *Httpd) AddView(path string, view ViewFunc) {
+	h.urls[regexp.MustCompile(path)] = view
+}
+
+func (h *Httpd) AddOrigin(origin string) {
+	h.validOrigins[origin] = true
+}
+
+func (h *Httpd) ValidateOrigin(r *http.Request) bool {
 	surl := r.Header.Get("Origin")
+	// browser send no Origin header on directly access
+	if surl == "" {
+		return true
+	}
+
 	// Fail on missing Origin header or bad url
 	url, err := url.Parse(surl)
-	if err != nil || surl == "" {
+	if err != nil {
 		return false
 	}
+
 	// allow http scheme so safari can connect <https> builder -> <http> localhost
 	if url.Scheme == "http" {
 		url.Scheme = "https"
@@ -47,41 +79,23 @@ func ValidateOrigin(r *http.Request) bool {
 	}
 	surl = string(burl)
 	cast.LogDebug("Validating origin: "+surl, nil)
-	// Allow on FrontOrigin match or wildcard in conf
-	if surl == config.FrontOrigin || surl == config.BridgeOrigin || surl == config.FrontOriginPre || config.FrontOrigin == "*" {
+
+	if _, exists := h.validOrigins["*"]; exists {
+		return true
+	}
+
+	if _, exists := h.validOrigins[surl]; exists {
 		return true
 	}
 	return false
 }
 
-var server = &Httpd{urls: make(map[*regexp.Regexp]ViewFunc)}
-
-func GetServer() *Httpd {
-	return server
-}
-
-type ViewFunc func(w http.ResponseWriter, r *http.Request, matches [][]string)
-
-// Httpd struct
-type Httpd struct {
-	on        bool
-	srv       *http.Server
-	errors    []error
-	consumers []chan error
-	urls      map[*regexp.Regexp]ViewFunc
-}
-
-func (h *Httpd) AddView(path string, view ViewFunc) {
-	h.urls[regexp.MustCompile(path)] = view
-}
-
 func (h *Httpd) httpMiddleware(w http.ResponseWriter, r *http.Request) error {
-	if !ValidateOrigin(r) {
+	if !h.ValidateOrigin(r) {
 		w.WriteHeader(http.StatusBadRequest)
 		return fmt.Errorf("bad Origin")
 	}
 	surl := r.Header.Get("Origin")
-	cast.LogDebug("Access-Control-Allow-Origin: "+surl, nil)
 	w.Header().Set("Access-Control-Allow-Origin", surl)
 	if r.Method == "OPTIONS" {
 		pnacors := r.Header.Get("Access-Control-Request-Private-Network")

@@ -52,6 +52,11 @@ func InitServerMode() chan error {
 	}()
 
 	srv := nhttpd.GetServer()
+	srv.AddOrigin(config.FrontOrigin)
+	srv.AddOrigin(config.BridgeOrigin)
+	srv.AddOrigin(config.FrontOriginPre)
+	srv.AddOrigin(config.FrontOrigin)
+
 	srv.AddView(`/ws/.+$`, wsView)
 	srv.AddView(`/handshake`, handshakeView)
 	srv.AddView(`/stop/.+$`, stopBlueprintView)
@@ -140,7 +145,10 @@ func parseErrors(err error) ([]string, []*ValidationError) {
 }
 
 func wsView(w http.ResponseWriter, r *http.Request, matches [][]string) {
-	upgrader.CheckOrigin = nhttpd.ValidateOrigin
+	// TODO: add wsocket features to server and prevent
+	// getting the server from view
+	srv := nhttpd.GetServer()
+	upgrader.CheckOrigin = srv.ValidateOrigin
 	clientUUID := path.Base(r.URL.Path)
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
