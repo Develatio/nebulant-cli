@@ -123,12 +123,11 @@ func DebuggerCmd(nblc *subsystem.NBLcommand) (int, error) {
 
 	// WIP: ver cómo determinar esto
 	headers := make(http.Header)
-	headers.Add("Origin", "localhost")
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), headers)
-	c.SetReadLimit(int64(MAXREADSIZE))
 	if err != nil {
 		return 1, err
 	}
+	c.SetReadLimit(int64(MAXREADSIZE))
 	defer c.Close()
 
 	// 	done := make(chan struct{})

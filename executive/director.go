@@ -103,11 +103,12 @@ L:
 				}
 				managerFound = true
 				cast.LogInfo("[Director] Sending Instruction to Manager", nil)
-				select {
-				case manager.execInstruction <- instr:
-				default:
-					// Hey! How's it going developer?
-				}
+				// TODO: call manager.Runtime.<XYZ>
+				// select {
+				// case manager.execInstruction <- instr:
+				// default:
+				// 	// Hey! How's it going developer?
+				// }
 			}
 			if !managerFound {
 				cast.LogInfo("[Director] No manager found for instruction", nil)
@@ -119,7 +120,7 @@ L:
 
 			// if manager is nil, hirbcfg.IRB should be configured
 			if manager == nil {
-				manager = NewManager()
+				manager = NewManager(d.serverMode)
 				manager.PrepareIRB(irb)
 			}
 

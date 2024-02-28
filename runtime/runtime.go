@@ -69,9 +69,10 @@ type runtimeWaiter struct {
 // 	return b.actx
 // }
 
-func NewRuntime(irb *blueprint.IRBlueprint) *Runtime {
+func NewRuntime(irb *blueprint.IRBlueprint, serverMode bool) *Runtime {
 	return &Runtime{
 		irb:                irb,
+		serverMode:         serverMode,
 		actionContextStack: make([]base.IActionContext, 0, 1),
 		activeActionIDs:    make(map[string]int),
 		activeJoinPoints:   make(map[string]base.IActionContext),
@@ -433,7 +434,6 @@ func (t *Thread) Play() {
 
 func (t *Thread) Back() (<-chan struct{}, bool) {
 	if t.current != nil {
-		fmt.Println("no current :(")
 		if t.current.GetRunStatus() == base.RunStatusRunning {
 			return nil, false
 		}
@@ -526,13 +526,13 @@ func (t *Thread) _loadPrev() bool {
 
 	parents := t.current.Parents()
 	if len(parents) <= 0 {
-		fmt.Println("no more parents")
+		// no more parents
 		// cannot prev without parents
 		return false
 	}
 
 	if len(parents) > 1 {
-		fmt.Println("more thant one parent")
+		// more than one parent
 		// cannot (yet) prev with many parents
 		// we need more info: wich parent?
 		return false
@@ -675,9 +675,8 @@ func (t *Thread) _runCurrent() {
 func (t *Thread) close() {
 	t.ThreadStep = ThreadClose
 	t.state = base.RuntimeStateEnd
-	fmt.Println("removing thread ", t)
+	// remove thread t
 	t.runtime.finishThread(t)
-	fmt.Println("probably removed thread", t)
 	// WIP: aquí tenemos que cerrar el listener
 }
 
@@ -749,7 +748,7 @@ func (t *Thread) Init() {
 
 	preload:
 		// load action after all
-		if stpctrl.back {
+		if stpctrl != nil && stpctrl.back {
 			// in back mode, here we load previous actx
 			t._loadPrev()
 			more = t.current != nil
@@ -762,7 +761,7 @@ func (t *Thread) Init() {
 		// a return from closed t.step is also nil
 		// this confirms the previous after-run t.step
 		// if exists
-		if stpctrl.confirm != nil {
+		if stpctrl != nil && stpctrl.confirm != nil {
 			stpctrl.confirm <- struct{}{}
 		}
 
@@ -782,7 +781,7 @@ func (t *Thread) Init() {
 		if t.state == base.RuntimeStateStill && t.step != nil {
 			// getting from closed step, returns nil
 			stpctrl = <-t.step
-			if stpctrl.back {
+			if stpctrl != nil && stpctrl.back {
 				// backing from here means that we should
 				// leave all ready to re-run the same actx
 				// it is possible that current is nil
@@ -798,7 +797,7 @@ func (t *Thread) Init() {
 				t.current.SetRunStatus(base.RunStatusRunning)
 			}
 			// on close step, confirm is nil
-			if stpctrl.confirm != nil {
+			if stpctrl != nil && stpctrl.confirm != nil {
 				stpctrl.confirm <- struct{}{}
 			}
 		}
@@ -811,8 +810,9 @@ func (t *Thread) Init() {
 		// is in pause
 		if t.state == base.RuntimeStateStill && t.step != nil {
 			// closed step returns nil on get
+			// awaiting chan also returns nil on close
 			stpctrl = <-t.step
-			if stpctrl.back {
+			if stpctrl != nil && stpctrl.back {
 				// backing from here means we should goto
 				// to afterload actx and waiting step to
 				// re-run same actx
@@ -832,6 +832,7 @@ func (t *Thread) Init() {
 // recibir eventos de stop y demás
 type Runtime struct {
 	mu                 sync.Mutex
+	serverMode         bool
 	state              base.RuntimeState
 	activeThreads      map[*Thread]bool
 	eventListeners     map[*base.EventListener]bool
@@ -942,8 +943,6 @@ func (r *Runtime) finishThread(th *Thread) {
 
 	el := th.EventListener()
 	delete(r.eventListeners, el)
-
-	fmt.Println("threads:", len(r.activeThreads))
 }
 
 func (r *Runtime) Play() {
@@ -1005,10 +1004,18 @@ func (r *Runtime) _setRunDebugFunc(actx base.IActionContext) {
 		// serve debuger
 		dbg := NewDebugger(r)
 		dbg.SetCursor(actx)
-		go dbg.Serve()
 
-		// WIP: si el server debug ya está inicializado, sólo
-		// dar info para conex.
+		if dbg.running {
+			cast.LogInfo("Already running debugger, discarding re-run", r.irb.ExecutionUUID)
+			return nil, nil
+		}
+
+		if r.serverMode {
+			go dbg.Serve()
+		} else {
+			go dbg.Start()
+		}
+
 		// WIP: el server para debug puede activarse
 		// por comando, por lo que aquí debería comprobarse
 		// y no re-arrancare

@@ -21,6 +21,14 @@ import (
 	"io"
 )
 
+func NewFD(name string, r io.ReadCloser, w io.WriteCloser) io.ReadWriteCloser {
+	return &PortFD{
+		name: name,
+		r:    r,
+		w:    w,
+	}
+}
+
 type nopWriteCloser struct {
 	io.Writer
 }

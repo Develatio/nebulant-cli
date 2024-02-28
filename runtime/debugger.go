@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -30,28 +31,33 @@ import (
 	ws "github.com/develatio/nebulant-cli/netproto/websocket"
 	"github.com/develatio/nebulant-cli/nhttpd"
 	"github.com/develatio/nebulant-cli/nsterm"
-	"github.com/develatio/nebulant-cli/term"
+	nebulant_term "github.com/develatio/nebulant-cli/term"
 	"github.com/google/shlex"
 	"github.com/gorilla/websocket"
+	"golang.org/x/term"
 )
 
-var Debuggers []*debugger
+var debuggers map[*Runtime]*debugger = make(map[*Runtime]*debugger)
 
 var MAXWRITESIZE = 1024
 var MAXREADSIZE = 1024
 
 // Newdebugger func
 func NewDebugger(r *Runtime) *debugger {
+	if _, exists := debuggers[r]; exists {
+		return debuggers[r]
+	}
 	debugger := &debugger{
 		// currentBreakPoint: breakpoint,
 		// manager: breakpoint.stage.manager,
 		//
-		runtime: r,
-		qq:      make(chan *client, 100),
-		stop:    make(chan struct{}),
+		runtime:  r,
+		qq:       make(chan *client, 100),
+		stop:     make(chan struct{}),
+		rclients: make(map[*client]bool),
 	}
 	// debugger.breakPoints = append(debugger.breakPoints, breakpoint)
-	Debuggers = append(Debuggers, debugger)
+	debuggers[r] = debugger
 	return debugger
 }
 
@@ -68,13 +74,19 @@ type debugger struct {
 	// manager *Manager
 	// breakPoints       []*breakPoint
 	// currentBreakPoint *breakPoint
-	cursor base.IActionContext
-	qq     chan *client
-	stop   chan struct{}
-	close  chan error
+	running  bool
+	remote   bool
+	rclients map[*client]bool
+	lclient  *client
+	cursor   base.IActionContext
+	qq       chan *client
+	stop     chan struct{}
+	close    chan error
 }
 
 func (d *debugger) Serve() error {
+	d.running = true
+	d.remote = true
 	// TODO: lookup for available port
 	// return http.ListenAndServe("localhost:6565", d)
 	// WIP: este ejecution UUID queremos que sea así?
@@ -84,9 +96,65 @@ func (d *debugger) Serve() error {
 	srv := nhttpd.GetServer()
 	srv.AddView(`/debugger/`+*id, d.debuggerView)
 	d.close = srv.ServeIfNot()
-	cast.LogInfo(fmt.Sprintf("New debugger started at %s/debugger/%s", srv.GetAddr(), *id), nil)
+	cast.LogInfo(fmt.Sprintf("New debugger started at %s/debugger/%s", srv.GetAddr(), *id), d.runtime.irb.ExecutionUUID)
 	err := <-d.close
+	d.remote = false
+	// WIP: una forma de apagar el server aquí, del mismo
+	// modo que se inicializa: StopAsNeeded(), quizás si
+	// ServeIfNot devuelve un "subscription" que se pasa
+	// al cerrar, o quzás si ServeIfNot cuenta los arranques
+	// y los a pagados, cuando sea 0, se apaga
+	cast.LogInfo("Remote debugger out", d.runtime.irb.ExecutionUUID)
 	return err
+}
+
+// no server mode
+func (d *debugger) Start() {
+	d.running = true
+	oSstdin := nebulant_term.GenuineOsStdin
+	oSstdout := nebulant_term.GenuineOsStdout
+
+	oldState, err := term.MakeRaw(int(oSstdin.Fd()))
+	if err != nil {
+		panic(err)
+	}
+	defer term.Restore(int(oSstdin.Fd()), oldState)
+
+	fmt.Fprint(oSstdout, "Starting debugger shell...\r\n")
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		fmt.Fprint(oSstdout, "No terminal detected. Remote debugger system will start. Yo can still press any key to start local shell.\r\n")
+		go d.Serve()
+		b := make([]byte, 1)
+		oSstdin.Read(b)
+	}
+
+	lfd := nsterm.NewFD("local term", nebulant_term.GenuineOsStdin, nebulant_term.GenuineOsStdout)
+	clnt := &client{
+		conn: nil,
+		dbg:  d,
+		vpty: nsterm.NewVirtPTY(),
+		wsrw: lfd,
+	}
+	d.lclient = clnt
+	clnt.start()
+}
+
+func (d *debugger) closeClient(cc *client) {
+	if d.lclient == cc {
+		// local client
+		d.lclient = nil
+	} else {
+		delete(d.rclients, cc)
+	}
+	if d.lclient == nil && len(d.rclients) <= 0 {
+		if d.remote {
+			d.close <- nil
+		}
+	}
+	d.running = false
+	delete(debuggers, d.runtime)
+	d.runtime.Play() // resume run on last debugger out
+	cast.LogInfo("no more clients in debugger, exiting", d.runtime.irb.ExecutionUUID)
 }
 
 func (d *debugger) debuggerView(w http.ResponseWriter, r *http.Request, matches [][]string) {
@@ -108,7 +176,7 @@ func (d *debugger) debuggerView(w http.ResponseWriter, r *http.Request, matches 
 		wsrw: ws.NewWebSocketReadWriteCloser(conn),
 	}
 
-	// c.clients = append(c.clients, clnt)
+	d.rclients[clnt] = true
 	go clnt.start()
 }
 
@@ -209,8 +277,6 @@ func printActxTrace(fd io.Writer, actx base.IActionContext, pointer bool) {
 	// }
 
 	children := actx.Children()
-	fmt.Println(children)
-	fmt.Println(actx)
 	size := len(children)
 	count := 0
 	if size <= 0 {
@@ -220,16 +286,13 @@ func printActxTrace(fd io.Writer, actx base.IActionContext, pointer bool) {
 		for _, child := range children {
 			count++
 			if size == count {
-				fmt.Println("printing last brother", child)
 				_printBox(fd, child, false, forkLastItemBox)
 				return
 			}
-			fmt.Println("printing brother", child)
 			_printBox(fd, child, false, forkItemBox)
 		}
 		return
 	}
-	fmt.Println("printing only one children", children[0])
 	_printBox(fd, children[0], false, regularBox)
 }
 
@@ -262,6 +325,8 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 	// 	if fs.Arg(1) == "" {
 
 	// 	}
+	case "s":
+		fmt.Fprint(clientFD, "Step not implemented yet\n")
 	case "j":
 		if fs.Arg(1) == "" {
 			if d.cursor == nil || !d.cursor.IsThreadPoint() {
@@ -503,7 +568,7 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 		// cc.stoppipe = make(chan struct{})
 		// defer close(cc.stoppipe)
 
-		shell, err := term.DetermineOsShell()
+		shell, err := nebulant_term.DetermineOsShell()
 		if err != nil {
 			cast.LogErr(err.Error(), nil)
 			fmt.Fprintln(clientFD, err.Error())
@@ -532,7 +597,6 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 			return
 		}
 		cast.LogDebug(fmt.Sprintf("Stop of shell %v", shell), nil)
-	case "q":
 
 	default:
 		cast.LogDebug("Unknown command "+string(cmd), nil)
@@ -542,7 +606,7 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 
 type client struct {
 	dbg  *debugger
-	conn *websocket.Conn
+	conn *websocket.Conn // in case of remote clients
 	wsrw io.ReadWriteCloser
 	vpty *nsterm.VPTY2
 	// default ldisc, used in Raw(false)
@@ -575,12 +639,12 @@ func (c *client) start() {
 	// stdin and stdout for xterm.js
 	mfd := c.vpty.MustarFD()
 	go func() {
+		// copy app rcv to mustar file descriptor
 		io.Copy(mfd, c.wsrw)
-		// fmt.Println("out of c to mfd")
 	}()
 	go func() {
+		// copy mustar file descriptor input to app in interface
 		io.Copy(c.wsrw, mfd)
-		// fmt.Println("out of mfd to c")
 	}()
 
 	// file descriptor for app
@@ -588,7 +652,7 @@ func (c *client) start() {
 	c.sluvaFD = sfd
 
 	// welcome msg to debug session
-	sfd.Write([]byte(term.Magenta + "Nebulant debug. Hello :)\r\nhow are you?\r\n" + term.Reset))
+	sfd.Write([]byte(nebulant_term.Magenta + "Nebulant debug. Hello :)\r\nhow are you?\r\n" + nebulant_term.Reset))
 
 	prmpt := nsterm.NewPrompt(c.vpty, sfd, sfd)
 	prmpt.SetPS1("Nebulant dbg> ")
@@ -609,8 +673,19 @@ func (c *client) start() {
 		}
 
 		// built in :)
-		if *s == "exit" {
-			// TODO: disconnect
+		if *s == "exit" || *s == "q" {
+			c.dbg.closeClient(c)
+			err := mfd.Close()
+			if err != nil {
+				cast.LogErr(err.Error(), c.dbg.runtime.irb.ExecutionUUID)
+			}
+			if c.conn != nil {
+				err := c.conn.Close()
+				if err != nil {
+					cast.LogErr(err.Error(), c.dbg.runtime.irb.ExecutionUUID)
+				}
+			}
+			break
 		}
 
 		// built in ;)

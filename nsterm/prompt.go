@@ -23,6 +23,16 @@ import (
 	"github.com/develatio/nebulant-cli/term"
 )
 
+// Prompt struct. A helper to write
+// shell prompts asking for a input
+// abstracting the origin of the app
+// and the input source. This means
+// that the source and/or the app
+// can be local or remote. This should
+// be used with VPTY2 that handles all
+// the complex stuff.
+// This pieze allows to have a PS
+// prompt, line edit and history.
 type Prompt struct {
 	vpty       *VPTY2
 	stdin      io.ReadCloser

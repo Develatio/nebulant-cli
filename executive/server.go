@@ -26,7 +26,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/develatio/nebulant-cli/assets"
 	"github.com/develatio/nebulant-cli/base"
@@ -38,10 +37,13 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var ServerWaiter *sync.WaitGroup = &sync.WaitGroup{}
-var ServerError error
+var ServerMode bool = false
 
 func InitServerMode() chan error {
+	ServerMode = true
+	defer func() {
+		ServerMode = false
+	}()
 	go func() {
 		cast.LogInfo("Updating assets in bg...", nil)
 		aerr := assets.UpgradeAssets(false, false)
@@ -257,7 +259,7 @@ func autocompleteView(w http.ResponseWriter, r *http.Request, matches [][]string
 	// }
 	// cast.SBusConnect(fLink)
 	// MDirector.RegisterManager <- manager
-	manager := NewManager()
+	manager := NewManager(true)
 	manager.PrepareIRB(irb)
 	MDirector.HandleIRB <- &HandleIRBConfig{Manager: manager}
 
