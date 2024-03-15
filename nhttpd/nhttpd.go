@@ -157,13 +157,12 @@ func (h *Httpd) ServeIfNot() chan error {
 	cast.LogInfo(fmt.Sprintf("Listening on %s", addr), nil)
 	h.on = true
 	go func() {
-		// WIP: explorar si podemos generar los certs al vuelo, que obviamente
-		// no serán válidos a ojos del navegador, pero nos permite establecer
-		// conexiones seguras en caso de conectarnos con el debugger en modo
-		// remoto
-		// https:
-		// err := http.ListenAndServeTLS(*addr, "localhost.crt", "localhost.key", nil)
-		err := h.srv.ListenAndServe()
+		var err error
+		if len(config.SERVER_CERT) > 0 {
+			err = h.srv.ListenAndServeTLS(config.SERVER_CERT, config.SERVER_KEY)
+		} else {
+			err = h.srv.ListenAndServe()
+		}
 		if err != nil {
 			h.errors = append(h.errors, err)
 		}

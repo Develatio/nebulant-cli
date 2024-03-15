@@ -74,6 +74,7 @@ type debugger struct {
 	// manager *Manager
 	// breakPoints       []*breakPoint
 	// currentBreakPoint *breakPoint
+	detach   []*nsterm.VPTY2
 	running  bool
 	remote   bool
 	rclients map[*client]bool
@@ -82,6 +83,70 @@ type debugger struct {
 	qq       chan *client
 	stop     chan struct{}
 	close    chan error
+}
+
+func (d *debugger) Detach(actionMFD io.ReadWriteCloser) {
+	vpty := nsterm.NewVirtPTY()
+	ldisc := nsterm.NewMultiUserLdisc()
+	// ldisc := nsterm.NewRawLdisc()
+	vpty.SetLDisc(ldisc)
+	d.detach = append(d.detach, vpty)
+	mfd := vpty.MustarFD()
+	sfd := vpty.SluvaFD()
+
+	go func() {
+		_, _ = io.Copy(sfd, actionMFD)
+		fmt.Println("out of io.Copy(sfd, actionMFD)")
+		mfd.Close()
+	}()
+	go func() {
+		_, _ = io.Copy(actionMFD, sfd)
+		fmt.Println("out of io.Copy(actionMFD, sfd)")
+	}()
+}
+
+func (d *debugger) Attach(clientFD io.ReadWriteCloser, num int) error {
+	// cc.Raw(true)
+	// defer cc.Raw(false)
+	// clientFD := cc.GetFD() // sluva
+	if num < 0 || len(d.detach) == num {
+		return fmt.Errorf("attaching to unknown term num")
+	}
+	vpty := d.detach[num]
+
+	// ldisc := vpty.GetLDisc()
+	// ldisc.(*nsterm.MultiUserLdisc).AddUser(clientFD)
+
+	nmp := vpty.NewMustarPort()
+	// this is a multiuser ldisc, doing a cursor
+	// forces ldisc to know this port
+	vpty.CursorMustar(nmp)
+	mOutFD := nmp.OutFD()
+
+	// mfd := vpty.MustarFD()
+	// mfd.Write([]byte(nebulant_term.IdentifyDevice))
+
+	go func() {
+		_, _ = io.Copy(clientFD, mOutFD)
+		fmt.Println("out of atachment io.Copy(clientFD, mOutFD)")
+		mOutFD.Close()
+	}()
+	_, _ = io.Copy(mOutFD, clientFD)
+	fmt.Println("out of atachment io.Copy(mfd, clientFD)")
+
+	// go func() {
+	// 	_, _ = io.Copy(actionMustarFD, clientFD)
+	// 	fmt.Println("\n\n\nout of attach clientfd -> f\n\n\n")
+
+	// }()
+	// // copy os pty to sluva
+	// _, err := io.Copy(clientFD, actionMustarFD)
+	// fmt.Println("\n\n\nout of attach f -> clientfd\n\n\n")
+	// clientFD.Write([]byte("attach finished\n"))
+	// if err != nil {
+	// 	return err
+	// }
+	return nil
 }
 
 func (d *debugger) Serve() error {
@@ -136,7 +201,7 @@ func (d *debugger) Start() {
 		wsrw: lfd,
 	}
 	d.lclient = clnt
-	clnt.start()
+	clnt.start(len(d.detach) > 0)
 }
 
 func (d *debugger) closeClient(cc *client) {
@@ -146,22 +211,23 @@ func (d *debugger) closeClient(cc *client) {
 	} else {
 		delete(d.rclients, cc)
 	}
+
 	if d.lclient == nil && len(d.rclients) <= 0 {
 		if d.remote {
 			d.close <- nil
 		}
+		cast.LogInfo("no more clients in debugger, exiting", d.runtime.irb.ExecutionUUID)
+		d.running = false
+		d.runtime.Play() // resume run on last debugger out
+		delete(debuggers, d.runtime)
 	}
-	d.running = false
-	delete(debuggers, d.runtime)
-	d.runtime.Play() // resume run on last debugger out
-	cast.LogInfo("no more clients in debugger, exiting", d.runtime.irb.ExecutionUUID)
 }
 
 func (d *debugger) debuggerView(w http.ResponseWriter, r *http.Request, matches [][]string) {
 	var upgrader = websocket.Upgrader{
-		ReadBufferSize:  MAXREADSIZE,
-		WriteBufferSize: MAXWRITESIZE,
-		CheckOrigin:     func(r *http.Request) bool { return true },
+		// ReadBufferSize:  MAXREADSIZE,
+		// WriteBufferSize: MAXWRITESIZE,
+		CheckOrigin: func(r *http.Request) bool { return true },
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -177,7 +243,7 @@ func (d *debugger) debuggerView(w http.ResponseWriter, r *http.Request, matches 
 	}
 
 	d.rclients[clnt] = true
-	go clnt.start()
+	go clnt.start(len(d.detach) > 0)
 }
 
 ///// WIP: mover estas funcs a algún otro sitio
@@ -589,7 +655,9 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 
 		cast.LogDebug(fmt.Sprintf("Running shell %v", shell), nil)
 
+		// copy sluva to os pty
 		go func() { _, _ = io.Copy(f, clientFD) }()
+		// copy os pty to sluva
 		_, err = io.Copy(clientFD, f)
 		if err != nil {
 			cast.LogErr(err.Error(), nil)
@@ -630,7 +698,7 @@ func (c *client) GetFD() io.ReadWriteCloser {
 	return c.sluvaFD
 }
 
-func (c *client) start() {
+func (c *client) start(attach bool) {
 	ldisc := nsterm.NewDefaultLdisc()
 	c.vpty.SetLDisc(ldisc)
 	c.ldisc = ldisc
@@ -640,11 +708,16 @@ func (c *client) start() {
 	mfd := c.vpty.MustarFD()
 	go func() {
 		// copy app rcv to mustar file descriptor
-		io.Copy(mfd, c.wsrw)
+		_, err := io.Copy(mfd, c.wsrw)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Println("out of wsrw to mfd")
 	}()
 	go func() {
 		// copy mustar file descriptor input to app in interface
 		io.Copy(c.wsrw, mfd)
+		fmt.Println("out of mfd wsrw")
 	}()
 
 	// file descriptor for app
@@ -653,6 +726,21 @@ func (c *client) start() {
 
 	// welcome msg to debug session
 	sfd.Write([]byte(nebulant_term.Magenta + "Nebulant debug. Hello :)\r\nhow are you?\r\n" + nebulant_term.Reset))
+
+	// if there is a detached vpty iface, attach to it
+	if attach {
+		nsluva := c.vpty.NewSluvaPort()
+		c.vpty.CursorSluva(nsluva)
+		c.Raw(true)
+		sfd.Write([]byte("Attaching to action..."))
+		c.dbg.Attach(nsluva.OutFD(), 0)
+		c.vpty.DestroyPort(nsluva)
+		c.Raw(false)
+		// no restoration needed, there is
+		// only one sluva in vpty after
+		// attach: the original sluva
+		// c.vpty.CursorSluva(...)
+	}
 
 	prmpt := nsterm.NewPrompt(c.vpty, sfd, sfd)
 	prmpt.SetPS1("Nebulant dbg> ")
@@ -675,16 +763,19 @@ func (c *client) start() {
 		// built in :)
 		if *s == "exit" || *s == "q" {
 			c.dbg.closeClient(c)
-			err := mfd.Close()
-			if err != nil {
-				cast.LogErr(err.Error(), c.dbg.runtime.irb.ExecutionUUID)
-			}
+			// err := mfd.Close()
+			// if err != nil {
+			// 	cast.LogErr(err.Error(), c.dbg.runtime.irb.ExecutionUUID)
+			// }
+			sfd.Write([]byte("Closing debugger client..."))
 			if c.conn != nil {
+				sfd.Write([]byte("Closing remote connection..."))
 				err := c.conn.Close()
 				if err != nil {
 					cast.LogErr(err.Error(), c.dbg.runtime.irb.ExecutionUUID)
 				}
 			}
+			cast.LogInfo("dbg client out", c.dbg.runtime.irb.ExecutionUUID)
 			break
 		}
 

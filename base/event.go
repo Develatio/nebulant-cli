@@ -16,6 +16,8 @@
 
 package base
 
+import "sync"
+
 type EventCode int
 
 const AnyEvent EventCode = -1
@@ -84,4 +86,41 @@ func NewEventListener() *EventListener {
 	return &EventListener{
 		events: make(chan IEvent, 10),
 	}
+}
+
+type EventDispatcher struct {
+	mu             sync.Mutex
+	eventListeners map[*EventListener]bool
+}
+
+func (ev *EventDispatcher) NewEventListener() *EventListener {
+	ev.mu.Lock()
+	defer ev.mu.Unlock()
+	el := NewEventListener()
+	ev.eventListeners[el] = true
+	return el
+}
+
+func (ev *EventDispatcher) DestroyEventListener(e *EventListener) {
+	ev.mu.Lock()
+	defer ev.mu.Unlock()
+	delete(ev.eventListeners, e)
+}
+
+func (ev *EventDispatcher) Dispatch(e IEvent) {
+	ev.mu.Lock()
+	defer ev.mu.Unlock()
+	for el := range ev.eventListeners {
+		select {
+		case el.EventChan() <- e:
+			// ok
+		default:
+			// also ok
+			// cast.LogDebug("event listener full, skip", r.irb.ExecutionUUID)
+		}
+	}
+}
+
+func NewEventDispatcher() *EventDispatcher {
+	return &EventDispatcher{eventListeners: make(map[*EventListener]bool)}
 }

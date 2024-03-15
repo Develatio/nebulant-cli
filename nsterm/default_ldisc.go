@@ -60,10 +60,11 @@ func NewDefaultLdisc() *DefaultLdisc {
 }
 
 type DefaultLdisc struct {
-	mustarFD io.ReadWriteCloser
-	sluvaFD  io.ReadWriteCloser
-	errs     []error
-	ERR      chan error
+	mInFD io.ReadWriteCloser
+	sInFD io.ReadWriteCloser
+
+	errs []error
+	ERR  chan error
 	// LineBuff     []byte
 	RuneBuff     []rune
 	CursorOffset int
@@ -82,11 +83,11 @@ func (d *DefaultLdisc) ReadRuneBuff() []rune {
 }
 
 func (d *DefaultLdisc) SetMustarFD(fd io.ReadWriteCloser) {
-	d.mustarFD = fd
+	d.mInFD = fd
 }
 
 func (d *DefaultLdisc) SetSluvaFD(fd io.ReadWriteCloser) {
-	d.sluvaFD = fd
+	d.sInFD = fd
 }
 
 func (d *DefaultLdisc) SetBuff(s string) {
@@ -97,8 +98,9 @@ func (d *DefaultLdisc) SetBuff(s string) {
 
 // Called from vpty on mustar port write.
 // Read -> process -> Write to sluva FD
-func (d *DefaultLdisc) ReceiveMustarBuff(n int) {
-	// _, err := io.CopyN(d.sluvaFD, d.mustarFD, int64(n))
+func (d *DefaultLdisc) ReceiveMustarBuff(n int, mInFD *PortFD) {
+
+	// _, err := io.CopyN(d.sInFD, d.mustarFD, int64(n))
 	// if err != nil {
 	// 	d.errs = append(d.errs, err)
 	// }
@@ -109,7 +111,7 @@ func (d *DefaultLdisc) ReceiveMustarBuff(n int) {
 	}
 
 	data_b := make([]byte, n)
-	n, err := io.ReadFull(d.mustarFD, data_b)
+	n, err := io.ReadFull(mInFD, data_b)
 	if err != nil {
 		d.errs = append(d.errs, err)
 		d.ERR <- err
@@ -130,7 +132,7 @@ func (d *DefaultLdisc) ReceiveMustarBuff(n int) {
 	// handle "\n"
 	if data_s == CarriageReturn {
 		d.RuneBuff = append(d.RuneBuff, data_r)
-		_, err = d.sluvaFD.Write([]byte(string(d.RuneBuff)))
+		_, err = d.sInFD.Write([]byte(string(d.RuneBuff)))
 		if err != nil {
 			d.errs = append(d.errs, err)
 			d.ERR <- err
@@ -146,27 +148,27 @@ func (d *DefaultLdisc) ReceiveMustarBuff(n int) {
 			if d.CursorOffset > 0 {
 				d.CursorOffset--
 				// eco cursor left
-				d.mustarFD.Write(data_b)
+				mInFD.Write(data_b)
 			}
 		case CursorRight:
 			if d.CursorOffset < len(d.RuneBuff) {
 				d.CursorOffset++
 				// eco cursor right
-				d.mustarFD.Write(data_b)
+				mInFD.Write(data_b)
 			}
 		case CursorHome:
 			if d.CursorOffset == 0 {
 				// do nothing
 				break
 			}
-			d.mustarFD.Write(bytes.Repeat([]byte(CursorLeft), d.CursorOffset))
+			mInFD.Write(bytes.Repeat([]byte(CursorLeft), d.CursorOffset))
 			d.CursorOffset = 0
 		case CursorEnd:
 			if d.CursorOffset == len(d.RuneBuff) {
 				// do nothing
 				break
 			}
-			d.mustarFD.Write(bytes.Repeat([]byte(CursorRight), len(d.RuneBuff)-d.CursorOffset))
+			mInFD.Write(bytes.Repeat([]byte(CursorRight), len(d.RuneBuff)-d.CursorOffset))
 			d.CursorOffset = len(d.RuneBuff)
 		case Delete:
 			if d.CursorOffset == len(d.RuneBuff) {
@@ -188,10 +190,10 @@ func (d *DefaultLdisc) ReceiveMustarBuff(n int) {
 				d.CursorOffset--
 
 				// eco line edit
-				d.mustarFD.Write([]byte("\b"))
-				d.mustarFD.Write([]byte(string(d.RuneBuff[d.CursorOffset:])))
-				d.mustarFD.Write([]byte(" \b"))
-				d.mustarFD.Write(bytes.Repeat([]byte(CursorLeft), len(nbr[d.CursorOffset:])))
+				mInFD.Write([]byte("\b"))
+				mInFD.Write([]byte(string(d.RuneBuff[d.CursorOffset:])))
+				mInFD.Write([]byte(" \b"))
+				mInFD.Write(bytes.Repeat([]byte(CursorLeft), len(nbr[d.CursorOffset:])))
 
 				// fmt.Println("\r\n", len(d.RuneBuff), string(d.RuneBuff))
 				break
@@ -201,9 +203,9 @@ func (d *DefaultLdisc) ReceiveMustarBuff(n int) {
 			d.RuneBuff = d.RuneBuff[0 : len(d.RuneBuff)-1]
 			d.CursorOffset--
 			// eco cursor right
-			d.mustarFD.Write([]byte("\b \b"))
+			mInFD.Write([]byte("\b \b"))
 		case CtrlC:
-			d.mustarFD.Write([]byte("^C"))
+			mInFD.Write([]byte("^C"))
 		}
 		d.ESC <- data_s
 		return
@@ -231,19 +233,19 @@ func (d *DefaultLdisc) ReceiveMustarBuff(n int) {
 		d.RuneBuff = nbr
 		d.CursorOffset = d.CursorOffset + 1 // data_r len == 1
 		//eco
-		d.mustarFD.Write(data_b)
+		mInFD.Write(data_b)
 		// complete line
-		d.mustarFD.Write([]byte(string(nbr[d.CursorOffset:])))
+		mInFD.Write([]byte(string(nbr[d.CursorOffset:])))
 		// bring term cursor back after line completion
-		d.mustarFD.Write(bytes.Repeat([]byte(CursorLeft), len(nbr[d.CursorOffset:])))
-		// d.mustarFD.Write([]byte("-"))
+		mInFD.Write(bytes.Repeat([]byte(CursorLeft), len(nbr[d.CursorOffset:])))
+		// mInFD.Write([]byte("-"))
 		return
 	}
 
 	d.RuneBuff = append(d.RuneBuff, data_r)
 	d.CursorOffset = d.CursorOffset + len(data_b)
 	// eco
-	d.mustarFD.Write(data_b)
+	mInFD.Write(data_b)
 
 	/// byte version:
 
@@ -261,34 +263,34 @@ func (d *DefaultLdisc) ReceiveMustarBuff(n int) {
 	// 	d.LineBuff = nbf
 	// 	d.CursorOffset = d.CursorOffset + len(data_b)
 	// 	//eco
-	// 	d.mustarFD.Write(data_b)
+	// 	mInFD.Write(data_b)
 	// 	// complete line
-	// 	d.mustarFD.Write(nbf[d.CursorOffset:])
+	// 	mInFD.Write(nbf[d.CursorOffset:])
 	// 	// bring term cursor back after line completion
-	// 	d.mustarFD.Write(bytes.Repeat([]byte(CursorLeft), len(nbf[d.CursorOffset:])))
-	// 	// d.mustarFD.Write([]byte("-"))
+	// 	mInFD.Write(bytes.Repeat([]byte(CursorLeft), len(nbf[d.CursorOffset:])))
+	// 	// mInFD.Write([]byte("-"))
 	// 	return
 	// }
 
 	// d.LineBuff = append(d.LineBuff, data_b...)
 	// d.CursorOffset = d.CursorOffset + len(data_b)
 	// // eco
-	// d.mustarFD.Write(data_b)
+	// mInFD.Write(data_b)
 
 }
 
-func (d *DefaultLdisc) ReceiveSluvaBuff(n int) {
+func (d *DefaultLdisc) ReceiveSluvaBuff(n int, sInFD *PortFD) {
 	// fmt.Println("reading from sluva")
 
 	data := make([]byte, n)
-	_, err := io.ReadFull(d.sluvaFD, data)
+	_, err := io.ReadFull(sInFD, data)
 	if err != nil {
 		d.errs = append(d.errs, err)
 		return
 	}
 	data = LFtoCRLF(data)
 	// data = append([]byte("d;"), data...)
-	_, err = d.mustarFD.Write(data)
+	_, err = d.mInFD.Write(data)
 	if err != nil {
 		d.errs = append(d.errs, err)
 	}

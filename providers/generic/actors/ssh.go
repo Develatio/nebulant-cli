@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
@@ -38,6 +39,8 @@ import (
 
 	"github.com/develatio/nebulant-cli/base"
 	nebulantssh "github.com/develatio/nebulant-cli/netproto/ssh"
+	"github.com/develatio/nebulant-cli/nsterm"
+	"github.com/develatio/nebulant-cli/util"
 	"github.com/povsister/scp"
 	"golang.org/x/crypto/ssh"
 )
@@ -60,13 +63,39 @@ type runRemoteParameters struct {
 	Command    *string           `json:"command"`
 	Vars       map[string]string `json:"vars"`
 	// VarsTargets []string          `json:"vars_targets"`
-	DumpJSON *bool `json:"dump_json"`
+	DumpJSON            *bool `json:"dump_json"`
+	OpenDbgShellAfter   bool  `json:"open_dbg_shell_after"`
+	OpenDbgShellBefore  bool  `json:"open_dbg_shell_before"`
+	OpenDbgShellOnerror bool  `json:"open_dbg_shell_onerror"`
 }
 
 type runRemoteScriptOutput struct {
 	Stdout   *bytes.Buffer `json:"stdout"`
 	Stderr   *bytes.Buffer `json:"stderr"`
+	Error    error         `json"error"`
 	ExitCode string        `json:"exit_code"`
+}
+
+func newSSHDebugShell(ctx *ActionContext, sshClient *nebulantssh.SSHClient) error {
+	mst := ctx.GetMustarFD()
+	svu := ctx.GetSluvaFD()
+	// ctx.Logger.LogErr(errors.Join(fmt.Errorf("remote exec fail"), sshRunErr.(error)).Error())
+	dbgsession, err := sshClient.NewSessionPthShellWithOpts(&nebulantssh.SessOpts{
+		Stdin:  svu,
+		Stdout: svu,
+		Stderr: svu,
+	})
+	if err != nil {
+		return err
+	}
+	ctx.DebugInit()
+	ctx.Logger.LogInfo("waiting for debug session to finish")
+	err = dbgsession.Wait()
+	ctx.Logger.LogInfo("debug session finished")
+	// svu.Close()
+	mst.Close() // force close of mustar
+	// ctx.Logger.LogInfo("debugger finished")
+	return err
 }
 
 // RunRemoteScript func
@@ -190,6 +219,10 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	result := &runRemoteScriptOutput{}
 	var sshOut io.Writer
 	var sshErr io.Writer
+	sshVpty := nsterm.NewVirtPTY()
+	sshVpty.SetLDisc(nsterm.NewRawLdisc())
+	sshmfd := sshVpty.MustarFD()
+	sshStdin := sshVpty.SluvaFD()
 
 	result.Stdout = new(bytes.Buffer)
 	result.Stderr = new(bytes.Buffer)
@@ -197,6 +230,25 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		result.Stdout = new(bytes.Buffer)
 		result.Stderr = result.Stdout
 	}
+
+	logStdoutSwch := util.NewSwitchableWriter(&logWriter{
+		Log:       ctx.Logger.ByteLogInfo,
+		LogPrefix: []byte(*p.Target + ":ssh> "),
+	})
+	resultStdoutSwch := util.NewSwitchableWriter(result.Stdout)
+	logStderrSwch := util.NewSwitchableWriter(&logWriter{
+		Log:       ctx.Logger.ByteLogErr,
+		LogPrefix: []byte(*p.Target + ":ssh> "),
+	})
+	resultStderrSwch := util.NewSwitchableWriter(result.Stderr)
+
+	// start writers off
+
+	logStdoutSwch.Off()
+	resultStdoutSwch.Off()
+	logStderrSwch.Off()
+	resultStderrSwch.Off()
+
 	sshOut = io.MultiWriter(result.Stdout, &logWriter{
 		Log:       ctx.Logger.ByteLogInfo,
 		LogPrefix: []byte(*p.Target + ":ssh> "),
@@ -206,8 +258,17 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		LogPrefix: []byte(*p.Target + ":ssh> "),
 	})
 
-	sshClient.Stderr = sshErr
-	sshClient.Stdout = sshOut
+	session, err := sshClient.NewSessionPthShellWithOpts(&nebulantssh.SessOpts{
+		Stdout: sshOut,
+		Stderr: sshErr,
+		Stdin:  sshStdin,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.Logger.LogInfo("Setting env vars...")
+	// WIP: prevent log sensible vars
 	if p.Vars != nil {
 		for key, val := range p.Vars {
 			vv := val
@@ -215,11 +276,14 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 			if err != nil {
 				return nil, err
 			}
-			sshClient.Env[key] = vv
+			// too asumptions?
+			sshmfd.Write([]byte(fmt.Sprintf("export %s=$( cat <<EOF\n%s\nEOF\n)\n", key, vv)))
+			// sshClient.Env[key] = vv
 		}
 	}
 
 	if p.DumpJSON != nil && *p.DumpJSON {
+		ctx.Logger.LogInfo("Uploading a dump of json vars...")
 		f, err := ctx.Store.DumpValuesToJSONFile()
 		if err != nil {
 			return nil, err
@@ -239,15 +303,114 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
+	// if p.OpenDbgShellBefore {
+	// 	ctx.Logger.LogInfo("Opening debug before run...")
+	// 	ctx.DebugInit()
+	// }
+
 	if p.Command != nil { // run cmd
-		sshRunErr = sshClient.RunCmd(*p.Command)
+		sshmfd.Write([]byte(*p.Command))
+		sshmfd.Write([]byte("\n"))
+		sshmfd.Write([]byte("exit $?"))
+		sshmfd.Write([]byte("\n"))
 	} else if p.ScriptPath != nil { // upload local script and run
-		sshRunErr = sshClient.RunScriptFromLocalPath(*p.ScriptPath)
+		// TODO: configurable dst path
+		scriptpath := fmt.Sprintf("/tmp/nscript_%d.sh", rand.Int())
+		ctx.Logger.LogInfo(fmt.Sprintf("Uploading local:%s -> remote:%s script...", *p.ScriptPath, scriptpath))
+		scpClient, err := sshClient.NewSCPClientFromExistingSSH()
+		if err != nil {
+			ctx.Logger.LogErr("errr1" + err.Error())
+			return nil, err
+		}
+		err = scpClient.CopyFileToRemote(*p.ScriptPath, scriptpath, &scp.FileTransferOption{Perm: 0700})
+		if err != nil {
+			ctx.Logger.LogErr("errr2" + err.Error())
+			return nil, err
+		}
+		sshmfd.Write([]byte(scriptpath))
+		sshmfd.Write([]byte("\n"))
+		sshmfd.Write([]byte("exit $?"))
+		sshmfd.Write([]byte("\n"))
 	} else if p.ScriptText != nil {
-		sshRunErr = sshClient.RunScriptFromText(p.ScriptText)
+		// TODO: configurable dst path
+		scriptpath := fmt.Sprintf("/tmp/nscript_%d.sh", rand.Int())
+		ctx.Logger.LogInfo(fmt.Sprintf("Uploading remote:%s script...", scriptpath))
+		scpClient, err := sshClient.NewSCPClientFromExistingSSH()
+		if err != nil {
+			ctx.Logger.LogErr("errr3" + err.Error())
+			return nil, err
+		}
+		rr := bytes.NewReader([]byte(*p.ScriptText))
+		err = scpClient.CopyToRemote(rr, scriptpath, &scp.FileTransferOption{Perm: 0700})
+		if err != nil {
+			ctx.Logger.LogErr("errr4" + err.Error())
+			return nil, err
+		}
+		sshmfd.Write([]byte(scriptpath))
+		sshmfd.Write([]byte("\n"))
+		sshmfd.Write([]byte("exit $?"))
+		sshmfd.Write([]byte("\n"))
 	} else {
 		return nil, fmt.Errorf("no script provided")
 	}
+
+	// TODO: capture ^D to exit debug
+	// and keep shell alive
+	// if p.OpenDbgShellAfter {
+	// 	ctx.Logger.LogInfo("Opening debug after shell...")
+	// 	ctx.DebugInit()
+	// }
+
+	// before
+
+	ctx.Logger.LogInfo("Waiting shell to finish...")
+	sshRunErr = session.Wait()
+	ctx.Logger.LogInfo("Finished")
+	fmt.Println(p)
+	if sshRunErr != nil && p.OpenDbgShellOnerror {
+		ctx.Logger.LogErr(errors.Join(fmt.Errorf("remote exec fail"), sshRunErr.(error)).Error())
+		ctx.Logger.LogInfo("waiting for debug session to finish")
+		sshRunErr = newSSHDebugShell(ctx, sshClient)
+		ctx.Logger.LogInfo("debugger finished")
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// ctx.DebugInit()
+		// ctx.Logger.LogInfo("waiting for debug session to finish")
+		// sshRunErr = dbgsession.Wait()
+		// ctx.Logger.LogInfo("debug session finished")
+
+		// sshRunErr =
+
+		// mst := ctx.GetMustarFD()
+		// svu := ctx.GetSluvaFD()
+
+		// dbgsession, err := sshClient.NewSessionPthShellWithOpts(&nebulantssh.SessOpts{
+		// 	Stdin:  svu,
+		// 	Stdout: svu,
+		// 	Stderr: svu,
+		// })
+		// if err != nil {
+		// 	return nil, err
+		// }
+
+		// svu.Close()
+		//mst.Close() // force close of mustar
+
+	}
+
+	// after
+	// ctx.DebugInit()
+
+	// if p.Command != nil { // run cmd
+	// 	sshRunErr = sshClient.RunCmd(*p.Command)
+	// } else if p.ScriptPath != nil { // upload local script and run
+	// 	sshRunErr = sshClient.RunScriptFromLocalPath(*p.ScriptPath)
+	// } else if p.ScriptText != nil {
+	// 	sshRunErr = sshClient.RunScriptFromText(p.ScriptText)
+	// } else {
+	// 	return nil, fmt.Errorf("no script provided")
+	// }
 	ctx.Logger.ByteLogInfo([]byte("\n----------\n"))
 
 	if sshRunErr == nil {

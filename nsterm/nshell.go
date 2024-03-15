@@ -16,77 +16,68 @@
 
 package nsterm
 
-import (
-	"flag"
-	"fmt"
-	"io"
+// func run(vpty *VPTY2, s string, stdin io.ReadCloser, stdout io.WriteCloser) (int, error) {
+// 	argslice, err := util.CommandLineToArgv(s)
+// 	if err != nil {
+// 		stdout.Write([]byte(err.Error()))
+// 	}
 
-	"github.com/develatio/nebulant-cli/subsystem"
-	"github.com/develatio/nebulant-cli/util"
-)
+// 	cmdline := flag.NewFlagSet(argslice[0], flag.ContinueOnError)
+// 	cmdline.SetOutput(stdout)
+// 	subsystem.ConfArgs(cmdline)
+// 	err = cmdline.Parse(argslice)
+// 	if err != nil {
+// 		return 1, err
+// 	}
+// 	sc := cmdline.Arg(0)
 
-func run(vpty *VPTY2, s string, stdin io.ReadCloser, stdout io.WriteCloser) (int, error) {
-	argslice, err := util.CommandLineToArgv(s)
-	if err != nil {
-		stdout.Write([]byte(err.Error()))
-	}
+// 	if cmd, exists := subsystem.NBLCommands[sc]; exists {
+// 		// TODO: implement raw requirement per command
+// 		// and set raw only if needed
+// 		prev_ldisc := vpty.GetLDisc()
+// 		vpty.SetLDisc(NewRawLdisc())
+// 		defer vpty.SetLDisc(prev_ldisc)
 
-	cmdline := flag.NewFlagSet(argslice[0], flag.ContinueOnError)
-	cmdline.SetOutput(stdout)
-	subsystem.ConfArgs(cmdline)
-	err = cmdline.Parse(argslice)
-	if err != nil {
-		return 1, err
-	}
-	sc := cmdline.Arg(0)
+// 		cmd.UpgradeTerm = false // prevent set raw term
+// 		cmd.WelcomeMsg = false  // prevent welcome msg
+// 		err := subsystem.PrepareCmd(cmd)
+// 		if err != nil {
+// 			return 1, err
+// 		}
+// 		cmd.Stdin = stdin
+// 		cmd.Stdout = stdout
+// 		// finally run command
+// 		return cmd.Run(cmdline)
+// 	}
+// 	return 127, fmt.Errorf(fmt.Sprintf("?? unknown cmd %v\n", cmdline.Arg(0)))
+// }
 
-	if cmd, exists := subsystem.NBLCommands[sc]; exists {
-		// TODO: implement raw requirement per command
-		// and set raw only if needed
-		prev_ldisc := vpty.GetLDisc()
-		vpty.SetLDisc(NewRawLdisc())
-		defer vpty.SetLDisc(prev_ldisc)
+// func NSShell(vpty *VPTY2, stdin io.ReadCloser, stdout io.WriteCloser) (int, error) {
+// 	prmpt := NewPrompt(vpty, stdin, stdout)
+// 	for {
+// 		s, err := prmpt.ReadLine()
+// 		if err != nil {
+// 			return 1, err
+// 		}
+// 		if s == nil {
+// 			// no command
+// 			continue
+// 		}
+// 		scmd := *s
 
-		cmd.UpgradeTerm = false // prevent set raw term
-		cmd.WelcomeMsg = false  // prevent welcome msg
-		err := subsystem.PrepareCmd(cmd)
-		if err != nil {
-			return 1, err
-		}
-		cmd.Stdin = stdin
-		cmd.Stdout = stdout
-		// finally run command
-		return cmd.Run(cmdline)
-	}
-	return 127, fmt.Errorf(fmt.Sprintf("?? unknown cmd %v\n", cmdline.Arg(0)))
-}
+// 		// built in :)
+// 		if scmd == "exit" {
+// 			return 0, nil
+// 		}
 
-func NSShell(vpty *VPTY2, stdin io.ReadCloser, stdout io.WriteCloser) (int, error) {
-	prmpt := NewPrompt(vpty, stdin, stdout)
-	for {
-		s, err := prmpt.ReadLine()
-		if err != nil {
-			return 1, err
-		}
-		if s == nil {
-			// no command
-			continue
-		}
-		scmd := *s
-
-		// built in :)
-		if scmd == "exit" {
-			return 0, nil
-		}
-
-		// built in ;)
-		if scmd == "help" {
-			scmd = "--help"
-		}
-		ecode, err := run(vpty, scmd, stdin, stdout)
-		if err != nil {
-			stdout.Write([]byte(err.Error()))
-			stdout.Write([]byte(fmt.Sprintf("Exitcode %v", ecode)))
-		}
-	}
-}
+// 		// built in ;)
+// 		if scmd == "help" {
+// 			scmd = "--help"
+// 		}
+// 		ecode, err := run(vpty, scmd, stdin, stdout)
+// 		if err != nil {
+// 			stdout.Write([]byte(err.Error()))
+// 			stdout.Write([]byte(fmt.Sprintf("Exitcode %v", ecode)))
+// 		}
+// 	}
+// }

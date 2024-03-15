@@ -14,17 +14,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package base
+package util
 
-type RuntimeState int
+import "io"
 
-const (
-	// running
-	RuntimeStatePlay RuntimeState = iota
-	// paused
-	RuntimeStateStill
-	// ending but not ended
-	RuntimeStateEnding
-	// finished ensured
-	RuntimeStateEnd
-)
+func NewSwitchableWriter(w io.Writer) *switchableWriter {
+	return &switchableWriter{w: w}
+}
+
+type switchableWriter struct {
+	off bool
+	w   io.Writer
+}
+
+func (s *switchableWriter) On()  { s.off = false }
+func (s *switchableWriter) Off() { s.off = true }
+
+func (s *switchableWriter) Write(p []byte) (n int, err error) {
+	if s.off {
+		return len(p), nil
+	}
+	return s.w.Write(p)
+}

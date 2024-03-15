@@ -17,6 +17,7 @@
 package nsterm
 
 import (
+	"fmt"
 	"io"
 )
 
@@ -24,19 +25,23 @@ var ErrClosedPipe = io.ErrClosedPipe
 
 type pipe struct {
 	// buff  *bytes.Buffer
-	done   chan struct{}
+	closed bool
 	buff   chan []byte
 	remain chan []byte
 }
 
 func (pp *pipe) Write(p []byte) (n int, err error) {
 	// fmt.Println("-> buff", bytes.TrimRight(p, "\x00"))
+	if pp.closed {
+		return 0, fmt.Errorf("Write to closed pipe")
+	}
 	pp.buff <- p
 	return len(p), nil
 }
 
 func (pp *pipe) Close() error {
-	close(pp.done)
+	pp.closed = true
+	close(pp.buff)
 	return nil
 }
 
@@ -51,24 +56,33 @@ func (pp *pipe) Read(p []byte) (n int, err error) {
 		}
 		// fmt.Println("<- buff", bytes.TrimRight(r, "\x00"))
 		return copy(p, r), nil
-	case <-pp.done:
-		return 0, io.EOF
+	// case <-pp.done:
+	// 	return 0, io.EOF
 	default:
+		// a closed channel with previous data, will
+		// send the remain data before close
 		b := <-pp.buff
+		var err error = nil
+		if pp.closed {
+			// read can still write to p []byte while
+			// return io.EOF data. Only 0, EOF return
+			// will stop subsequent readings
+			err = io.EOF
+		}
 		if len(b) > len(p) {
 			nn := copy(p, b)
 			pp.remain <- b[nn:]
 			// fmt.Println("<- buff", bytes.TrimRight(b, "\x00"))
-			return nn, nil
+			return nn, err
 		}
 		// fmt.Println("<- buff", bytes.TrimRight(b, "\x00"))
-		return copy(p, b), nil
+		return copy(p, b), err
 	}
 }
 
 func NewPipe() (io.ReadCloser, io.WriteCloser) {
 	pp := &pipe{
-		done:   make(chan struct{}),
+		// done:   make(chan struct{}),
 		buff:   make(chan []byte, 250),
 		remain: make(chan []byte, 1),
 	}

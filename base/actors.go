@@ -17,6 +17,8 @@
 package base
 
 import (
+	"io"
+
 	"github.com/develatio/nebulant-cli/blueprint"
 )
 
@@ -59,6 +61,16 @@ type IActionContext interface {
 	RunAction() (*ActionOutput, error)
 	SetRunStatus(ActionContextRunStatus)
 	GetRunStatus() ActionContextRunStatus
+	//
+	GetSluvaFD() io.ReadWriteCloser
+	GetMustarFD() io.ReadWriteCloser
+	//
+	// the func that runs on DebugInit call
+	WithDebugInitFunc(func())
+	// returns the fd in wich the action can
+	// read/write to interact with  user,
+	// commonly the sluva FD of vpty
+	DebugInit()
 }
 
 // IActor interface

@@ -40,8 +40,9 @@ func (r *RawLdisc) SetSluvaFD(fd io.ReadWriteCloser) {
 	r.sluvaFD = fd
 }
 
-func (r *RawLdisc) ReceiveMustarBuff(n int) {
-	_, err := io.CopyN(r.sluvaFD, r.mustarFD, int64(n))
+func (r *RawLdisc) ReceiveMustarBuff(n int, mInFD *PortFD) {
+	// reading from mustar.in_r
+	_, err := io.CopyN(r.sluvaFD, mInFD, int64(n))
 	if err != nil {
 		r.errs = append(r.errs, err)
 	}
@@ -49,15 +50,15 @@ func (r *RawLdisc) ReceiveMustarBuff(n int) {
 	// emulate real raw writing char by char
 	// TODO: maybe rune decode is needed
 	// for i := 0; i < n; i++ {
-	// 	_, err := io.CopyN(r.sluvaFD, r.mustarFD, 1)
+	// 	_, err := io.CopyN(r.sluvaFD, mInFD, 1)
 	// 	if err != nil {
 	// 		r.errs = append(r.errs, err)
 	// 	}
 	// }
 }
 
-func (r *RawLdisc) ReceiveSluvaBuff(n int) {
-	_, err := io.CopyN(r.mustarFD, r.sluvaFD, int64(n))
+func (r *RawLdisc) ReceiveSluvaBuff(n int, sInFD *PortFD) {
+	_, err := io.CopyN(r.mustarFD, sInFD, int64(n))
 	if err != nil {
 		r.errs = append(r.errs, err)
 		return

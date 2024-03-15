@@ -90,6 +90,12 @@ var SERVER_ADDR = "localhost"
 // Server port
 var SERVER_PORT = "15678"
 
+// Server cert file path
+var SERVER_CERT = ""
+
+// Server key file path
+var SERVER_KEY = ""
+
 // AssetDescriptorURL conf
 var AssetDescriptorURL = "https://builder-assets.nebulant.io/assets.json"
 

@@ -70,6 +70,8 @@ var EraseLine string = "\033[K"
 var EraseLineFromCursor string = "\033[0K"
 var EraseEntireLine string = "\033[2K"
 
+var IdentifyDevice string = "\033Z"
+
 var mls *MultilineStdout = nil
 
 // https://github.com/manifoldco/promptui/issues/49

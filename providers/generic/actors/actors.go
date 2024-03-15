@@ -17,6 +17,7 @@
 package actors
 
 import (
+	"io"
 	"sync"
 
 	"github.com/develatio/nebulant-cli/base"
@@ -51,6 +52,19 @@ type ActionContext struct {
 	Action    *blueprint.Action
 	Store     base.IStore
 	Logger    base.ILogger
+	Actx      base.IActionContext
+}
+
+func (a *ActionContext) DebugInit() {
+	a.Actx.DebugInit()
+}
+
+func (a *ActionContext) GetSluvaFD() io.ReadWriteCloser {
+	return a.Actx.GetSluvaFD()
+}
+
+func (a *ActionContext) GetMustarFD() io.ReadWriteCloser {
+	return a.Actx.GetMustarFD()
 }
 
 // ActionFunc func

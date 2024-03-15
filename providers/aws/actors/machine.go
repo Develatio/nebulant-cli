@@ -95,7 +95,11 @@ func RunInstance(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
-	aout := base.NewActionOutput(ctx.Action, runResult.Instances[0], runResult.Instances[0].InstanceId)
+	aout := base.NewActionOutput(
+		ctx.Action,
+		runResult.Instances[0],
+		runResult.Instances[0].InstanceId,
+	)
 	return aout, nil
 }
 

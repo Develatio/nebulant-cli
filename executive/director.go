@@ -98,17 +98,25 @@ L:
 			}
 			managerFound := false
 			for manager := range d.managers {
-				if instr.ExecutionUUID != nil && *manager.ExecutionUUID != *instr.ExecutionUUID {
-					continue
+				if instr.ExecutionUUID != nil && *manager.ExecutionUUID == *instr.ExecutionUUID {
+					managerFound = true
+					cast.LogInfo("[Director] Sending Instruction to Runtime", nil)
+					switch instr.Instruction {
+					case ExecStop:
+						manager.Runtime.Stop()
+					case ExecStart:
+						manager.Runtime.Play()
+					case ExecPause:
+						manager.Runtime.Pause()
+					case ExecResume:
+						manager.Runtime.Play()
+					case ExecState:
+						cast.LogInfo("NOOP instruction", nil)
+					case ExecEmancipation:
+						cast.LogInfo("NOOP instruction", nil)
+					}
+					break
 				}
-				managerFound = true
-				cast.LogInfo("[Director] Sending Instruction to Manager", nil)
-				// TODO: call manager.Runtime.<XYZ>
-				// select {
-				// case manager.execInstruction <- instr:
-				// default:
-				// 	// Hey! How's it going developer?
-				// }
 			}
 			if !managerFound {
 				cast.LogInfo("[Director] No manager found for instruction", nil)

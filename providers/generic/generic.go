@@ -84,6 +84,7 @@ func (p *Provider) HandleAction(actx base.IActionContext) (*base.ActionOutput, e
 			Action: action,
 			Store:  p.store,
 			Logger: l,
+			Actx:   actx,
 		})
 	}
 	return nil, fmt.Errorf("GENERIC: Unknown action: " + action.ActionName)

@@ -127,7 +127,7 @@ func DebuggerCmd(nblc *subsystem.NBLcommand) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	c.SetReadLimit(int64(MAXREADSIZE))
+	// c.SetReadLimit(int64(MAXREADSIZE))
 	defer c.Close()
 
 	// 	done := make(chan struct{})
@@ -164,6 +164,9 @@ func DebuggerCmd(nblc *subsystem.NBLcommand) (int, error) {
 
 	// os.Setenv("TERM", "vt100")
 
+	// WIP: setear la opción de closehandler
+	// para hacer exit cuando la conexión
+	// se cierra desde el server
 	wsrw := ws.NewWebSocketReadWriteCloser(c)
 
 	go io.Copy(nblc.Stdout, wsrw)

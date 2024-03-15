@@ -122,13 +122,13 @@ func RegisterSubcommands() {
 			Sec:           subsystem.SecRuntime,
 			Call:          DebuggerCmd,
 		},
-		"shell": {
-			UpgradeTerm:   false,
-			WelcomeMsg:    true,
-			InitProviders: false,
-			Help:          "  shell\t\t" + term.EmojiSet["FaceWithMonocle"] + " run interactive shell\n",
-			Sec:           subsystem.SecRuntime,
-			Call:          NSTerm,
-		},
+		// "shell": {
+		// 	UpgradeTerm:   false,
+		// 	WelcomeMsg:    true,
+		// 	InitProviders: false,
+		// 	Help:          "  shell\t\t" + term.EmojiSet["FaceWithMonocle"] + " run interactive shell\n",
+		// 	Sec:           subsystem.SecRuntime,
+		// 	Call:          NSTerm,
+		// },
 	}
 }

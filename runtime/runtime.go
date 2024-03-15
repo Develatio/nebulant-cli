@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"sync"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
+	"github.com/develatio/nebulant-cli/nsterm"
 )
 
 type runtimeEvent struct {
@@ -36,39 +38,6 @@ type runtimeEvent struct {
 func (r *runtimeEvent) EventCode() base.EventCode { return r.ecode }
 func (r *runtimeEvent) String() string            { return fmt.Sprintf("runtime event: %v", r.ecode) }
 
-type runtimeWaiter struct {
-	// afterchannels []chan struct{}
-	// beforechannels []chan struct{}
-	// actx       base.IActionContext
-	err    error
-	after  bool
-	before bool
-}
-
-// func (b *breakPoint) WaitIfAfter() {
-// 	s := make(chan struct{})
-// 	b.afterchannels = append(b.suscribers, s)
-// 	<-
-// }
-
-// func (b *breakPoint) Subscribe() <-chan struct{} {
-// 	s := make(chan struct{})
-// 	b.suscribers = append(b.suscribers, s)
-// 	return s
-// }
-
-// // WIP quizás End podría aceptar un subscriber para
-// // cerrar sólo ese
-// func (b *breakPoint) End() {
-// 	for i := 0; i < len(b.suscribers); i++ {
-// 		close(b.suscribers[i])
-// 	}
-// }
-
-// func (b *breakPoint) GetActionContext() base.IActionContext {
-// 	return b.actx
-// }
-
 func NewRuntime(irb *blueprint.IRBlueprint, serverMode bool) *Runtime {
 	return &Runtime{
 		irb:                irb,
@@ -77,9 +46,9 @@ func NewRuntime(irb *blueprint.IRBlueprint, serverMode bool) *Runtime {
 		activeActionIDs:    make(map[string]int),
 		activeJoinPoints:   make(map[string]base.IActionContext),
 		// activeBreakPoints:  make(map[*breakPoint]bool),
-		activeThreads:  make(map[*Thread]bool),
-		eventListeners: make(map[*base.EventListener]bool),
-		exitCode:       0,
+		activeThreads: make(map[*Thread]bool),
+		evDispatcher:  base.NewEventDispatcher(),
+		exitCode:      0,
 	}
 }
 
@@ -161,6 +130,12 @@ func (j *joinPointContext) EventListener() *base.EventListener {
 func (j *joinPointContext) WithCancelCause() {}
 func (j *joinPointContext) Cancel(e error)   {}
 
+func (j *joinPointContext) WithDebugInitFunc(f func()) {}
+func (j *joinPointContext) DebugInit()                 {}
+
+func (j *joinPointContext) GetSluvaFD() io.ReadWriteCloser  { return nil }
+func (j *joinPointContext) GetMustarFD() io.ReadWriteCloser { return nil }
+
 // actioncontext type
 type threadPointContext struct {
 	_dbgname  string
@@ -238,12 +213,19 @@ func (t *threadPointContext) EventListener() *base.EventListener {
 func (t *threadPointContext) WithCancelCause() {}
 func (t *threadPointContext) Cancel(e error)   {}
 
+func (t *threadPointContext) WithDebugInitFunc(f func())      {}
+func (t *threadPointContext) DebugInit()                      {}
+func (t *threadPointContext) GetSluvaFD() io.ReadWriteCloser  { return nil }
+func (t *threadPointContext) GetMustarFD() io.ReadWriteCloser { return nil }
+
 type actionContext struct {
 	_dbgname  string
 	ctx       context.Context
 	runStatus base.ActionContextRunStatus
 	cancel    func(error)
 	initfunc  func() (*base.ActionOutput, error)
+	dbgfunc   func()
+	vpty      *nsterm.VPTY2
 	store     base.IStore
 	action    *blueprint.Action
 	// provider base.IProvider
@@ -278,6 +260,35 @@ func (a *actionContext) Cancel(e error) {
 	if a.cancel != nil {
 		a.cancel(e)
 	}
+}
+
+// the func that runs on DebugInit call
+func (a *actionContext) WithDebugInitFunc(f func()) {
+	a.dbgfunc = f
+}
+
+// returns the fd in wich the action can
+// read/write to interact with  user,
+// commonly the sluva FD of vpty
+func (a *actionContext) DebugInit() {
+	a.dbgfunc()
+}
+
+func (a *actionContext) GetSluvaFD() io.ReadWriteCloser {
+	if a.vpty == nil {
+		vpty := nsterm.NewVirtPTY()
+		vpty.SetLDisc(nsterm.NewRawLdisc())
+		a.vpty = vpty
+	}
+	return a.vpty.SluvaFD()
+}
+func (a *actionContext) GetMustarFD() io.ReadWriteCloser {
+	if a.vpty == nil {
+		vpty := nsterm.NewVirtPTY()
+		vpty.SetLDisc(nsterm.NewRawLdisc())
+		a.vpty = vpty
+	}
+	return a.vpty.MustarFD()
 }
 
 func (a *actionContext) SetStore(s base.IStore) {
@@ -350,7 +361,7 @@ const (
 type threadStepCtrl struct {
 	confirm chan struct{}
 	back    bool
-	reset   bool
+	// reset   bool
 }
 
 type Thread struct {
@@ -396,41 +407,12 @@ func (t *Thread) Play() {
 	close(t.step)
 }
 
-// func (t *Thread) Jump(actx base.IActionContext) (<-chan struct{}, bool) {
-// 	if !t.hasActionContext(actx) {
-// 		// cannot jump to not pre-loaded or pre-runned actx
-// 		return nil, false
-// 	}
-
-// 	if t.current != nil {
-// 		// cannot jump if there is already a running actx
-// 		if t.current.GetRunStatus() == base.RunStatusRunning {
-// 			return nil, false
-// 		}
-// 	}
-
-// 	if t.current == actx {
-
-// 	}
-// 	// load jump
-// 	t.current = actx
-
-// 	stepctrl := &threadStepCtrl{
-// 		confirm: make(chan struct{}),
-// 		back:    false,
-// 		reset:   true,
-// 	}
-
-// 	// fill chan and return true on ok
-// 	// this will not wait for chan pop
-// 	select {
-// 	case t.step <- stepctrl:
-// 		return stepctrl.confirm, true
-// 	default:
-// 		// Hey developer!,  what a wonderful day!
-// 		return nil, false
-// 	}
-// }
+func (t *Thread) Stop() {
+	if t.state == base.RuntimeStateStill {
+		close(t.step)
+	}
+	t.state = base.RuntimeStateEnding
+}
 
 func (t *Thread) Back() (<-chan struct{}, bool) {
 	if t.current != nil {
@@ -477,27 +459,6 @@ func (t *Thread) Step() (<-chan struct{}, bool) {
 		return nil, false
 	}
 }
-
-// checks for [pause/still] event and waits
-// until pause status ends. Returns true if
-// exec should continue and false if exec
-// should end
-// func (t *Thread) checkEvents() bool {
-// 	if t.elistener.ReadUntil(base.RuntimeStillEvent) {
-// 		fmt.Println("waiting for runtime play event")
-// 		ec := t.elistener.WaitUntil([]base.EventCode{base.RuntimePlayEvent, base.RuntimeEndEvent})
-// 		fmt.Println("play or end received")
-// 		switch ec {
-// 		case base.RuntimePlayEvent:
-// 			fmt.Println("play received")
-// 			return true
-// 		case base.RuntimeEndEvent:
-// 			fmt.Println("end received")
-// 			return false
-// 		}
-// 	}
-// 	return true
-// }
 
 // return true if this thread is handling or has handled actx
 func (t *Thread) hasActionContext(actx base.IActionContext) bool {
@@ -674,9 +635,16 @@ func (t *Thread) _runCurrent() {
 // closes the thread, his llops and his event listeners
 func (t *Thread) close() {
 	t.ThreadStep = ThreadClose
-	t.state = base.RuntimeStateEnd
+	t.state = base.RuntimeStateEnding
+
+	if t.current != nil {
+		t.current.Cancel(nil)
+	}
+
 	// remove thread t
 	t.runtime.finishThread(t)
+	cast.LogDebug("Thread finished", t.runtime.irb.ExecutionUUID)
+	t.state = base.RuntimeStateEnd
 	// WIP: aquí tenemos que cerrar el listener
 }
 
@@ -687,40 +655,13 @@ func (t *Thread) GetLastRun() base.IActionContext {
 	return t.done[len(t.done)-1]
 }
 
-// func (t *Thread) Back() (bool, error) {
-// 	last := t.done[len(t.done)-1]
-// 	parents := last.Parents()
-// 	// WIP: gestionar join points con más de un padre
-// 	count := len(parents)
-// 	if count > 1 {
-// 		return false, fmt.Errorf("more than one parent found, not implemented yet")
-// 	}
-// 	if count <= 0 {
-// 		return false, fmt.Errorf("no more parents found")
-// 	}
-
-// 	t.queue = append([]base.IActionContext{parents[0]}, t.queue...)
-// 	return t.Next(), nil
-// }
-
-// func (t *Thread) next() bool {
-// 	if t.ThreadStep == ThreadClose {
-// 		return false
-// 	}
-// 	more := t._next()
-// 	if !more {
-// 		t.close()
-// 	}
-// 	return more
-// }
-
 // commonly called by go Init()
 func (t *Thread) Init() {
 	// WIP: quizás sea necesario lanzar un evento para atrás de thread
 	// inicializado
 	var waitcount int
 	defer func() {
-		t.runtime.finishThread(t)
+		t.close()
 	}()
 
 	// define uninitialized (nil) "confirm" chan
@@ -769,10 +710,12 @@ func (t *Thread) Init() {
 		// awaiting. The t.Step() cannot be called if
 		// there is one action running
 		if !more {
-			t.close()
 			return
 		}
 
+		if t.state == base.RuntimeStateEnding {
+			return
+		}
 		// uninitialized step is nil
 		// closed step is not nil
 		// this is the step and confirm before-run
@@ -805,6 +748,9 @@ func (t *Thread) Init() {
 		t._runCurrent()
 		t.current.SetRunStatus(base.RunStatusDone)
 
+		if t.state == base.RuntimeStateEnding {
+			return
+		}
 		// closed step is not nil
 		// allow step-ing only if the thread state
 		// is in pause
@@ -823,19 +769,16 @@ func (t *Thread) Init() {
 			}
 		}
 		// end thread on no more actions
-
 	}
 }
 
-// WIP quizás sería intersante añadir aquí un channel, o un sistema
-// tipo cast, donde Stage, Manager y demás se pudieran suscribir para
-// recibir eventos de stop y demás
 type Runtime struct {
-	mu                 sync.Mutex
-	serverMode         bool
-	state              base.RuntimeState
-	activeThreads      map[*Thread]bool
-	eventListeners     map[*base.EventListener]bool
+	mu            sync.Mutex
+	serverMode    bool
+	state         base.RuntimeState
+	activeThreads map[*Thread]bool
+	// eventListeners     map[*base.EventListener]bool
+	evDispatcher       *base.EventDispatcher
 	irb                *blueprint.IRBlueprint
 	actionContextStack []base.IActionContext
 	activeActionIDs    map[string]int
@@ -851,24 +794,6 @@ type Runtime struct {
 	//
 	savedActionOutputs []*base.ActionOutput
 }
-
-// func (r *Runtime) setWaiterAfter(actx base.IActionContext) {
-// 	r.mu.Lock()
-// 	defer r.mu.Unlock()
-// 	if _, exists := r.waiters[actx]; !exists {
-// 		r.waiters[actx] = &runtimeWaiter{}
-// 	}
-// 	r.waiters[actx].after = true
-// }
-
-// func (r *Runtime) setWaiterBefore(actx base.IActionContext) {
-// 	r.mu.Lock()
-// 	defer r.mu.Unlock()
-// 	if _, exists := r.waiters[actx]; !exists {
-// 		r.waiters[actx] = &runtimeWaiter{}
-// 	}
-// 	r.waiters[actx].before = true
-// }
 
 func (r *Runtime) saveActionOutput(aout *base.ActionOutput) {
 	r.mu.Lock()
@@ -889,21 +814,17 @@ func (r *Runtime) Error() error {
 }
 
 func (r *Runtime) NewEventListener() *base.EventListener {
-	el := base.NewEventListener()
-	r.eventListeners[el] = true
-	return el
-}
-
-func (r *Runtime) Dispatch(e base.IEvent) {
-	for el := range r.eventListeners {
-		el.EventChan() <- e
-	}
+	return r.evDispatcher.NewEventListener()
 }
 
 func (r *Runtime) NewThread(actx base.IActionContext) {
+	if r.state == base.RuntimeStateEnding || r.state == base.RuntimeStateEnd {
+		return
+	}
+	cast.LogDebug("Stat new thread", r.irb.ExecutionUUID)
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	el := r.NewEventListener()
+	el := r.evDispatcher.NewEventListener()
 	th := &Thread{
 		runtime:   r,
 		elistener: el,
@@ -919,7 +840,9 @@ func (r *Runtime) NewThread(actx base.IActionContext) {
 		th.Pause()
 	}
 
-	r.Dispatch(&runtimeEvent{ecode: base.RuntimePlayEvent})
+	cast.LogDebug("Dispatching event", r.irb.ExecutionUUID)
+	go r.evDispatcher.Dispatch(&runtimeEvent{ecode: base.RuntimePlayEvent})
+	cast.LogDebug("Dispatched event", r.irb.ExecutionUUID)
 	go th.Init()
 	// o quizás el propio runtime debería observar
 	// la cola de threads para inicializarlos
@@ -938,42 +861,58 @@ func (r *Runtime) finishThread(th *Thread) {
 
 	// no threads, no activity
 	if len(r.activeThreads) <= 0 {
-		r.Dispatch(&runtimeEvent{ecode: base.RuntimeEndEvent})
+		go r.evDispatcher.Dispatch(&runtimeEvent{ecode: base.RuntimeEndEvent})
 	}
 
 	el := th.EventListener()
-	delete(r.eventListeners, el)
+	r.evDispatcher.DestroyEventListener(el)
 }
 
 func (r *Runtime) Play() {
-	r.Dispatch(&runtimeEvent{ecode: base.RuntimePlayEvent})
+	// WIP: mezclar el sistema antiguo de eventos
+	// con el sistema nuevo de eventos
+	// WIP: cambiar el nombre de EventManager por
+	// EventRuntime
+	cast.PushEvent(cast.EventManagerResuming, r.irb.ExecutionUUID)
+	cast.PushEvent(cast.EventManagerStarting, r.irb.ExecutionUUID)
+	go r.evDispatcher.Dispatch(&runtimeEvent{ecode: base.RuntimePlayEvent})
 	threads := r.GetThreads()
 	for th := range threads {
 		th.Play()
 	}
 	r.state = base.RuntimeStatePlay
+	cast.PushEvent(cast.EventManagerStarted, r.irb.ExecutionUUID)
+	r.DispatchCurrentActiveIdsEvent()
 }
 
 func (r *Runtime) Pause() {
-	r.Dispatch(&runtimeEvent{ecode: base.RuntimeStillEvent})
+	cast.PushEvent(cast.EventManagerPausing, r.irb.ExecutionUUID)
+	go r.evDispatcher.Dispatch(&runtimeEvent{ecode: base.RuntimeStillEvent})
 	threads := r.GetThreads()
 	for th := range threads {
 		th.Pause()
 	}
 	r.state = base.RuntimeStateStill
+	cast.PushEvent(cast.EventManagerPaused, r.irb.ExecutionUUID)
+	r.DispatchCurrentActiveIdsEvent()
 }
 
-// func (r *Runtime) GetBreakPoint() *breakPoint {
-// 	return r.breakPoint
-// }
+func (r *Runtime) Stop() {
+	cast.PushEvent(cast.EventManagerStopping, r.irb.ExecutionUUID)
+	r.state = base.RuntimeStateEnding
+	go r.evDispatcher.Dispatch(&runtimeEvent{ecode: base.RuntimeEndEvent})
+	threads := r.GetThreads()
+	for th := range threads {
+		th.Stop()
+	}
+	r.state = base.RuntimeStateEnd
+	cast.PushEvent(cast.EventManagerOut, r.irb.ExecutionUUID)
+	r.DispatchCurrentActiveIdsEvent()
+}
 
 func (r *Runtime) GetThreads() map[*Thread]bool {
 	return r.activeThreads
 }
-
-// func (r *Runtime) Subscribe() <-chan int {
-// 	return make(<-chan int)
-// }
 
 func (r *Runtime) IsRunningParentsOf(actx base.IActionContext) bool {
 	r.mu.Lock()
@@ -1066,24 +1005,25 @@ func (r *Runtime) setRunFunc(actx base.IActionContext) {
 		actx.WithCancelCause()
 		defer actx.Cancel(nil)
 		aout, aerr := provider.HandleAction(actx)
-		if aout != nil && aerr != nil {
-			panic("Hey dev!, this is your fault!")
+
+		if aerr != nil {
+			// ssh run could return non nil aout with
+			// result.exitcode > 0 and also aerr non
+			// nil with the subyacent err
+			if aout == nil {
+				aout = base.NewActionOutput(action, aerr.Error(), nil)
+			}
+			aout.Records[0].Fail = true
+			aout.Records[0].Error = aerr
 		}
+
+		// aout is nil on action return nil, nil
 		if aout != nil {
 			for idx := 0; idx < len(aout.Records); idx++ {
 				err := store.Insert(aout.Records[idx], action.Provider)
 				if err != nil {
 					log.Panic(err.Error())
 				}
-			}
-		} else if aerr != nil {
-			aout = base.NewActionOutput(action, nil, nil)
-			aout.Records[0].Fail = true
-			aout.Records[0].Error = aerr
-			aout.Records[0].Value = aerr.Error()
-			err := store.Insert(aout.Records[0], action.Provider)
-			if err != nil {
-				log.Panic(err.Error())
 			}
 		}
 
@@ -1092,6 +1032,35 @@ func (r *Runtime) setRunFunc(actx base.IActionContext) {
 		}
 
 		return aout, aerr
+	})
+}
+
+func (r *Runtime) setDebugInitFunc(actx base.IActionContext) {
+	actx.WithDebugInitFunc(func() {
+		// Pause exec
+		r.Pause()
+
+		// serve debuger
+		dbg := NewDebugger(r)
+		dbg.SetCursor(actx)
+
+		// init detached vpty iface
+		// vpty := nsterm.NewVirtPTY()
+		// vpty.SetLDisc(nsterm.NewRawLdisc())
+
+		must := actx.GetMustarFD()
+		dbg.Detach(must)
+
+		// init debugger as needed
+		if dbg.running {
+			cast.LogInfo("Already running debugger, discarding re-run", r.irb.ExecutionUUID)
+		}
+
+		if r.serverMode {
+			go dbg.Serve()
+		} else {
+			go dbg.Start()
+		}
 	})
 }
 
@@ -1129,12 +1098,6 @@ func (r *Runtime) DispatchCurrentActiveIdsEvent() {
 	cast.PushState(r.GetActiveActionIds(), cast.EventManagerStarted, r.irb.ExecutionUUID)
 }
 
-// WIP: quizás este func pueda inicializar una serie
-// de canales dentro de actionContext, que podrían ser
-// listeneados por el for(select) de stage cuando
-// se llama a HandleAction() en lugar de esperar el
-// return de ese HandleAction(), de ese modo el
-// stage no se quedaría bloqueado
 func (r *Runtime) activateContext(actx base.IActionContext) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -1145,10 +1108,11 @@ func (r *Runtime) activateContext(actx base.IActionContext) {
 	defer r.DispatchCurrentActiveIdsEvent()
 	// r.runningContexts[actx.(*actionContext)] = true
 
-	ev := r.NewEventListener()
+	ev := r.evDispatcher.NewEventListener()
 	actx.WithEventListener(ev)
 	if actx.Type() == base.ContextTypeRegular {
 		r.setRunFunc(actx)
+		r.setDebugInitFunc(actx)
 	}
 
 	action := actx.GetAction()
@@ -1173,7 +1137,7 @@ func (r *Runtime) deactivateContext(actx base.IActionContext) {
 	defer r.DispatchCurrentActiveIdsEvent()
 
 	el := actx.EventListener()
-	delete(r.eventListeners, el)
+	r.evDispatcher.DestroyEventListener(el)
 
 	action := actx.GetAction()
 	if _, exists := r.activeActionIDs[action.ActionID]; exists {
