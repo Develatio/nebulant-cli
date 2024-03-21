@@ -218,7 +218,6 @@ func (p *Puente) cliView(w http.ResponseWriter, r *http.Request, matches [][]str
 }
 
 func (p *Puente) consumerView(w http.ResponseWriter, r *http.Request, matches [][]string) {
-	fmt.Println(matches)
 	cast.LogDebug("test debug messages", nil)
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	if r.Method == "OPTIONS" {
@@ -231,17 +230,15 @@ func (p *Puente) consumerView(w http.ResponseWriter, r *http.Request, matches []
 		return
 	}
 
-	fmt.Println("connecting consumer")
 	cast.LogDebug(fmt.Sprintf("connecting consumer to %s", matches[0][1]), nil)
 	pool, exists := p.pools[matches[0][1]]
 	if !exists {
-		fmt.Println("inexistent token")
+
 		cast.LogDebug(fmt.Sprintf("no token %s", matches[0][1]), nil)
 		http.Error(w, "(╯°□°)╯︵ ɹoɹɹƎ !token", http.StatusForbidden)
 		return
 	}
 
-	fmt.Println("upgrading")
 	var upgrader = websocket.Upgrader{
 		// ReadBufferSize:  MAXREADSIZE,
 		// WriteBufferSize: MAXWRITESIZE,
@@ -253,7 +250,6 @@ func (p *Puente) consumerView(w http.ResponseWriter, r *http.Request, matches []
 		http.Error(w, err.Error(), http.StatusForbidden)
 		return
 	}
-	fmt.Println("upgraded")
 	pool.syncAddConsumer(conn)
 	sp := pool.vpty.NewSluvaPort()
 	pool.vpty.CursorSluva(sp) // forces ldisc to know this new port
@@ -266,4 +262,43 @@ func (p *Puente) consumerView(w http.ResponseWriter, r *http.Request, matches []
 	_, _ = io.Copy(soutfd, wsrw)
 }
 
-func (p *Puente) xtermjsView(w http.ResponseWriter, r *http.Request, matches [][]string) {}
+func (p *Puente) xtermjsView(w http.ResponseWriter, r *http.Request, matches [][]string) {
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != "GET" {
+		cast.LogDebug("HTTPERR NO GET METHOD", nil)
+		http.Error(w, "(╯°□°)╯︵ ɹoɹɹƎ !GET", http.StatusMethodNotAllowed)
+		return
+	}
+	xterm := `<!DOCTYPE html>
+	<html>
+	<head>
+		<title>Nebulant xterm.js</title>
+		<meta charset="UTF-8" />
+		<script src="https://cdn.jsdelivr.net/npm/xterm@latest/lib/xterm.min.js"></script>
+		<link href="https://cdn.jsdelivr.net/npm/xterm@latest/css/xterm.min.css" rel="stylesheet" />
+		<script src="https://cdn.jsdelivr.net/npm/xterm-addon-attach@latest/lib/xterm-addon-attach.min.js"></script>
+	
+		<script>
+			window.onload = function () {
+				const term = new window.Terminal();
+				const socket = new WebSocket("wss://{HOST}/consumer/{TOKEN}");
+				const attachAddon = new AttachAddon.AttachAddon(socket);
+				term.open(document.getElementById("terminal"));
+				term.loadAddon(attachAddon);
+			};
+		</script>
+	</head>
+	<body>
+		<div id="terminal"></div>
+	</body>
+	</html>
+	`
+
+	xterm = strings.Replace(xterm, "{TOKEN}", matches[0][1], 1)
+	xterm = strings.Replace(xterm, "{HOST}", r.Host, 1)
+	w.Write([]byte(xterm))
+}

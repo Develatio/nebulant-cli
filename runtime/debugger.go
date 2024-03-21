@@ -297,7 +297,7 @@ func (d *debugger) Start() {
 	defer term.Restore(int(oSstdin.Fd()), oldState)
 
 	fmt.Fprint(oSstdout, "Starting debugger shell...\r\n")
-	if term.IsTerminal(int(os.Stdout.Fd())) {
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
 		fmt.Fprint(oSstdout, "No terminal detected. Remote debugger system will start. Yo can still press any key to start local shell.\r\n")
 		go d.Serve()
 		go d.ReverseServer()
