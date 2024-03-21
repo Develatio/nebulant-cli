@@ -347,28 +347,24 @@ func (v *VPTY2) SetLDisc(ldisc Ldisc) {
 	}
 
 	mInFD := v.mustar.inFD
-	mInFD.name = "Mustar inFD for ldisc (mustar in_r out_w)"
-
-	// mfd := &PortFD{
-	// 	name: "Mustar FD for ldisc (mustar in_r out_w)",
-	// 	r:    v.mustar.in_r,  // <- v.mustar.in_w
-	// 	w:    v.mustar.out_w, // -> v.mustar.out_r
-	// }
 	sInFD := v.sluva.inFD
-	sInFD.name = "Sluva inFD for ldisc (sluva in_r out_w)"
-	// sfd := &PortFD{
-	// 	name: "Sluva FD for ldisc (sluva in_r out_w)",
-	// 	r:    v.sluva.in_r,
-	// 	w:    v.sluva.out_w,
-	// }
 
-	// ldisc.SetVPTY(v)
+	// notice to ldisc all mustars and sluvas
+	for p := range v.mustars {
+		p.inFD.name = "Mustar inFD for ldisc (mustar in_r out_w)"
+		ldisc.SetMustarFD(p.inFD)
+	}
 
+	for p := range v.sluvas {
+		p.inFD.name = "Sluva inFD for ldisc (sluva in_r out_w)"
+		ldisc.SetSluvaFD(p.inFD)
+	}
+
+	// finally set the current mustar and sluva
 	ldisc.SetMustarFD(mInFD)
 	ldisc.SetSluvaFD(sInFD)
 
 	v.ldisc = ldisc
-	// fmt.Println("setted ldisc")
 }
 
 func (v *VPTY2) GetLDisc() (ldisc Ldisc) {

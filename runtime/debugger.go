@@ -17,17 +17,23 @@
 package runtime
 
 import (
+	"bytes"
+	"crypto/tls"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/creack/pty"
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/cast"
+	"github.com/develatio/nebulant-cli/config"
 	ws "github.com/develatio/nebulant-cli/netproto/websocket"
 	"github.com/develatio/nebulant-cli/nhttpd"
 	"github.com/develatio/nebulant-cli/nsterm"
@@ -102,7 +108,10 @@ func (d *debugger) Detach(actionMFD io.ReadWriteCloser) {
 	go func() {
 		_, _ = io.Copy(actionMFD, sfd)
 		fmt.Println("out of io.Copy(actionMFD, sfd)")
+		sfd.Close()
 	}()
+	fmt.Println("end of detach")
+	ldisc.Close()
 }
 
 func (d *debugger) Attach(clientFD io.ReadWriteCloser, num int) error {
@@ -173,6 +182,108 @@ func (d *debugger) Serve() error {
 	return err
 }
 
+func (d *debugger) reverseCloudServer() error { return nil }
+func (d *debugger) reverseSelfServer() error {
+	addr := strings.ToLower(*config.BridgeAddrFlag)
+	addr, _ = strings.CutPrefix(addr, "ws://")
+	addr, _ = strings.CutPrefix(addr, "http://")
+	addr, _ = strings.CutPrefix(addr, "https://")
+	addr, _ = strings.CutPrefix(addr, "wss://")
+
+	url := url.URL{
+		Scheme: "https",
+		Host:   addr,
+		Path:   "/new",
+	}
+	rawBody, err := json.Marshal(map[string]string{
+		"auth": *config.BridgeSecretFlag,
+	})
+	reqBody := bytes.NewBuffer(rawBody)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", url.String(), reqBody)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	httpcl := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: true,
+		},
+	}}
+	resp, err := httpcl.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode > 399 {
+		return fmt.Errorf("HTTP ERR: status code %v", resp.StatusCode)
+	}
+	rawbody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	newPool := make(map[string]string)
+	if err := json.Unmarshal(rawbody, &newPool); err != nil {
+		return err
+	}
+	if _, exists := newPool["token"]; !exists {
+		return fmt.Errorf("conn err: no token provided")
+	}
+
+	u, err := url.Parse(fmt.Sprintf("wss://%s/cli", addr))
+	if err != nil {
+		return err
+	}
+	u.Scheme = "wss"
+	cast.LogInfo(fmt.Sprintf("Token: %s", newPool["token"]), nil)
+	cast.LogInfo(fmt.Sprintf("Dialing reverse bridge... %s", u.String()), nil)
+
+	headers := make(http.Header)
+	headers.Set("Authorization", fmt.Sprintf("Basic %s", newPool["token"]))
+	dialer := &websocket.Dialer{
+		Proxy:            http.ProxyFromEnvironment,
+		HandshakeTimeout: 45 * time.Second,
+		TLSClientConfig: &tls.Config{
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: true,
+		},
+	}
+	c, _, err := dialer.Dial(u.String(), headers)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	wsrw := ws.NewWebSocketReadWriteCloser(c)
+
+	clnt := &client{
+		conn: nil,
+		dbg:  d,
+		vpty: nsterm.NewVirtPTY(),
+		wsrw: wsrw,
+	}
+
+	clnt.start(len(d.detach) > 0)
+	return nil
+}
+
+func (d *debugger) reverseConnect() error { return nil }
+
+// use bridge
+func (d *debugger) ReverseServer() {
+	if *config.BridgeAddrFlag != "" {
+		// self-hosted bridge
+		err := d.reverseSelfServer()
+		if err != nil {
+			cast.LogErr(err.Error(), nil)
+		}
+		return
+	}
+	d.reverseCloudServer()
+}
+
 // no server mode
 func (d *debugger) Start() {
 	d.running = true
@@ -186,9 +297,10 @@ func (d *debugger) Start() {
 	defer term.Restore(int(oSstdin.Fd()), oldState)
 
 	fmt.Fprint(oSstdout, "Starting debugger shell...\r\n")
-	if !term.IsTerminal(int(os.Stdout.Fd())) {
+	if term.IsTerminal(int(os.Stdout.Fd())) {
 		fmt.Fprint(oSstdout, "No terminal detected. Remote debugger system will start. Yo can still press any key to start local shell.\r\n")
 		go d.Serve()
+		go d.ReverseServer()
 		b := make([]byte, 1)
 		oSstdin.Read(b)
 	}
@@ -740,6 +852,7 @@ func (c *client) start(attach bool) {
 		// only one sluva in vpty after
 		// attach: the original sluva
 		// c.vpty.CursorSluva(...)
+		fmt.Println("out of attach")
 	}
 
 	prmpt := nsterm.NewPrompt(c.vpty, sfd, sfd)

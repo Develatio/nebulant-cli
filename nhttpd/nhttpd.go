@@ -33,6 +33,8 @@ import (
 var server = &Httpd{urls: make(map[*regexp.Regexp]ViewFunc), validOrigins: make(map[string]bool)}
 
 func GetServer() *Httpd {
+	addr := net.JoinHostPort(config.SERVER_ADDR, config.SERVER_PORT)
+	server.addr = addr
 	return server
 }
 
@@ -46,6 +48,18 @@ type Httpd struct {
 	errors       []error
 	consumers    []chan error
 	urls         map[*regexp.Regexp]ViewFunc
+	addr         string
+	certPath     *string
+	keyPath      *string
+}
+
+func (h *Httpd) SetSecure(cert string, key string) {
+	h.certPath = &cert
+	h.keyPath = &key
+}
+
+func (h *Httpd) SetAddr(addr string) {
+	h.addr = addr
 }
 
 func (h *Httpd) AddView(path string, view ViewFunc) {
@@ -141,25 +155,18 @@ func (h *Httpd) ServeIfNot() chan error {
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/", h.route)
 
-	pip := net.ParseIP(config.SERVER_ADDR)
-	if !pip.IsPrivate() && !pip.IsLoopback() {
-		cast.LogWarn("You are using a public ip. Please note that this could result in a security hole!", nil)
-	}
-
-	addr := net.JoinHostPort(config.SERVER_ADDR, config.SERVER_PORT)
-
 	// prevent slowloris DDoS attack (G114)
 	h.srv = &http.Server{
-		Addr:              addr,
+		Addr:              h.addr,
 		ReadHeaderTimeout: 3 * time.Second,
 		Handler:           serveMux,
 	}
-	cast.LogInfo(fmt.Sprintf("Listening on %s", addr), nil)
+	cast.LogInfo(fmt.Sprintf("Listening on %s", h.addr), nil)
 	h.on = true
 	go func() {
 		var err error
-		if len(config.SERVER_CERT) > 0 {
-			err = h.srv.ListenAndServeTLS(config.SERVER_CERT, config.SERVER_KEY)
+		if h.certPath != nil {
+			err = h.srv.ListenAndServeTLS(*h.certPath, *h.keyPath)
 		} else {
 			err = h.srv.ListenAndServe()
 		}
@@ -175,7 +182,7 @@ func (h *Httpd) GetAddr() string {
 	if h.srv != nil {
 		return h.srv.Addr
 	}
-	return ""
+	return h.addr
 }
 
 func (h *Httpd) Shutdown() error {

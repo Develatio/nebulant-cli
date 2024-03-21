@@ -73,6 +73,14 @@ GOEXE=$(shell go env GOEXE)
 runrace:
 	CGO_ENABLED=1 go run -race -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" nebulant.go $(ARGS)
 
+.PHONY: runracebridge
+runracebridge:
+	CGO_ENABLED=1 go run -race -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" ./bridge $(ARGS)
+
+.PHONY: runbridge
+runbridge:
+	CGO_ENABLED=1 go run -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" ./bridge $(ARGS)
+
 .PHONY: run
 run:
 	go run -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" nebulant.go $(ARGS)

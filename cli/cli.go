@@ -58,26 +58,10 @@ func Start() (errcode int) {
 	if sc == "" {
 		sc = "interactive"
 	}
-	if cmd, exists := subsystem.NBLCommands[sc]; exists {
-		// prepare cmd
-		err := subsystem.PrepareCmd(cmd)
-		if err != nil {
-			cast.LogErr(err.Error(), nil)
-			// cast.SBus.Close().Wait()
-			return 1
-		}
-		// finally run command
-		exitcode, err := cmd.Run(flag.CommandLine)
-		if err != nil {
-			cast.LogErr(err.Error(), nil)
-			// cast.SBus.Close().Wait()
-		}
-		return exitcode
-	} else {
-		flag.Usage()
-		cast.LogErr("Unknown command", nil)
-		// cast.SBus.Close().Wait()
-		return 1
-		// os.Exit(1)
+
+	exitcode, err := subsystem.Run(sc)
+	if err != nil {
+		cast.LogErr(err.Error(), nil)
 	}
+	return exitcode
 }

@@ -162,6 +162,8 @@ func ConfArgs(flag *flag.FlagSet) {
 	config.Ipv6Flag = flag.Bool("6", false, "Force ipv6")
 	config.DisableColorFlag = flag.Bool("c", false, "Disable colors.")
 	config.ForceTerm = flag.Bool("ft", false, "Force terminal. Bypass no-term detection.")
+	config.BridgeAddrFlag = flag.String("b", "", "self-hosted bridge addr:port (ipv4) or [::1]:port (ipv6).")
+	config.BridgeSecretFlag = flag.String("bs", config.BRIDGE_SECRET, "self-hosted bridge auth secret string (overrides env NEBULANT_BRIDGE_SECRET).")
 
 	flag.Usage = func() {
 		var runtimecmds []string
@@ -191,5 +193,20 @@ func ConfArgs(flag *flag.FlagSet) {
 		}
 		// fmt.Fprint(flag.Output(), "  readvar\t\t"+term.EmojiSet["Key"]+" Read blueprint variable value during runtime\n")
 		fmt.Fprint(flag.Output(), "\n\nrun nebulant [command] --help to show help for a command\n")
+	}
+}
+
+func Run(sc string) (int, error) {
+	if cmd, exists := NBLCommands[sc]; exists {
+		// prepare cmd
+		err := PrepareCmd(cmd)
+		if err != nil {
+			return 1, err
+		}
+		// finally run command
+		return cmd.Run(flag.CommandLine)
+	} else {
+		flag.Usage()
+		return 1, fmt.Errorf("unknown command")
 	}
 }

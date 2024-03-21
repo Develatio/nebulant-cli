@@ -18,9 +18,13 @@
 
 package interactive
 
-import "fmt"
+import (
+	"fmt"
 
-func Loop() error {
+	"github.com/develatio/nebulant-cli/subsystem"
+)
+
+func Loop(nblc *subsystem.NBLcommand) error {
 	fmt.Println("Not supported")
 	return nil
 }

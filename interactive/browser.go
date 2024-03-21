@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"runtime/debug"
@@ -100,7 +100,7 @@ func httpReq(method string, path string, body interface{}) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	rawbody, err := ioutil.ReadAll(resp.Body)
+	rawbody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func httpReq(method string, path string, body interface{}) ([]byte, error) {
 
 func Browser(nblc *subsystem.NBLcommand) error {
 	if config.CREDENTIAL.AuthToken == nil {
-		return fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token.")
+		return fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token")
 	}
 
 	term.PrintInfo("Looking for collections...\n")

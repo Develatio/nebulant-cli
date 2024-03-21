@@ -17,6 +17,7 @@
 package subcom
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
@@ -24,7 +25,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
+	"time"
 
 	ws "github.com/develatio/nebulant-cli/netproto/websocket"
 	"github.com/develatio/nebulant-cli/subsystem"
@@ -106,24 +107,27 @@ func DebuggerCmd(nblc *subsystem.NBLcommand) (int, error) {
 		fs.Usage()
 		return 1, fmt.Errorf("please, provide addr")
 	}
-	addr = strings.ToLower(addr)
-	addr, _ = strings.CutPrefix(addr, "ws://")
-	addr, _ = strings.CutPrefix(addr, "http://")
-	addr, _ = strings.CutPrefix(addr, "https://")
-	addr, _ = strings.CutPrefix(addr, "wss://")
 
-	u, err := url.Parse(fmt.Sprintf("ws://%s", addr))
+	u, err := url.Parse(addr)
 	if err != nil {
 		fs.Usage()
 		return 1, err
 	}
-	u.Scheme = "ws"
+	// u.Scheme = "wss"
 	// u := url.URL{Scheme: "ws", Host: uu.Host, Path: ""}
 	log.Printf("connecting to %s", u.String())
 
 	// WIP: ver cómo determinar esto
 	headers := make(http.Header)
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), headers)
+	dialer := &websocket.Dialer{
+		Proxy:            http.ProxyFromEnvironment,
+		HandshakeTimeout: 45 * time.Second,
+		TLSClientConfig: &tls.Config{
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: true,
+		},
+	}
+	c, _, err := dialer.Dial(u.String(), headers)
 	if err != nil {
 		return 1, err
 	}

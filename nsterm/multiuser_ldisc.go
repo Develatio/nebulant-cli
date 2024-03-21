@@ -38,10 +38,20 @@ type MultiUserLdisc struct {
 }
 
 func (m *MultiUserLdisc) SetMustarFD(fd io.ReadWriteCloser) {
+	for _, f := range m.mustarFD {
+		if f == fd {
+			return
+		}
+	}
 	m.mustarFD = append(m.mustarFD, fd)
 }
 
 func (m *MultiUserLdisc) SetSluvaFD(fd io.ReadWriteCloser) {
+	for _, f := range m.sluvaFD {
+		if f == fd {
+			return
+		}
+	}
 	m.sluvaFD = append(m.sluvaFD, fd)
 }
 

@@ -96,6 +96,15 @@ var SERVER_CERT = ""
 // Server key file path
 var SERVER_KEY = ""
 
+// Bridge addr
+var BRIDGE_ADDR = ""
+
+// Bridge port
+var BRIDGE_PORT = "16789"
+
+// Bridge secret
+var BRIDGE_SECRET = os.Getenv("NEBULANT_BRIDGE_SECRET")
+
 // AssetDescriptorURL conf
 var AssetDescriptorURL = "https://builder-assets.nebulant.io/assets.json"
 
@@ -106,6 +115,7 @@ var UpdateDescriptorURL string = "https://releases.nebulant.io/version.json"
 
 var ServerModeFlag *bool
 var AddrFlag *string
+var BridgeAddrFlag *string
 var VersionFlag *bool
 var DebugFlag *bool
 var ParanoicDebugFlag *bool
@@ -117,6 +127,11 @@ var LookupAssetFlag *string
 var ForceTerm *bool
 var BuildAssetIndexFlag *string
 var ForceUpgradeAssetsNoDownloadFlag *bool
+var BridgeSecretFlag *string
+var BridgeOriginFlag *string
+
+var BridgeCertPathFlag *string
+var BridgeKeyPathFlag *string
 
 var ForceNoTerm = false
 
