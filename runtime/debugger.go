@@ -123,9 +123,6 @@ func (d *debugger) Attach(clientFD io.ReadWriteCloser, num int) error {
 	}
 	vpty := d.detach[num]
 
-	// ldisc := vpty.GetLDisc()
-	// ldisc.(*nsterm.MultiUserLdisc).AddUser(clientFD)
-
 	nmp := vpty.NewMustarPort()
 	// this is a multiuser ldisc, doing a cursor
 	// forces ldisc to know this port

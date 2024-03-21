@@ -17,57 +17,64 @@
 package nsterm
 
 import (
+	"fmt"
 	"io"
 )
 
 func NewMultiUserLdisc() *MultiUserLdisc {
-	return &MultiUserLdisc{users: make(map[io.ReadWriteCloser]bool)}
+	return &MultiUserLdisc{
+		mustarFD: make(map[io.ReadWriteCloser]bool),
+		sluvaFD:  make(map[io.ReadWriteCloser]bool),
+	}
 }
 
 type MultiUserLdisc struct {
 	// internal mustar
-	mustarFD []io.ReadWriteCloser
+	mustarFD map[io.ReadWriteCloser]bool
 	// internal sluva
-	sluvaFD []io.ReadWriteCloser
+	sluvaFD map[io.ReadWriteCloser]bool
 	// a map of sluvas to write from mustarFD
-	users map[io.ReadWriteCloser]bool
-	errs  []error
+	errs             []error
+	MustarWriteCount int
+	MustarReadCount  int
 
 	// mustaropen bool
 	// sluvaopen  bool
 }
 
 func (m *MultiUserLdisc) SetMustarFD(fd io.ReadWriteCloser) {
-	for _, f := range m.mustarFD {
-		if f == fd {
-			return
-		}
+	if _, exists := m.mustarFD[fd]; exists {
+		return
 	}
-	m.mustarFD = append(m.mustarFD, fd)
+	m.mustarFD[fd] = true
 }
 
 func (m *MultiUserLdisc) SetSluvaFD(fd io.ReadWriteCloser) {
-	for _, f := range m.sluvaFD {
-		if f == fd {
-			return
-		}
+	if _, exists := m.sluvaFD[fd]; exists {
+		return
 	}
-	m.sluvaFD = append(m.sluvaFD, fd)
+	m.sluvaFD[fd] = true
 }
 
 func (m *MultiUserLdisc) ReceiveMustarBuff(n int, mInFD *PortFD) {
-	// fmt.Println("receive mustar ", mInFD)
+	// m.MustarReadCount = m.MustarReadCount + n
 	p := make([]byte, n)
 	_, err := mInFD.Read(p)
 	if err != nil {
 		m.errs = append(m.errs, err)
 	}
-	for _, slv := range m.sluvaFD {
+	for slv := range m.sluvaFD {
+		// m.MustarWriteCount = m.MustarWriteCount + n
 		_, err := slv.Write(p)
 		if err != nil {
+			slv.Close()
+			delete(m.sluvaFD, slv) // gtfo
+			fmt.Println("Deleting sluva")
 			m.errs = append(m.errs, err)
 		}
 	}
+	fmt.Printf("Sluva count: %v\n", len(m.sluvaFD))
+	// fmt.Printf("mustar r: %v w: %v\n", m.MustarReadCount, m.MustarWriteCount)
 }
 
 func (m *MultiUserLdisc) ReceiveSluvaBuff(n int, sInFD *PortFD) {
@@ -77,20 +84,14 @@ func (m *MultiUserLdisc) ReceiveSluvaBuff(n int, sInFD *PortFD) {
 	if err != nil {
 		m.errs = append(m.errs, err)
 	}
-	for _, mst := range m.mustarFD {
+	for mst := range m.mustarFD {
 		_, err := mst.Write(p)
 		if err != nil {
-			m.errs = append(m.errs, err)
+			mst.Close()
+			m.errs = append(m.errs, err) // gtfo
+			delete(m.mustarFD, mst)
 		}
 	}
-}
-
-func (m *MultiUserLdisc) AddUser(fd io.ReadWriteCloser) {
-	m.users[fd] = true
-}
-
-func (m *MultiUserLdisc) DelUser(fd io.ReadWriteCloser) {
-	delete(m.users, fd)
 }
 
 // NOOP

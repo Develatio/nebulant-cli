@@ -22,8 +22,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
@@ -36,6 +38,21 @@ import (
 var Bridge *Puente = &Puente{pools: make(map[string]*pool)}
 
 func Serve() error {
+	go func() {
+		for {
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+			cast.LogInfo(fmt.Sprintf("Alloc: %v MiB\tHeapInuse: %v MiB\tFrees: %v MiB\tSys: %v MiB\tNumGC: %v", m.Alloc/1024/1024, m.HeapInuse/1024/1024, m.Frees/1024/1024, m.Sys/1024/1024, m.NumGC), nil)
+			pools := 0
+			consumers := 0
+			for _, p := range Bridge.pools {
+				pools++
+				consumers = consumers + len(p.consumerConn)
+			}
+			cast.LogInfo(fmt.Sprintf("Pools: %v\tConsumers: %v", pools, consumers), nil)
+			time.Sleep(1 * time.Second)
+		}
+	}()
 	Bridge.secret = *config.BridgeSecretFlag
 	srv := nhttpd.GetServer()
 	addr := config.BridgeAddrFlag
@@ -76,13 +93,19 @@ type pool struct {
 	token        string
 	cliConn      *websocket.Conn
 	vpty         *nsterm.VPTY2
-	consumerConn []*websocket.Conn
+	consumerConn map[*websocket.Conn]bool
 }
 
 func (p *pool) syncAddConsumer(conn *websocket.Conn) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.consumerConn = append(p.consumerConn, conn)
+	p.consumerConn[conn] = true
+}
+
+func (p *pool) syncDeleteConsumer(conn *websocket.Conn) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	delete(p.consumerConn, conn)
 }
 
 type Puente struct {
@@ -137,8 +160,9 @@ func (p *Puente) newView(w http.ResponseWriter, r *http.Request, matches [][]str
 	token := base64.StdEncoding.EncodeToString([]byte(b))
 
 	newpool := &pool{
-		token: token,
-		vpty:  nsterm.NewVirtPTY(),
+		token:        token,
+		vpty:         nsterm.NewVirtPTY(),
+		consumerConn: make(map[*websocket.Conn]bool),
 	}
 	newpool.vpty.SetLDisc(nsterm.NewMultiUserLdisc())
 	p.syncAddPool(newpool)
@@ -218,7 +242,6 @@ func (p *Puente) cliView(w http.ResponseWriter, r *http.Request, matches [][]str
 }
 
 func (p *Puente) consumerView(w http.ResponseWriter, r *http.Request, matches [][]string) {
-	cast.LogDebug("test debug messages", nil)
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -260,6 +283,9 @@ func (p *Puente) consumerView(w http.ResponseWriter, r *http.Request, matches []
 		soutfd.Close()
 	}()
 	_, _ = io.Copy(soutfd, wsrw)
+	conn.Close()
+	pool.syncDeleteConsumer(conn)
+	pool.vpty.DestroyPort(sp)
 }
 
 func (p *Puente) xtermjsView(w http.ResponseWriter, r *http.Request, matches [][]string) {

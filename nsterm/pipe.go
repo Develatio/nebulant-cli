@@ -19,6 +19,7 @@ package nsterm
 import (
 	"fmt"
 	"io"
+	"time"
 )
 
 var ErrClosedPipe = io.ErrClosedPipe
@@ -35,11 +36,40 @@ func (pp *pipe) Write(p []byte) (n int, err error) {
 	if pp.closed {
 		return 0, fmt.Errorf("Write to closed pipe")
 	}
-	pp.buff <- p
+
+	// buffsize := len(pp.buff)
+	// fmt.Printf("Write: %v, Buff: %v\n", len(p), buffsize)
+
+	sent := false
+	failcount := 0
+	for !sent {
+		select {
+		// TODO: WARNING
+		// race condition here, chan could be closed
+		// just before this line
+		case pp.buff <- p:
+			sent = true
+		default:
+			if failcount == 10 {
+				return 0, io.ErrShortBuffer
+			}
+			// TODO: close after some err count to
+			// handle buffer overflow
+			if pp.closed {
+				return 0, io.ErrClosedPipe
+			}
+			time.Sleep(100 * time.Millisecond)
+			failcount++
+		}
+	}
+
 	return len(p), nil
 }
 
 func (pp *pipe) Close() error {
+	if pp.closed {
+		return io.ErrClosedPipe
+	}
 	pp.closed = true
 	close(pp.buff)
 	return nil
@@ -83,7 +113,7 @@ func (pp *pipe) Read(p []byte) (n int, err error) {
 func NewPipe() (io.ReadCloser, io.WriteCloser) {
 	pp := &pipe{
 		// done:   make(chan struct{}),
-		buff:   make(chan []byte, 250),
+		buff:   make(chan []byte, 4096),
 		remain: make(chan []byte, 1),
 	}
 	return pp, pp
