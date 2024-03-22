@@ -239,6 +239,8 @@ func (p *Puente) cliView(w http.ResponseWriter, r *http.Request, matches [][]str
 	}()
 	cast.LogInfo("CLI connected", nil)
 	_, _ = io.Copy(moutfd, wsrw)
+	pool.vpty.Close()
+	delete(p.pools, token)
 }
 
 func (p *Puente) consumerView(w http.ResponseWriter, r *http.Request, matches [][]string) {
@@ -279,11 +281,11 @@ func (p *Puente) consumerView(w http.ResponseWriter, r *http.Request, matches []
 	soutfd := sp.OutFD()
 	wsrw := ws.NewWebSocketReadWriteCloser(conn)
 	go func() {
-		_, _ = io.Copy(wsrw, soutfd)
-		soutfd.Close()
+		_, _ = io.Copy(soutfd, wsrw)
 	}()
-	_, _ = io.Copy(soutfd, wsrw)
-	conn.Close()
+	_, _ = io.Copy(wsrw, soutfd)
+	wsrw.Close()
+	cast.LogDebug("Consumer out", nil)
 	pool.syncDeleteConsumer(conn)
 	pool.vpty.DestroyPort(sp)
 }

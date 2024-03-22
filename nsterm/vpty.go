@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 )
 
 func NewFD(name string, r io.ReadCloser, w io.WriteCloser) io.ReadWriteCloser {
@@ -193,6 +194,7 @@ func (p *Port) OutFD() *PortFD {
 type VPTY2 struct {
 	// in theory, sluva should translate in/out
 	// sluva represent a port, pair of pipes
+	mu      sync.Mutex
 	sluva   *Port
 	ldisc   Ldisc
 	mustar  *Port
@@ -262,6 +264,8 @@ func (v *VPTY2) _newTickerPort() *Port {
 // NewSluvaPort create new sluva port, it
 // will stored
 func (v *VPTY2) NewSluvaPort() *Port {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 	port := v._newTickerPort()
 	port.outFD.w.(*WriteCloserTicker).ticker = v.sluvaWriteTick
 	port.inFD.name = "Sluva inFD for ldisc (sluva in_r out_w)"
@@ -274,6 +278,8 @@ func (v *VPTY2) NewSluvaPort() *Port {
 }
 
 func (v *VPTY2) NewMustarPort() *Port {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 	port := v._newTickerPort()
 	port.outFD.w.(*WriteCloserTicker).ticker = v.mustarWriteTick
 	port.inFD.name = "Mustar inFD for ldisc (mustar in_r out_w)"
@@ -303,6 +309,8 @@ func (v *VPTY2) CursorSluva(p *Port) error {
 }
 
 func (v *VPTY2) CursorMustar(p *Port) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 	if _, exists := v.mustars[p]; !exists {
 		return fmt.Errorf("unknown port")
 	}
@@ -312,6 +320,8 @@ func (v *VPTY2) CursorMustar(p *Port) error {
 }
 
 func (v *VPTY2) DestroyPort(p *Port) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 	var portset map[*Port]bool
 	var pport **Port
 	if _, exists := v.mustars[p]; exists {
@@ -339,6 +349,8 @@ func (v *VPTY2) DestroyPort(p *Port) error {
 }
 
 func (v *VPTY2) SetLDisc(ldisc Ldisc) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 	if v.ldisc != nil {
 		err := v.ldisc.Close()
 		if err != nil {
@@ -396,6 +408,20 @@ func (v *VPTY2) MustarFD() *PortFD {
 	// 	r:    v.mustar.out_r, // <- v.mustar.out_w
 	// 	w:    v.mustar.in_w,  // -> v.mustar.in_r
 	// }
+}
+
+func (v *VPTY2) Close() error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	for slv := range v.sluvas {
+		slv.inFD.Close()
+		slv.outFD.Close()
+	}
+	for mst := range v.mustars {
+		mst.inFD.Close()
+		mst.outFD.Close()
+	}
+	return v.ldisc.Close()
 }
 
 // func (v *VPTY2) addErr(err error) {

@@ -108,5 +108,13 @@ func (m *MultiUserLdisc) IOctl() {
 }
 
 func (m *MultiUserLdisc) Close() error {
+	for mst := range m.mustarFD {
+		mst.Close()
+	}
+	for slv := range m.sluvaFD {
+		slv.Close()
+	}
+	m.mustarFD = make(map[io.ReadWriteCloser]bool)
+	m.sluvaFD = make(map[io.ReadWriteCloser]bool)
 	return nil
 }

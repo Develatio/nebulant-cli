@@ -17,6 +17,8 @@
 package ws
 
 import (
+	"errors"
+	"fmt"
 	"io"
 
 	"github.com/gorilla/websocket"
@@ -33,6 +35,7 @@ type WebSocketReadWriteCloser struct {
 	rr    io.Reader
 	ww    io.WriteCloser
 	close bool
+	err   error
 }
 
 func (w *WebSocketReadWriteCloser) Write(p []byte) (n int, err error) {
@@ -50,12 +53,24 @@ func (w *WebSocketReadWriteCloser) Close() error {
 }
 
 func (w *WebSocketReadWriteCloser) Read(p []byte) (n int, err error) {
+	if w.close {
+		return 0, errors.Join(w.err, fmt.Errorf("reading on closed socket"))
+	}
 	for {
 		if w.rr == nil {
 			// start new nextreader
+			// from doc: Applications must break out of the
+			// application's read loop when this method returns
+			// a non-nil error value. Errors returned from this
+			// method are permanent. Once this method returns a
+			// non-nil error, all subsequent calls to this method
+			// return the same error.
 			mt, rr, err := w.conn.NextReader()
 			if err != nil {
-				return 0, err
+				err2 := w.conn.Close()
+				w.close = true
+				w.err = errors.Join(err, err2)
+				return 0, w.err
 			}
 			switch mt {
 			case websocket.CloseMessage:

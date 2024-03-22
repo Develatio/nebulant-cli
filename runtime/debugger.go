@@ -104,14 +104,14 @@ func (d *debugger) Detach(actionMFD io.ReadWriteCloser) {
 		_, _ = io.Copy(sfd, actionMFD)
 		fmt.Println("out of io.Copy(sfd, actionMFD)")
 		mfd.Close()
+		vpty.Close()
 	}()
 	go func() {
 		_, _ = io.Copy(actionMFD, sfd)
 		fmt.Println("out of io.Copy(actionMFD, sfd)")
 		sfd.Close()
+		vpty.Close()
 	}()
-	fmt.Println("end of detach")
-	ldisc.Close()
 }
 
 func (d *debugger) Attach(clientFD io.ReadWriteCloser, num int) error {
