@@ -22,8 +22,9 @@ import (
 	"github.com/develatio/nebulant-cli/blueprint"
 )
 
-type ContextType int
 type ActionContextRunStatus int
+
+type ContextType int
 
 const (
 	ContextTypeRegular ContextType = iota // one parent, one child

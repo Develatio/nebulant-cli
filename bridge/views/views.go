@@ -146,8 +146,13 @@ func (p *Puente) newView(w http.ResponseWriter, r *http.Request, matches [][]str
 		return
 	}
 
-	if inBody.Auth != p.secret {
+	if inBody.Auth == "" {
 		http.Error(w, "(╯°□°)╯︵ ɹoɹɹƎ !Auth", http.StatusForbidden)
+		return
+	}
+
+	if inBody.Auth != p.secret {
+		http.Error(w, "(╯°□°)╯︵ ɹoɹɹƎ !!Auth", http.StatusForbidden)
 		return
 	}
 
@@ -258,7 +263,6 @@ func (p *Puente) consumerView(w http.ResponseWriter, r *http.Request, matches []
 	cast.LogDebug(fmt.Sprintf("connecting consumer to %s", matches[0][1]), nil)
 	pool, exists := p.pools[matches[0][1]]
 	if !exists {
-
 		cast.LogDebug(fmt.Sprintf("no token %s", matches[0][1]), nil)
 		http.Error(w, "(╯°□°)╯︵ ɹoɹɹƎ !token", http.StatusForbidden)
 		return

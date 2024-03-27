@@ -23,10 +23,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -47,6 +49,18 @@ var debuggers map[*Runtime]*debugger = make(map[*Runtime]*debugger)
 
 var MAXWRITESIZE = 1024
 var MAXREADSIZE = 1024
+
+// TODO: merge with interactive.browser
+// serializers and move to common path
+type newBridgePoolSerializer struct {
+	Token       string `json:"token"`
+	Scheme      string `json:"scheme"`
+	Host        string `json:"host"`
+	Port        int    `json:"port"`
+	ConsumerUrl string `json:"consumer_url"`
+	XtermUrl    string `json:"xterm_url"`
+	CliUrl      string `json:"cli_url"`
+}
 
 // Newdebugger func
 func NewDebugger(r *Runtime) *debugger {
@@ -179,19 +193,107 @@ func (d *debugger) Serve() error {
 	return err
 }
 
-func (d *debugger) reverseCloudServer() error { return nil }
-func (d *debugger) reverseSelfServer() error {
-	addr := strings.ToLower(*config.BridgeAddrFlag)
-	addr, _ = strings.CutPrefix(addr, "ws://")
-	addr, _ = strings.CutPrefix(addr, "http://")
-	addr, _ = strings.CutPrefix(addr, "https://")
-	addr, _ = strings.CutPrefix(addr, "wss://")
+func (d *debugger) _bridgeConnect(u *url.URL, token string) error {
+	if u.Scheme == "https" {
+		u.Scheme = "wss"
+	} else if u.Scheme == "http" {
+		u.Scheme = "ws"
+	} // else: malformed url on Dial
+	// u.Path = u.Path + "/cli"
 
-	url := url.URL{
-		Scheme: "https",
-		Host:   addr,
-		Path:   "/new",
+	cast.LogInfo(fmt.Sprintf("Token: %s", token), nil)
+	cast.LogInfo(fmt.Sprintf("Dialing reverse bridge... %s", u.String()), nil)
+
+	headers := make(http.Header)
+	headers.Set("Authorization", fmt.Sprintf("Basic %s", token))
+	dialer := &websocket.Dialer{
+		Proxy:            http.ProxyFromEnvironment,
+		HandshakeTimeout: 45 * time.Second,
+		TLSClientConfig: &tls.Config{
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: true,
+		},
 	}
+	c, _, err := dialer.Dial(u.String(), headers)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	wsrw := ws.NewWebSocketReadWriteCloser(c)
+
+	clnt := &client{
+		conn: nil,
+		dbg:  d,
+		vpty: nsterm.NewVirtPTY(),
+		wsrw: wsrw,
+	}
+
+	clnt.start(len(d.detach) > 0)
+	return nil
+}
+
+func (d *debugger) reverseCloudServer() error {
+	url := url.URL{
+		Scheme: config.BackendProto,
+		Host:   config.BackendURLDomain,
+		Path:   "v1/bridge/new/",
+	}
+	req, err := http.NewRequest("GET", url.String(), nil)
+	if err != nil {
+		return err
+	}
+	jar, err := config.Login(nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Jar: jar}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	rawbody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode > 399 {
+		fmt.Println()
+		return fmt.Errorf(strconv.Itoa(resp.StatusCode) + " server error: " + string(rawbody))
+	}
+
+	newp := &newBridgePoolSerializer{}
+	if err := json.Unmarshal(rawbody, newp); err != nil {
+		return err
+	}
+
+	url.Host = net.JoinHostPort(newp.Host, strconv.Itoa(newp.Port))
+	url.Path = newp.CliUrl
+	return d._bridgeConnect(&url, newp.Token)
+}
+
+func (d *debugger) reverseSelfServer() error {
+	u, err := url.Parse(*config.BridgeAddrFlag)
+	if err != nil {
+		return err
+	}
+	if u.Host == "" {
+		h, p, err := net.SplitHostPort(*config.BridgeAddrFlag)
+		if err != nil {
+			return err
+		}
+		u.Scheme = "https"
+		u.Host = net.JoinHostPort(h, p)
+	}
+	_, _, err = net.SplitHostPort(u.Host)
+	if err != nil {
+		return err
+	}
+	if u.Path == "" {
+		u.Path = "/new"
+	}
+
 	rawBody, err := json.Marshal(map[string]string{
 		"auth": *config.BridgeSecretFlag,
 	})
@@ -199,7 +301,7 @@ func (d *debugger) reverseSelfServer() error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", url.String(), reqBody)
+	req, err := http.NewRequest("POST", u.String(), reqBody)
 	if err != nil {
 		return err
 	}
@@ -230,40 +332,8 @@ func (d *debugger) reverseSelfServer() error {
 		return fmt.Errorf("conn err: no token provided")
 	}
 
-	u, err := url.Parse(fmt.Sprintf("wss://%s/cli", addr))
-	if err != nil {
-		return err
-	}
-	u.Scheme = "wss"
-	cast.LogInfo(fmt.Sprintf("Token: %s", newPool["token"]), nil)
-	cast.LogInfo(fmt.Sprintf("Dialing reverse bridge... %s", u.String()), nil)
-
-	headers := make(http.Header)
-	headers.Set("Authorization", fmt.Sprintf("Basic %s", newPool["token"]))
-	dialer := &websocket.Dialer{
-		Proxy:            http.ProxyFromEnvironment,
-		HandshakeTimeout: 45 * time.Second,
-		TLSClientConfig: &tls.Config{
-			MinVersion:         tls.VersionTLS12,
-			InsecureSkipVerify: true,
-		},
-	}
-	c, _, err := dialer.Dial(u.String(), headers)
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-	wsrw := ws.NewWebSocketReadWriteCloser(c)
-
-	clnt := &client{
-		conn: nil,
-		dbg:  d,
-		vpty: nsterm.NewVirtPTY(),
-		wsrw: wsrw,
-	}
-
-	clnt.start(len(d.detach) > 0)
-	return nil
+	u.Path = "/cli"
+	return d._bridgeConnect(u, newPool["token"])
 }
 
 func (d *debugger) reverseConnect() error { return nil }
@@ -278,7 +348,10 @@ func (d *debugger) ReverseServer() {
 		}
 		return
 	}
-	d.reverseCloudServer()
+	err := d.reverseCloudServer()
+	if err != nil {
+		cast.LogErr(err.Error(), nil)
+	}
 }
 
 // no server mode

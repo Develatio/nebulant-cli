@@ -72,11 +72,13 @@ type resultsBlueprint struct {
 	Results []*blueprintSerializer `json:"results"`
 }
 
+// TODO: move to common, this code is duplicated in
+// runtime/debugger.go
 func httpReq(method string, path string, body interface{}) ([]byte, error) {
 	url := url.URL{
 		Scheme: config.BackendProto,
 		Host:   config.BackendURLDomain,
-		Path:   "/apiv1/" + path,
+		Path:   "/v1/" + path,
 	}
 	rawBody, err := json.Marshal(body)
 	if err != nil {
@@ -117,7 +119,7 @@ func Browser(nblc *subsystem.NBLcommand) error {
 	}
 
 	term.PrintInfo("Looking for collections...\n")
-	data, err := httpReq("GET", "authx/me/", nil)
+	data, err := httpReq("GET", "me/", nil)
 	if err != nil {
 		return err
 	}
