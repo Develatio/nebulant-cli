@@ -795,6 +795,10 @@ type Runtime struct {
 	savedActionOutputs []*base.ActionOutput
 }
 
+func (r *Runtime) IsServerMode() bool {
+	return r.serverMode
+}
+
 func (r *Runtime) saveActionOutput(aout *base.ActionOutput) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -949,11 +953,9 @@ func (r *Runtime) _setRunDebugFunc(actx base.IActionContext) {
 			return nil, nil
 		}
 
-		if r.serverMode {
-			go dbg.Serve()
-		} else {
-			go dbg.Start()
-		}
+		// this Start func calls this.IsServerMode
+		// to start in local shell or in server mode
+		go dbg.Start()
 
 		// WIP: el server para debug puede activarse
 		// por comando, por lo que aquí debería comprobarse
@@ -1056,11 +1058,9 @@ func (r *Runtime) setDebugInitFunc(actx base.IActionContext) {
 			cast.LogInfo("Already running debugger, discarding re-run", r.irb.ExecutionUUID)
 		}
 
-		if r.serverMode {
-			go dbg.Serve()
-		} else {
-			go dbg.Start()
-		}
+		// this Start func calls this.IsServerMode
+		// to start in local shell or in server mode
+		go dbg.Start()
 	})
 }
 

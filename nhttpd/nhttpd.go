@@ -107,6 +107,11 @@ func (h *Httpd) ValidateOrigin(r *http.Request) bool {
 func (h *Httpd) httpMiddleware(w http.ResponseWriter, r *http.Request) error {
 	if !h.ValidateOrigin(r) {
 		w.WriteHeader(http.StatusBadRequest)
+		// The Nebulant Bridge keeps retring the
+		// connection. This is a problem when a
+		// debug server is up without server
+		// mode on because this err is displaying
+		// every
 		return fmt.Errorf("bad Origin")
 	}
 	surl := r.Header.Get("Origin")
@@ -165,15 +170,26 @@ func (h *Httpd) ServeIfNot() chan error {
 	h.on = true
 	go func() {
 		var err error
-		if h.certPath != nil {
-			err = h.srv.ListenAndServeTLS(*h.certPath, *h.keyPath)
-		} else {
-			err = h.srv.ListenAndServe()
+		defer h.Shutdown()
+
+		// TLS Server
+		if h.certPath != nil && *h.certPath != "" {
+			if h.keyPath == nil || *h.keyPath == "" {
+				h.errors = append(h.errors, fmt.Errorf("TLS server err: empty key path"))
+				return
+			}
+			if err = h.srv.ListenAndServeTLS(*h.certPath, *h.keyPath); err != nil {
+				err = errors.Join(fmt.Errorf("TLS server err. cert path: %s", *h.certPath), err)
+				h.errors = append(h.errors, err)
+			}
+			return
 		}
-		if err != nil {
+
+		// Insecure Server
+		err = h.srv.ListenAndServe()
+		if err = errors.Join(fmt.Errorf("server err"), err); err != nil {
 			h.errors = append(h.errors, err)
 		}
-		h.Shutdown()
 	}()
 	return consumer
 }

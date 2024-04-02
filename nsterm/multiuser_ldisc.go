@@ -73,7 +73,7 @@ func (m *MultiUserLdisc) ReceiveMustarBuff(n int, mInFD *PortFD) {
 			m.errs = append(m.errs, err)
 		}
 	}
-	fmt.Printf("Sluva count: %v\n", len(m.sluvaFD))
+	// fmt.Printf("Sluva count: %v\n", len(m.sluvaFD))
 	// fmt.Printf("mustar r: %v w: %v\n", m.MustarReadCount, m.MustarWriteCount)
 }
 

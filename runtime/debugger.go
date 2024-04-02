@@ -53,13 +53,14 @@ var MAXREADSIZE = 1024
 // TODO: merge with interactive.browser
 // serializers and move to common path
 type newBridgePoolSerializer struct {
-	Token       string `json:"token"`
-	Scheme      string `json:"scheme"`
-	Host        string `json:"host"`
-	Port        int    `json:"port"`
-	ConsumerUrl string `json:"consumer_url"`
-	XtermUrl    string `json:"xterm_url"`
-	CliUrl      string `json:"cli_url"`
+	Token        string `json:"token"`
+	Scheme       string `json:"scheme"`
+	Host         string `json:"host"`
+	Port         int    `json:"port"`
+	ConsumerPath string `json:"consumer_url"`
+	XtermPath    string `json:"xterm_url"`
+	CliPath      string `json:"cli_url"`
+	cliURL       *url.URL
 }
 
 // Newdebugger func
@@ -103,6 +104,18 @@ type debugger struct {
 	qq       chan *client
 	stop     chan struct{}
 	close    chan error
+}
+
+func (d *debugger) l(msg string) {
+	cast.LogInfo(fmt.Sprintf("DBG: %s", msg), d.runtime.irb.ExecutionUUID)
+}
+
+func (d *debugger) le(msg string) {
+	cast.LogErr(fmt.Sprintf("DBG: %s", msg), d.runtime.irb.ExecutionUUID)
+}
+
+func (d *debugger) lw(msg string) {
+	cast.LogWarn(fmt.Sprintf("DBG: %s", msg), d.runtime.irb.ExecutionUUID)
 }
 
 func (d *debugger) Detach(actionMFD io.ReadWriteCloser) {
@@ -169,7 +182,64 @@ func (d *debugger) Attach(clientFD io.ReadWriteCloser, num int) error {
 	return nil
 }
 
-func (d *debugger) Serve() error {
+func (d *debugger) printDebugBannerStart() {
+	tit := "debug session START event"
+	fill := strings.Repeat("/", (80-len(tit))/2)
+	d.l(fmt.Sprintf("%s %s %s", fill, tit, fill))
+}
+func (d *debugger) printDebugBannerEnd() {
+	d.l(strings.Repeat("\\", 80))
+	d.l("debug session END event")
+	d.l(strings.Repeat("\\", 80))
+}
+
+func (d *debugger) Start() {
+	d.printDebugBannerStart()
+	if d.runtime.IsServerMode() {
+		d.l("Starting debugger in server mode...")
+		d.startServerMode(make(chan struct{}))
+	} else {
+		d.l("Starting debugger in local shell...")
+		// this could still start server mode
+		// if term.IsTerminal returns false
+		d.startLocalTermMode()
+	}
+	d.printDebugBannerEnd()
+}
+
+// no server mode
+func (d *debugger) startLocalTermMode() {
+	d.running = true
+	oSstdin := nebulant_term.GenuineOsStdin
+
+	oldState, err := term.MakeRaw(int(oSstdin.Fd()))
+	if err != nil {
+		panic(err)
+	}
+	defer term.Restore(int(oSstdin.Fd()), oldState)
+
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		d.lw("No terminal detected. Remote debugger system will start. You can still press any key to start local shell")
+		started := make(chan struct{})
+		go d.startServerMode(started)
+		<-started
+		go d.ReverseServer()
+		b := make([]byte, 1)
+		oSstdin.Read(b)
+	}
+
+	lfd := nsterm.NewFD("local term", nebulant_term.GenuineOsStdin, nebulant_term.GenuineOsStdout)
+	clnt := &client{
+		conn: nil,
+		dbg:  d,
+		vpty: nsterm.NewVirtPTY(),
+		wsrw: lfd,
+	}
+	d.lclient = clnt
+	clnt.start(len(d.detach) > 0)
+}
+
+func (d *debugger) startServerMode(started chan struct{}) error {
 	d.running = true
 	d.remote = true
 	// TODO: lookup for available port
@@ -181,7 +251,9 @@ func (d *debugger) Serve() error {
 	srv := nhttpd.GetServer()
 	srv.AddView(`/debugger/`+*id, d.debuggerView)
 	d.close = srv.ServeIfNot()
-	cast.LogInfo(fmt.Sprintf("New debugger started at %s/debugger/%s", srv.GetAddr(), *id), d.runtime.irb.ExecutionUUID)
+	d.l(fmt.Sprintf("New local debugger started at address %s/debugger/%s", srv.GetAddr(), *id))
+	d.l("Use `nebulant-cli debugger <debug address>` to get attached to debug session")
+	started <- struct{}{}
 	err := <-d.close
 	d.remote = false
 	// WIP: una forma de apagar el server aquí, del mismo
@@ -189,11 +261,13 @@ func (d *debugger) Serve() error {
 	// ServeIfNot devuelve un "subscription" que se pasa
 	// al cerrar, o quzás si ServeIfNot cuenta los arranques
 	// y los a pagados, cuando sea 0, se apaga
-	cast.LogInfo("Remote debugger out", d.runtime.irb.ExecutionUUID)
+	d.l("Remote debugger out")
 	return err
 }
 
-func (d *debugger) _bridgeConnect(u *url.URL, token string) error {
+func (d *debugger) _bridgeConnect(newp *newBridgePoolSerializer) error {
+	u := newp.cliURL
+	token := newp.Token
 	if u.Scheme == "https" {
 		u.Scheme = "wss"
 	} else if u.Scheme == "http" {
@@ -201,8 +275,8 @@ func (d *debugger) _bridgeConnect(u *url.URL, token string) error {
 	} // else: malformed url on Dial
 	// u.Path = u.Path + "/cli"
 
-	cast.LogInfo(fmt.Sprintf("Token: %s", token), nil)
-	cast.LogInfo(fmt.Sprintf("Dialing reverse bridge... %s", u.String()), nil)
+	d.l(fmt.Sprintf("Remote debug session token: %s", token))
+	d.l(fmt.Sprintf("Dialing the bridge... %s", u.String()))
 
 	headers := make(http.Header)
 	headers.Set("Authorization", fmt.Sprintf("Basic %s", token))
@@ -228,12 +302,25 @@ func (d *debugger) _bridgeConnect(u *url.URL, token string) error {
 		wsrw: wsrw,
 	}
 
+	d.l("Connection to the bridge stablished")
+	d.l("Now you can connect to the debug session using the cli or a web browser:")
+	u.Path = newp.ConsumerPath
+	d.l(fmt.Sprintf("With cli: ./nebulant debugger %s", u.String()))
+
+	u.Path = newp.XtermPath
+	if u.Scheme == "wss" {
+		u.Scheme = "https"
+	} else {
+		u.Scheme = "http"
+	}
+	d.l(fmt.Sprintf("With web browser: %s", u.String()))
+
 	clnt.start(len(d.detach) > 0)
 	return nil
 }
 
 func (d *debugger) reverseCloudServer() error {
-	url := url.URL{
+	url := &url.URL{
 		Scheme: config.BackendProto,
 		Host:   config.BackendURLDomain,
 		Path:   "v1/bridge/new/",
@@ -269,8 +356,9 @@ func (d *debugger) reverseCloudServer() error {
 	}
 
 	url.Host = net.JoinHostPort(newp.Host, strconv.Itoa(newp.Port))
-	url.Path = newp.CliUrl
-	return d._bridgeConnect(&url, newp.Token)
+	url.Path = newp.CliPath
+	newp.cliURL = url
+	return d._bridgeConnect(newp)
 }
 
 func (d *debugger) reverseSelfServer() error {
@@ -286,7 +374,11 @@ func (d *debugger) reverseSelfServer() error {
 		u.Scheme = "https"
 		u.Host = net.JoinHostPort(h, p)
 	}
-	_, _, err = net.SplitHostPort(u.Host)
+	h, sp, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		return err
+	}
+	p, err := strconv.Atoi(sp)
 	if err != nil {
 		return err
 	}
@@ -333,57 +425,37 @@ func (d *debugger) reverseSelfServer() error {
 	}
 
 	u.Path = "/cli"
-	return d._bridgeConnect(u, newPool["token"])
-}
 
-func (d *debugger) reverseConnect() error { return nil }
+	newp := &newBridgePoolSerializer{
+		Token:        newPool["token"],
+		Scheme:       u.Scheme,
+		Host:         h,
+		Port:         p,
+		ConsumerPath: fmt.Sprintf("/consumer/%s", newPool["token"]),
+		XtermPath:    fmt.Sprintf("/xterm/%s", newPool["token"]),
+		CliPath:      "/cli",
+		cliURL:       u,
+	}
+	return d._bridgeConnect(newp)
+}
 
 // use bridge
 func (d *debugger) ReverseServer() {
+	d.l("A new remote debug session across bridge will be started")
 	if *config.BridgeAddrFlag != "" {
 		// self-hosted bridge
+		d.l("Dialing self-hosted bridge...")
 		err := d.reverseSelfServer()
 		if err != nil {
 			cast.LogErr(err.Error(), nil)
 		}
 		return
 	}
+	d.l("Dialing nebulant cloud bridge...")
 	err := d.reverseCloudServer()
 	if err != nil {
 		cast.LogErr(err.Error(), nil)
 	}
-}
-
-// no server mode
-func (d *debugger) Start() {
-	d.running = true
-	oSstdin := nebulant_term.GenuineOsStdin
-	oSstdout := nebulant_term.GenuineOsStdout
-
-	oldState, err := term.MakeRaw(int(oSstdin.Fd()))
-	if err != nil {
-		panic(err)
-	}
-	defer term.Restore(int(oSstdin.Fd()), oldState)
-
-	fmt.Fprint(oSstdout, "Starting debugger shell...\r\n")
-	if !term.IsTerminal(int(os.Stdout.Fd())) {
-		fmt.Fprint(oSstdout, "No terminal detected. Remote debugger system will start. Yo can still press any key to start local shell.\r\n")
-		go d.Serve()
-		go d.ReverseServer()
-		b := make([]byte, 1)
-		oSstdin.Read(b)
-	}
-
-	lfd := nsterm.NewFD("local term", nebulant_term.GenuineOsStdin, nebulant_term.GenuineOsStdout)
-	clnt := &client{
-		conn: nil,
-		dbg:  d,
-		vpty: nsterm.NewVirtPTY(),
-		wsrw: lfd,
-	}
-	d.lclient = clnt
-	clnt.start(len(d.detach) > 0)
 }
 
 func (d *debugger) closeClient(cc *client) {
@@ -398,7 +470,7 @@ func (d *debugger) closeClient(cc *client) {
 		if d.remote {
 			d.close <- nil
 		}
-		cast.LogInfo("no more clients in debugger, exiting", d.runtime.irb.ExecutionUUID)
+		d.l("no more clients in debugger, exiting")
 		d.running = false
 		d.runtime.Play() // resume run on last debugger out
 		delete(debuggers, d.runtime)
@@ -955,10 +1027,10 @@ func (c *client) start(attach bool) {
 				sfd.Write([]byte("Closing remote connection..."))
 				err := c.conn.Close()
 				if err != nil {
-					cast.LogErr(err.Error(), c.dbg.runtime.irb.ExecutionUUID)
+					c.dbg.le(err.Error())
 				}
 			}
-			cast.LogInfo("dbg client out", c.dbg.runtime.irb.ExecutionUUID)
+			c.dbg.l("dbg client out")
 			break
 		}
 

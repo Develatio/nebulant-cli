@@ -63,12 +63,8 @@ func main() {
 	config.DebugFlag = flag.Bool("x", false, "Enable debug.")
 	config.BridgeSecretFlag = flag.String("bs", config.BRIDGE_SECRET, "Auth secret string (overrides env NEBULANT_BRIDGE_SECRET).")
 	config.BridgeOriginFlag = flag.String("o", "*", "Access-Control-Allow-Origin header.")
-	config.BridgeCertPathFlag = flag.String("c", "", "https/wss cert file path")
-	config.BridgeKeyPathFlag = flag.String("k", "", "https/wss key file path")
-
-	if *config.DebugFlag {
-		config.DEBUG = true
-	}
+	config.BridgeCertPathFlag = flag.String("c", "", "https/wss cert file path.")
+	config.BridgeKeyPathFlag = flag.String("k", "", "https/wss key file path.")
 
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
@@ -76,6 +72,10 @@ func main() {
 	}
 
 	flag.Parse()
+
+	if *config.DebugFlag {
+		config.DEBUG = true
+	}
 
 	if len(*config.BridgeSecretFlag) <= 0 {
 		flag.Usage()

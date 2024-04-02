@@ -19,6 +19,7 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
@@ -32,8 +33,10 @@ func Start() (errcode int) {
 	cast.InitConsoleLogger()
 	subcom.RegisterSubcommands()
 
-	subsystem.ConfArgs(flag.CommandLine)
-	flag.Parse()
+	if err := subsystem.ConfArgs(flag.CommandLine, os.Args[1:]); err != nil {
+		cast.LogErr(err.Error(), nil)
+		return 1
+	}
 
 	// Version and exit
 	if *config.VersionFlag {

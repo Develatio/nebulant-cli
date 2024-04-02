@@ -154,18 +154,21 @@ func PrepareCmd(cmd *NBLcommand) error {
 	return nil
 }
 
-func ConfArgs(flag *flag.FlagSet) {
+func ConfArgs(fflag *flag.FlagSet, arguments []string) error {
 	// var err error
-	config.VersionFlag = flag.Bool("v", false, "Show version and exit.")
-	config.DebugFlag = flag.Bool("x", false, "Enable debug.")
-	config.ParanoicDebugFlag = flag.Bool("xx", false, "Enable paranoic debug.")
-	config.Ipv6Flag = flag.Bool("6", false, "Force ipv6")
-	config.DisableColorFlag = flag.Bool("c", false, "Disable colors.")
-	config.ForceTerm = flag.Bool("ft", false, "Force terminal. Bypass no-term detection.")
-	config.BridgeAddrFlag = flag.String("b", "", "self-hosted bridge addr:port (ipv4) or [::1]:port (ipv6).")
-	config.BridgeSecretFlag = flag.String("bs", config.BRIDGE_SECRET, "self-hosted bridge auth secret string (overrides env NEBULANT_BRIDGE_SECRET).")
+	// compat flags
+	sflag := fflag.Bool("s", false, "Ignored for compatibility")
+	//
+	config.VersionFlag = fflag.Bool("v", false, "Show version and exit.")
+	config.DebugFlag = fflag.Bool("x", false, "Enable debug.")
+	config.ParanoicDebugFlag = fflag.Bool("xx", false, "Enable paranoic debug.")
+	config.Ipv6Flag = fflag.Bool("6", false, "Force ipv6")
+	config.DisableColorFlag = fflag.Bool("c", false, "Disable colors.")
+	config.ForceTerm = fflag.Bool("ft", false, "Force terminal. Bypass no-term detection.")
+	config.BridgeAddrFlag = fflag.String("b", "", "self-hosted bridge addr:port (ipv4) or [::1]:port (ipv6).")
+	config.BridgeSecretFlag = fflag.String("bs", config.BRIDGE_SECRET, "self-hosted bridge auth secret string (overrides env NEBULANT_BRIDGE_SECRET).")
 
-	flag.Usage = func() {
+	fflag.Usage = func() {
 		var runtimecmds []string
 		var orderedcmdtxt []string
 		for cmdtxt, cmd := range NBLCommands {
@@ -175,25 +178,35 @@ func ConfArgs(flag *flag.FlagSet) {
 			orderedcmdtxt = append(orderedcmdtxt, cmdtxt)
 		}
 		sort.Strings(orderedcmdtxt)
-		fmt.Fprint(flag.Output(), "\nUsage: nebulant [flags] [command]\n")
-		fmt.Fprint(flag.Output(), "\nFlags:\n")
-		PrintDefaults(flag)
-		fmt.Fprint(flag.Output(), "\nCommands:\n")
+		fmt.Fprint(fflag.Output(), "\nUsage: nebulant [flags] [command]\n")
+		fmt.Fprint(fflag.Output(), "\nFlags:\n")
+		PrintDefaults(fflag)
+		fmt.Fprint(fflag.Output(), "\nCommands:\n")
 		for _, cmdtxt := range orderedcmdtxt {
 			cmd := NBLCommands[cmdtxt]
 			if cmd.Sec == SecRuntime {
 				runtimecmds = append(runtimecmds, cmd.Help)
 				continue
 			}
-			fmt.Fprint(flag.Output(), cmd.Help)
+			fmt.Fprint(fflag.Output(), cmd.Help)
 		}
-		fmt.Fprint(flag.Output(), "\n\nRuntime commands:\n")
+		fmt.Fprint(fflag.Output(), "\n\nRuntime commands:\n")
 		for _, hh := range runtimecmds {
-			fmt.Fprint(flag.Output(), hh)
+			fmt.Fprint(fflag.Output(), hh)
 		}
-		// fmt.Fprint(flag.Output(), "  readvar\t\t"+term.EmojiSet["Key"]+" Read blueprint variable value during runtime\n")
-		fmt.Fprint(flag.Output(), "\n\nrun nebulant [command] --help to show help for a command\n")
+		// fmt.Fprint(fflag.Output(), "  readvar\t\t"+term.EmojiSet["Key"]+" Read blueprint variable value during runtime\n")
+		fmt.Fprint(fflag.Output(), "\n\nrun nebulant [command] --help to show help for a command\n")
 	}
+
+	if err := fflag.Parse(arguments); err != nil {
+		fflag.PrintDefaults()
+		return err
+	}
+	if *sflag {
+		fmt.Fprint(fflag.Output(), "\n\ndeprecated flag. Use 'serve' command instead: ./nebulant serve\n")
+		return fmt.Errorf("deprecated flag err")
+	}
+	return nil
 }
 
 func Run(sc string) (int, error) {

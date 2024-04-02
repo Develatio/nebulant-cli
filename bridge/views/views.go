@@ -38,21 +38,24 @@ import (
 var Bridge *Puente = &Puente{pools: make(map[string]*pool)}
 
 func Serve() error {
-	go func() {
-		for {
-			var m runtime.MemStats
-			runtime.ReadMemStats(&m)
-			cast.LogInfo(fmt.Sprintf("Alloc: %v MiB\tHeapInuse: %v MiB\tFrees: %v MiB\tSys: %v MiB\tNumGC: %v", m.Alloc/1024/1024, m.HeapInuse/1024/1024, m.Frees/1024/1024, m.Sys/1024/1024, m.NumGC), nil)
-			pools := 0
-			consumers := 0
-			for _, p := range Bridge.pools {
-				pools++
-				consumers = consumers + len(p.consumerConn)
+	if config.DEBUG {
+		go func() {
+			for {
+				var m runtime.MemStats
+				runtime.ReadMemStats(&m)
+				cast.LogInfo(fmt.Sprintf("Alloc: %v MiB\tHeapInuse: %v MiB\tFrees: %v MiB\tSys: %v MiB\tNumGC: %v", m.Alloc/1024/1024, m.HeapInuse/1024/1024, m.Frees/1024/1024, m.Sys/1024/1024, m.NumGC), nil)
+				pools := 0
+				consumers := 0
+				for _, p := range Bridge.pools {
+					pools++
+					consumers = consumers + len(p.consumerConn)
+				}
+				cast.LogInfo(fmt.Sprintf("Pools: %v\tConsumers: %v", pools, consumers), nil)
+				time.Sleep(10 * time.Second)
 			}
-			cast.LogInfo(fmt.Sprintf("Pools: %v\tConsumers: %v", pools, consumers), nil)
-			time.Sleep(1 * time.Second)
-		}
-	}()
+		}()
+	}
+
 	Bridge.secret = *config.BridgeSecretFlag
 	srv := nhttpd.GetServer()
 	addr := config.BridgeAddrFlag
@@ -163,6 +166,7 @@ func (p *Puente) newView(w http.ResponseWriter, r *http.Request, matches [][]str
 		return
 	}
 	token := base64.StdEncoding.EncodeToString([]byte(b))
+	token, _ = strings.CutSuffix(token, "==")
 
 	newpool := &pool{
 		token:        token,
