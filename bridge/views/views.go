@@ -27,12 +27,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/develatio/nebulant-cli/bridge/assets"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	ws "github.com/develatio/nebulant-cli/netproto/websocket"
 	"github.com/develatio/nebulant-cli/nhttpd"
 	"github.com/develatio/nebulant-cli/nsterm"
 	"github.com/gorilla/websocket"
+
+	_ "embed"
 )
 
 var Bridge *Puente = &Puente{pools: make(map[string]*pool)}
@@ -67,8 +70,8 @@ func Serve() error {
 
 	srv.AddView(`^/new$`, Bridge.newView)
 	srv.AddView(`^/cli$`, Bridge.cliView)
-	srv.AddView(`^/consumer/(.+)$`, Bridge.consumerView) // esto además confirma asistencia
-	srv.AddView(`^/xterm/(.+)$`, Bridge.xtermjsView)     // esto además confirma asistencia
+	srv.AddView(`^/consumer/(.+)$`, Bridge.consumerView)
+	srv.AddView(`^/xterm/(.+)$`, Bridge.xtermjsView)
 
 	errc := srv.ServeIfNot()
 	err := <-errc
@@ -309,30 +312,7 @@ func (p *Puente) xtermjsView(w http.ResponseWriter, r *http.Request, matches [][
 		http.Error(w, "(╯°□°)╯︵ ɹoɹɹƎ !GET", http.StatusMethodNotAllowed)
 		return
 	}
-	xterm := `<!DOCTYPE html>
-	<html>
-	<head>
-		<title>Nebulant xterm.js</title>
-		<meta charset="UTF-8" />
-		<script src="https://cdn.jsdelivr.net/npm/xterm@latest/lib/xterm.min.js"></script>
-		<link href="https://cdn.jsdelivr.net/npm/xterm@latest/css/xterm.min.css" rel="stylesheet" />
-		<script src="https://cdn.jsdelivr.net/npm/xterm-addon-attach@latest/lib/xterm-addon-attach.min.js"></script>
-	
-		<script>
-			window.onload = function () {
-				const term = new window.Terminal();
-				const socket = new WebSocket("wss://{HOST}/consumer/{TOKEN}");
-				const attachAddon = new AttachAddon.AttachAddon(socket);
-				term.open(document.getElementById("terminal"));
-				term.loadAddon(attachAddon);
-			};
-		</script>
-	</head>
-	<body>
-		<div id="terminal"></div>
-	</body>
-	</html>
-	`
+	xterm := assets.XTERM
 
 	xterm = strings.Replace(xterm, "{TOKEN}", matches[0][1], 1)
 	xterm = strings.Replace(xterm, "{HOST}", r.Host, 1)
