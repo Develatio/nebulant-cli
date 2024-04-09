@@ -795,6 +795,10 @@ type Runtime struct {
 	savedActionOutputs []*base.ActionOutput
 }
 
+func (r *Runtime) GetStack() []base.IActionContext {
+	return r.actionContextStack
+}
+
 func (r *Runtime) IsServerMode() bool {
 	return r.serverMode
 }

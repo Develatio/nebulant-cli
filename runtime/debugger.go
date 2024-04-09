@@ -39,6 +39,7 @@ import (
 	ws "github.com/develatio/nebulant-cli/netproto/websocket"
 	"github.com/develatio/nebulant-cli/nhttpd"
 	"github.com/develatio/nebulant-cli/nsterm"
+	"github.com/develatio/nebulant-cli/storage"
 	nebulant_term "github.com/develatio/nebulant-cli/term"
 	"github.com/google/shlex"
 	"github.com/gorilla/websocket"
@@ -61,6 +62,11 @@ type newBridgePoolSerializer struct {
 	XtermPath    string `json:"xterm_url"`
 	CliPath      string `json:"cli_url"`
 	cliURL       *url.URL
+}
+
+// like user-space
+type clientSpace struct {
+	store base.IStore
 }
 
 // Newdebugger func
@@ -234,6 +240,9 @@ func (d *debugger) startLocalTermMode() {
 		dbg:  d,
 		vpty: nsterm.NewVirtPTY(),
 		wsrw: lfd,
+		space: &clientSpace{
+			store: storage.NewStore(),
+		},
 	}
 	d.lclient = clnt
 	clnt.start(len(d.detach) > 0)
@@ -300,6 +309,9 @@ func (d *debugger) _bridgeConnect(newp *newBridgePoolSerializer) error {
 		dbg:  d,
 		vpty: nsterm.NewVirtPTY(),
 		wsrw: wsrw,
+		space: &clientSpace{
+			store: storage.NewStore(),
+		},
 	}
 
 	d.l("Connection to the bridge stablished")
@@ -494,6 +506,9 @@ func (d *debugger) debuggerView(w http.ResponseWriter, r *http.Request, matches 
 		dbg:  d,
 		vpty: nsterm.NewVirtPTY(),
 		wsrw: ws.NewWebSocketReadWriteCloser(conn),
+		space: &clientSpace{
+			store: storage.NewStore(),
+		},
 	}
 
 	d.rclients[clnt] = true
@@ -692,7 +707,6 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 			}
 			fmt.Fprint(clientFD, "err: thread not found\n")
 		}
-
 	case "n":
 		threads := d.runtime.GetThreads()
 		for th := range threads {
@@ -746,28 +760,74 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 			}
 		}
 		fmt.Fprintf(clientFD, "cannot found thread of %p\n", d.cursor)
-
 	case "hl":
 		d.hightLightCursor()
-	// case "p":
-	// 	threads := d.runtime.GetThreads()
-	// 	for th := range threads {
-	// 		if th.hasActionContext(d.cursor) {
-	// 			fmt.Fprintf(clientFD, "thread %p has %p\n", th, d.cursor)
-	// 			_, err := th.Back()
-	// 			if err != nil {
-	// 				fmt.Fprintf(clientFD, "err: %s\n", err.Error())
-	// 			}
-	// 			pp := th.GetLastRun()
-	// 			if pp != nil {
-	// 				d.SetCursor(pp)
-	// 			}
-	// 			// el.EventChan() <- &runtimeEvent{ecode: base.RuntimeStillEvent}
-	// 			return
-	// 		}
-	// 	}
-	// 	fmt.Println("no one has actx")
+	case "set":
+		fmt.Fprint(clientFD, fs.Args())
+		args := fs.Args()[1:]
+		if len(args) < 3 || args[1] != "=" {
+			fmt.Fprintf(clientFD, "invalid syntax\n")
+			return
+		}
+		cc.space.store.SetPrivateVar(args[0], args[2])
 	case "p":
+		if fs.Arg(1) == "" {
+			// print all contexts
+			for _, actx := range d.runtime.GetStack() {
+				action := actx.GetAction()
+				if action.Output != nil {
+					fmt.Fprintf(clientFD, "- %s \t : %p (%s)\n", action.ActionName, actx, *action.Output)
+					continue
+				}
+				fmt.Fprintf(clientFD, "- %s \t : %p\n", action.ActionName, actx)
+			}
+			return
+		}
+
+		path := fs.Arg(1)
+
+		pv := cc.space.store.GetPrivateVar(path)
+		if pv != nil {
+			fmt.Fprintf(clientFD, "%s", pv)
+			fmt.Fprintf(clientFD, "\n")
+			return
+		}
+
+		aa := strings.Split(path, ".")
+		pv = cc.space.store.GetPrivateVar(aa[0])
+		if pv != nil {
+			aa[0] = fmt.Sprintf("%s", pv)
+		}
+
+		for _, actx := range d.runtime.GetStack() {
+			if aa[0] == fmt.Sprintf("%p", actx) {
+				actxstore := actx.GetStore()
+				action := actx.GetAction()
+				refname := action.Output
+				if refname == nil {
+					fmt.Fprintf(clientFD, "action without data\n")
+					return
+				}
+				aa[0] = *refname
+				ppp := fmt.Sprintf("{{%s}}", strings.Join(aa, "."))
+				err := actxstore.Interpolate(&ppp)
+				if err != nil {
+					fmt.Fprint(clientFD, err.Error())
+					fmt.Fprintf(clientFD, "\n")
+					return
+				}
+				fmt.Fprint(clientFD, ppp)
+				fmt.Fprintf(clientFD, "\n")
+				return
+			}
+		}
+
+		actxstore := d.cursor.GetStore()
+		ppp := fmt.Sprintf("{{%s}}", strings.Join(aa, "."))
+		actxstore.Interpolate(&ppp)
+		fmt.Fprint(clientFD, ppp)
+		fmt.Fprintf(clientFD, "\n")
+	case "u":
 		parents := d.cursor.Parents()
 		if len(parents) == 1 && parents[0].IsThreadPoint() {
 			d.runtime.NewThread(parents[0])
@@ -934,6 +994,7 @@ type client struct {
 	// default ldisc, used in Raw(false)
 	ldisc   nsterm.Ldisc
 	sluvaFD *nsterm.PortFD
+	space   *clientSpace
 }
 
 // func (c *client) Write(p []byte) (n int, err error) {
@@ -966,12 +1027,12 @@ func (c *client) start(attach bool) {
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		fmt.Println("out of wsrw to mfd")
+		// fmt.Println("out of wsrw to mfd")
 	}()
 	go func() {
 		// copy mustar file descriptor input to app in interface
 		io.Copy(c.wsrw, mfd)
-		fmt.Println("out of mfd wsrw")
+		// fmt.Println("out of mfd wsrw")
 	}()
 
 	// file descriptor for app
@@ -994,7 +1055,7 @@ func (c *client) start(attach bool) {
 		// only one sluva in vpty after
 		// attach: the original sluva
 		// c.vpty.CursorSluva(...)
-		fmt.Println("out of attach")
+		// fmt.Println("out of attach")
 	}
 
 	prmpt := nsterm.NewPrompt(c.vpty, sfd, sfd)
