@@ -132,6 +132,7 @@ var BridgeOriginFlag *string
 
 var BridgeCertPathFlag *string
 var BridgeKeyPathFlag *string
+var BridgeXtermRootPath *string
 
 var ForceNoTerm = false
 

@@ -19,9 +19,14 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"mime"
 	"net/http"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -38,7 +43,7 @@ import (
 	_ "embed"
 )
 
-var Bridge *Puente = &Puente{pools: make(map[string]*pool)}
+var Bridge *Puente = &Puente{pools: make(map[string]*pool), xtermindex: assets.XTERM}
 
 func Serve() error {
 	if config.DEBUG {
@@ -71,11 +76,78 @@ func Serve() error {
 	srv.AddView(`^/new$`, Bridge.newView)
 	srv.AddView(`^/cli$`, Bridge.cliView)
 	srv.AddView(`^/consumer/(.+)$`, Bridge.consumerView)
+
+	if *config.BridgeXtermRootPath != "" {
+		mc := &memCache{elem: map[string][]byte{}, ct: make(map[string]string)}
+		foundindex := false
+		err := filepath.WalkDir(*config.BridgeXtermRootPath, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() {
+				return nil
+			}
+			relpath, err := filepath.Rel(*config.BridgeXtermRootPath, path)
+			if err != nil {
+				return err
+			}
+			cast.LogDebug(fmt.Sprintf("Serving file from mem: %s", relpath), nil)
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			if relpath == "index.html" {
+				Bridge.xtermindex = string(data)
+				foundindex = true
+				return nil
+			}
+
+			mc.elem["/xterm/"+relpath] = data
+			mc.ct["/xterm/"+relpath] = mime.TypeByExtension(filepath.Ext(relpath))
+			srv.AddView(`^/xterm/`+relpath+`$`, mc.serveFileCacheView)
+			return nil
+		})
+		if !foundindex {
+			cast.LogWarn(fmt.Sprintf("index.html not found in %s", *config.BridgeXtermRootPath), nil)
+		}
+		if err != nil {
+			return errors.Join(fmt.Errorf("impossible to walk directories"), err)
+		}
+	}
+
 	srv.AddView(`^/xterm/(.+)$`, Bridge.xtermjsView)
 
 	errc := srv.ServeIfNot()
 	err := <-errc
 	return err
+}
+
+type memCache struct {
+	elem map[string][]byte
+	ct   map[string]string
+	// req  int
+}
+
+func (m *memCache) serveFileCacheView(w http.ResponseWriter, r *http.Request, matches [][]string) {
+	if len(matches) <= 0 {
+		w.WriteHeader(http.StatusTeapot)
+		w.Write([]byte("Nothing to see here ¯\\_(ツ)_/¯"))
+		return
+	}
+	match := matches[0]
+	if len(match) <= 0 {
+		w.WriteHeader(http.StatusTeapot)
+		w.Write([]byte("Nothing to see here (╯°□°）╯︵ ┻━┻"))
+		return
+	}
+	if _, exists := m.elem[matches[0][0]]; !exists {
+		w.WriteHeader(http.StatusTeapot)
+		w.Write([]byte("Nothing to see here ʕ⌐■ᴥ■ʔ"))
+		return
+	}
+	w.Header().Add("Content-Type", m.ct[matches[0][0]])
+	w.WriteHeader(http.StatusOK)
+	w.Write(m.elem[matches[0][0]])
 }
 
 type newInBody struct {
@@ -115,9 +187,10 @@ func (p *pool) syncDeleteConsumer(conn *websocket.Conn) {
 }
 
 type Puente struct {
-	secret string
-	mu     sync.Mutex
-	pools  map[string]*pool
+	secret     string
+	mu         sync.Mutex
+	pools      map[string]*pool
+	xtermindex string
 }
 
 func (p *Puente) syncAddPool(pl *pool) {
@@ -312,7 +385,15 @@ func (p *Puente) xtermjsView(w http.ResponseWriter, r *http.Request, matches [][
 		http.Error(w, "(╯°□°)╯︵ ɹoɹɹƎ !GET", http.StatusMethodNotAllowed)
 		return
 	}
-	xterm := assets.XTERM
+
+	_, exists := p.pools[matches[0][1]]
+	if !exists {
+		cast.LogDebug(fmt.Sprintf("no token %s", matches[0][1]), nil)
+		http.Error(w, "(╯°□°)╯︵ ɹoɹɹƎ !valid token", http.StatusForbidden)
+		return
+	}
+
+	xterm := p.xtermindex
 
 	xterm = strings.Replace(xterm, "{TOKEN}", matches[0][1], 1)
 	xterm = strings.Replace(xterm, "{HOST}", r.Host, 1)

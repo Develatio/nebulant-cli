@@ -65,6 +65,7 @@ func main() {
 	config.BridgeOriginFlag = flag.String("o", "*", "Access-Control-Allow-Origin header.")
 	config.BridgeCertPathFlag = flag.String("c", "", "https/wss cert file path.")
 	config.BridgeKeyPathFlag = flag.String("k", "", "https/wss key file path.")
+	config.BridgeXtermRootPath = flag.String("w", "", "webroot path for custom xtermjs implementation")
 
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
