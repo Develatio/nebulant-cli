@@ -10,10 +10,10 @@ services:
     image: develatio/nebulant_bridge
     command: "/app/dist/nebulant-bridge -x -b 0.0.0.0:16789 -bs ultrasecret -c server.crt -k server.key"
     ports:
-      - 16788:16789 
+      - 16788:16789
     networks:
-      - nebulant
-      - nebulant-external
+      - nebulant-private
+      - nebulant-lan
   # cli:
   #   container_name: nebulant_cli
   #   build:
@@ -29,6 +29,8 @@ services:
 
 
 networks:
-  nebulant: {}
-  nebulant-external:
+  nebulant-private:
+    name: nebulant-private
+  nebulant-lan:
+    name: nebulant-lan
     external: true
