@@ -111,20 +111,20 @@ const (
 	EventManagerPrepareBPEnd
 	// EventManagerPrepareBPEndWithErr const 6
 	EventManagerPrepareBPEndWithErr
-	// EventManagerStarting const 7
-	EventManagerStarting
-	// EventManagerResuming const 8
-	EventManagerResuming
-	// EventManagerStarted const 9
-	EventManagerStarted
-	// EventManagerPausing const 10
-	EventManagerPausing
+	// EventRuntimeStarting const 7
+	EventRuntimeStarting
+	// EventRuntimeResuming const 8
+	EventRuntimeResuming
+	// EventRuntimeStarted const 9
+	EventRuntimeStarted
+	// EventRuntimePausing const 10
+	EventRuntimePausing
 	// EventManagerPause const 11
-	EventManagerPaused
-	// EventManagerStopping const 12
-	EventManagerStopping
-	// EventManagerOut const 13
-	EventManagerOut
+	EventRuntimePaused
+	// EventRuntimeStopping const 12
+	EventRuntimeStopping
+	// EventRuntimeOut const 13
+	EventRuntimeOut
 	// EventRegisteredManager 14
 	EventRegisteredManager
 	// EventWaitingStatus 15
@@ -250,9 +250,9 @@ func (s *SystemBus) Start() {
 			// Discard logs as needed
 			if busdata.TypeID == BusDataTypeEvent && busdata.ExecutionUUID != nil && busdata.EventID != nil {
 				switch *busdata.EventID {
-				case EventManagerResuming, EventManagerStarted, EventManagerStarting:
+				case EventRuntimeResuming, EventRuntimeStarted, EventRuntimeStarting:
 					s.SetExecutionStatus(*busdata.ExecutionUUID, true)
-				case EventManagerOut, EventManagerStopping:
+				case EventRuntimeOut, EventRuntimeStopping:
 					s.SetExecutionStatus(*busdata.ExecutionUUID, false)
 				}
 			}

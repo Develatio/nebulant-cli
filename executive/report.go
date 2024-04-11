@@ -102,14 +102,14 @@ package executive
 // func (r *Registry) IsInPause() bool {
 // 	r.mu.Lock()
 // 	defer r.mu.Unlock()
-// 	return r.managerState == cast.EventManagerPausing || r.managerState == cast.EventManagerPaused
+// 	return r.managerState == cast.EventRuntimePausing || r.managerState == cast.EventRuntimePaused
 // }
 
 // // IsInStop func
 // func (r *Registry) IsInStop() bool {
 // 	r.mu.Lock()
 // 	defer r.mu.Unlock()
-// 	return r.managerState == cast.EventManagerStopping || r.managerState == cast.EventManagerOut
+// 	return r.managerState == cast.EventRuntimeStopping || r.managerState == cast.EventRuntimeOut
 // }
 
 // // HandleActionReport func

@@ -93,7 +93,7 @@ L:
 			cast.LogInfo("[Director] Received instruction with id "+*instr.ExecutionUUID, nil)
 			if len(d.managers) <= 0 {
 				cast.LogInfo("[Director] No managers available", nil)
-				cast.PushEvent(cast.EventManagerOut, instr.ExecutionUUID)
+				cast.PushEvent(cast.EventRuntimeOut, instr.ExecutionUUID)
 				continue
 			}
 			managerFound := false
@@ -120,7 +120,7 @@ L:
 			}
 			if !managerFound {
 				cast.LogInfo("[Director] No manager found for instruction", nil)
-				cast.PushEvent(cast.EventManagerOut, instr.ExecutionUUID)
+				cast.PushEvent(cast.EventRuntimeOut, instr.ExecutionUUID)
 			}
 		case hirbcfg := <-d.HandleIRB:
 			irb := hirbcfg.IRB

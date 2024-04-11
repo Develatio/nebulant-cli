@@ -637,7 +637,7 @@ func (d *debugger) hightLightCursor() {
 	action := d.cursor.GetAction()
 	active_ids := d.runtime.GetActiveActionIds()
 	active_ids = append(active_ids, action.ActionID)
-	cast.PushState(active_ids, cast.EventManagerStarted, d.runtime.irb.ExecutionUUID)
+	cast.PushState(active_ids, cast.EventRuntimeStarted, d.runtime.irb.ExecutionUUID)
 }
 
 func (d *debugger) ExecCmd(cc *client, cmd string) {
@@ -840,7 +840,7 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 		for th := range threads {
 			if th.hasActionContext(d.cursor) {
 				fmt.Fprintf(clientFD, "thread %p has %p\n", th, d.cursor)
-				bconfirm, ok := th.Back()
+				bconfirm, ok := th.StackUp()
 				if !ok {
 					fmt.Fprint(clientFD, "cannot go back\n")
 					return
@@ -857,6 +857,8 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 			}
 		}
 		fmt.Fprintf(clientFD, "cannot found thread of %p\n", d.cursor)
+
+	case "d":
 
 	case "desc":
 		if fs.Arg(1) == "" {

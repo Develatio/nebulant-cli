@@ -291,8 +291,8 @@ func autocompleteView(w http.ResponseWriter, r *http.Request, matches [][]string
 	// 	if manager == nil {
 	// 		continue
 	// 	}
-	// 	// skip if event isn't EventManagerOut
-	// 	if *fback.EventID != cast.EventManagerOut {
+	// 	// skip if event isn't EventRuntimeOut
+	// 	if *fback.EventID != cast.EventRuntimeOut {
 	// 		continue
 	// 	}
 	// 	// here the manager has ended, get last action result and
@@ -364,7 +364,7 @@ func stopBlueprintView(w http.ResponseWriter, r *http.Request, matches [][]strin
 		return
 	}
 	// echo
-	cast.PushEvent(cast.EventManagerStopping, &remoteExecutionUUID)
+	cast.PushEvent(cast.EventRuntimeStopping, &remoteExecutionUUID)
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -393,7 +393,7 @@ func pauseBlueprintView(w http.ResponseWriter, r *http.Request, matches [][]stri
 	}
 
 	// echo
-	cast.PushEvent(cast.EventManagerPausing, &remoteExecutionUUID)
+	cast.PushEvent(cast.EventRuntimePausing, &remoteExecutionUUID)
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -415,7 +415,7 @@ func resumeBlueprintView(w http.ResponseWriter, r *http.Request, matches [][]str
 		ExecutionUUID: &remoteExecutionUUID,
 	}
 	// echo
-	cast.PushEvent(cast.EventManagerResuming, &remoteExecutionUUID)
+	cast.PushEvent(cast.EventRuntimeResuming, &remoteExecutionUUID)
 	w.WriteHeader(http.StatusAccepted)
 }
 

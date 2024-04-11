@@ -359,16 +359,17 @@ const (
 	ThreadClose
 )
 
-type threadStepCtrl struct {
+type threadStackCtrl struct {
 	confirm chan struct{}
 	back    bool
+	skipRun bool
 	// reset   bool
 }
 
 type Thread struct {
 	ThreadStep ThreadStep
 	state      base.RuntimeState
-	step       chan *threadStepCtrl
+	step       chan *threadStackCtrl
 	queue      []base.IActionContext
 	done       []base.IActionContext
 	current    base.IActionContext
@@ -399,7 +400,7 @@ func (t *Thread) EventListener() *base.EventListener {
 }
 
 func (t *Thread) Pause() {
-	t.step = make(chan *threadStepCtrl)
+	t.step = make(chan *threadStackCtrl)
 	t.state = base.RuntimeStateStill
 }
 
@@ -415,14 +416,14 @@ func (t *Thread) Stop() {
 	t.state = base.RuntimeStateEnding
 }
 
-func (t *Thread) Back() (<-chan struct{}, bool) {
+func (t *Thread) StackUp() (<-chan struct{}, bool) {
 	if t.current != nil {
 		if t.current.GetRunStatus() == base.RunStatusRunning {
 			return nil, false
 		}
 	}
 
-	stepctrl := &threadStepCtrl{
+	stepctrl := &threadStackCtrl{
 		confirm: make(chan struct{}),
 		back:    true,
 	}
@@ -445,7 +446,7 @@ func (t *Thread) Step() (<-chan struct{}, bool) {
 		}
 	}
 
-	stepctrl := &threadStepCtrl{
+	stepctrl := &threadStackCtrl{
 		confirm: make(chan struct{}),
 		back:    false,
 	}
@@ -510,9 +511,6 @@ func (t *Thread) _loadPrev() bool {
 func (t *Thread) _loadNext() bool {
 	t.ThreadStep = ThreadBeforeAction
 	if len(t.queue) <= 0 {
-		// WIP: quizás avisar a Runtime, mediante algún
-		// chanel que el propio runtime cree y setee en el
-		// thread, que este thread ha terminado
 		t.current = nil
 		return false
 	}
@@ -546,32 +544,11 @@ func (t *Thread) _runCurrent() {
 	if action.JoinThreadsPoint {
 		t.runtime.activateContext(actx)
 		if t.runtime.IsRunningParentsOf(actx) {
-			// WIP: quizás informar a runtime
-			// que este thread ha terminado
-			// WIP: quizás mover esto a un WithRunFunc
-			// y tratar aquí la caja de JoinTreads como
-			// caja normal: si el WithRunFunc detecta
-			// que él mismo es el último de los threads
-			// que devuelva las "nexts" actions
-			//
-			// de momento sólo hacemos skip aquí si
-			// aún hay un parent trabajando
-			// de ser el último thread, el resto
-			// del código debería poder gestionar
-			// este action
 			return
 		}
 		t.runtime.deactivateContext(actx)
 	}
 
-	// WIP: testear si el action a ejecutar es un breakpoint
-	// o es un JoinThreads porque en ese caso hay que actuar
-	// de forma distinta.
-	// JoinThreads: el thread actual debe terminar darle el
-	// aviso a runtime para que arranque un nuevo thread
-	// en caso necesario, del mismo modo que lo hace ahora
-	// el manager cuando le llegan stageReports de JoinThreadsPoint
-	// aout and aerr are self stored by RunAction
 	t.runtime.activateContext(actx)
 	t.ThreadStep = ThreadIntoAction
 	aout, aerr := actx.RunAction()
@@ -611,8 +588,6 @@ func (t *Thread) _runCurrent() {
 	case 0:
 		// no more actions, errs and exit code
 		// keep as setted before
-		// WIP: aquí sería un buen lugar para devolver info
-		// a runtime
 		t.done = append(t.done, actx)
 		if t.ExitCode > 0 {
 			cast.LogErr(t.ExitErr.Error(), t.runtime.irb.ExecutionUUID)
@@ -653,7 +628,7 @@ func (t *Thread) close() {
 	t.runtime.finishThread(t)
 	cast.LogDebug("Thread finished", t.runtime.irb.ExecutionUUID)
 	t.state = base.RuntimeStateEnd
-	// WIP: aquí tenemos que cerrar el listener
+	// TODO: close t.elistener?
 }
 
 func (t *Thread) GetLastRun() base.IActionContext {
@@ -665,8 +640,6 @@ func (t *Thread) GetLastRun() base.IActionContext {
 
 // commonly called by go Init()
 func (t *Thread) Init() {
-	// WIP: quizás sea necesario lanzar un evento para atrás de thread
-	// inicializado
 	var waitcount int
 	defer func() {
 		t.close()
@@ -674,7 +647,7 @@ func (t *Thread) Init() {
 
 	// define uninitialized (nil) "confirm" chan
 	// var confirm chan struct{} // nil chan
-	var stpctrl *threadStepCtrl = &threadStepCtrl{back: false}
+	var stpctrl *threadStackCtrl = &threadStackCtrl{back: false}
 	var more bool
 
 	for {
@@ -792,13 +765,8 @@ type Runtime struct {
 	activeActionIDs    map[string]int
 	// join points
 	activeJoinPoints map[string]base.IActionContext
-	// WIP: de momento bool sin usar, se deja para un
-	// uso posterior
-	// breakPoint *breakPoint
-	// waiters map[base.IActionContext]*runtimeWaiter
-	//
-	exitCode int
-	exitErrs []error // uncaught err
+	exitCode         int
+	exitErrs         []error // uncaught err
 	//
 	savedActionOutputs []*base.ActionOutput
 }
@@ -848,7 +816,7 @@ func (r *Runtime) NewThread(actx base.IActionContext) {
 	th := &Thread{
 		runtime:   r,
 		elistener: el,
-		step:      make(chan *threadStepCtrl),
+		step:      make(chan *threadStackCtrl),
 	}
 	th.queue = append(th.queue, actx)
 	r.activeThreads[th] = true
@@ -889,36 +857,33 @@ func (r *Runtime) finishThread(th *Thread) {
 }
 
 func (r *Runtime) Play() {
-	// WIP: mezclar el sistema antiguo de eventos
-	// con el sistema nuevo de eventos
-	// WIP: cambiar el nombre de EventManager por
-	// EventRuntime
-	cast.PushEvent(cast.EventManagerResuming, r.irb.ExecutionUUID)
-	cast.PushEvent(cast.EventManagerStarting, r.irb.ExecutionUUID)
+	// TODO: merge both event systems?
+	cast.PushEvent(cast.EventRuntimeResuming, r.irb.ExecutionUUID)
+	cast.PushEvent(cast.EventRuntimeStarting, r.irb.ExecutionUUID)
 	go r.evDispatcher.Dispatch(&runtimeEvent{ecode: base.RuntimePlayEvent})
 	threads := r.GetThreads()
 	for th := range threads {
 		th.Play()
 	}
 	r.state = base.RuntimeStatePlay
-	cast.PushEvent(cast.EventManagerStarted, r.irb.ExecutionUUID)
+	cast.PushEvent(cast.EventRuntimeStarted, r.irb.ExecutionUUID)
 	r.DispatchCurrentActiveIdsEvent()
 }
 
 func (r *Runtime) Pause() {
-	cast.PushEvent(cast.EventManagerPausing, r.irb.ExecutionUUID)
+	cast.PushEvent(cast.EventRuntimePausing, r.irb.ExecutionUUID)
 	go r.evDispatcher.Dispatch(&runtimeEvent{ecode: base.RuntimeStillEvent})
 	threads := r.GetThreads()
 	for th := range threads {
 		th.Pause()
 	}
 	r.state = base.RuntimeStateStill
-	cast.PushEvent(cast.EventManagerPaused, r.irb.ExecutionUUID)
+	cast.PushEvent(cast.EventRuntimePaused, r.irb.ExecutionUUID)
 	r.DispatchCurrentActiveIdsEvent()
 }
 
 func (r *Runtime) Stop() {
-	cast.PushEvent(cast.EventManagerStopping, r.irb.ExecutionUUID)
+	cast.PushEvent(cast.EventRuntimeStopping, r.irb.ExecutionUUID)
 	r.state = base.RuntimeStateEnding
 	go r.evDispatcher.Dispatch(&runtimeEvent{ecode: base.RuntimeEndEvent})
 	threads := r.GetThreads()
@@ -926,7 +891,7 @@ func (r *Runtime) Stop() {
 		th.Stop()
 	}
 	r.state = base.RuntimeStateEnd
-	cast.PushEvent(cast.EventManagerOut, r.irb.ExecutionUUID)
+	cast.PushEvent(cast.EventRuntimeOut, r.irb.ExecutionUUID)
 	r.DispatchCurrentActiveIdsEvent()
 }
 
@@ -953,10 +918,6 @@ func (r *Runtime) IsRunningParentsOf(actx base.IActionContext) bool {
 
 func (r *Runtime) _setRunDebugFunc(actx base.IActionContext) {
 	actx.WithRunFunc(func() (*base.ActionOutput, error) {
-		// WIP: si ya hay un server arrancado, evitar arrancar otro
-		// r.activateContext(actx)
-		// defer r.deactivateContext(actx)
-
 		// Pause exec
 		r.Pause()
 
@@ -972,18 +933,6 @@ func (r *Runtime) _setRunDebugFunc(actx base.IActionContext) {
 		// this Start func calls this.IsServerMode
 		// to start in local shell or in server mode
 		go dbg.Start()
-
-		// WIP: el server para debug puede activarse
-		// por comando, por lo que aquí debería comprobarse
-		// y no re-arrancare
-
-		// breakpoint := &breakPoint{actx: actx}
-		// r.breakPoint = breakpoint
-		// WIP: guardar el channel en el actx, así luego
-		// podemos desuscribir de forma individual, cuando
-		// la feature se implemente
-		// <-breakpoint.Subscribe()
-		// r.Dispatch(&runtimeEvent{ecode: base.RuntimePlayEvent})
 		return nil, nil
 	})
 }
@@ -1008,10 +957,6 @@ func (r *Runtime) setRunFunc(actx base.IActionContext) {
 			if err != nil {
 				return nil, err
 			}
-			// WIP: ahora que tenemos runtime, parece más
-			// razonable inicializar el provider en el action
-			// context y que los hijos hereden el provider
-			// del actioncontext
 			store.StoreProvider(action.Provider, provider)
 		} else {
 			provider, err = store.GetProvider(action.Provider)
@@ -1097,9 +1042,6 @@ func (r *Runtime) pushActionContext(actx base.IActionContext) {
 	}
 }
 
-// WIP: cuando se mueva el actual report.managerState
-// hasta aquí, recordar que es necesario hacer cast.PushState
-// cuando cambie el estado de la ejecución
 func (r *Runtime) GetActiveActionIds() []string {
 	var cc []string
 	for actnID, howMany := range r.activeActionIDs {
@@ -1111,18 +1053,13 @@ func (r *Runtime) GetActiveActionIds() []string {
 }
 
 func (r *Runtime) DispatchCurrentActiveIdsEvent() {
-	cast.PushState(r.GetActiveActionIds(), cast.EventManagerStarted, r.irb.ExecutionUUID)
+	cast.PushState(r.GetActiveActionIds(), cast.EventRuntimeStarted, r.irb.ExecutionUUID)
 }
 
 func (r *Runtime) activateContext(actx base.IActionContext) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	// WIP: el estado que se manda en PushState es el que
-	// actualmente se almacena en report.go, se trata
-	// del estado actual del manager, mover el estado
-	// de la ejecución a Runtime
 	defer r.DispatchCurrentActiveIdsEvent()
-	// r.runningContexts[actx.(*actionContext)] = true
 
 	ev := r.evDispatcher.NewEventListener()
 	actx.WithEventListener(ev)
@@ -1146,7 +1083,6 @@ func (r *Runtime) activateContext(actx base.IActionContext) {
 	r.activeActionIDs[action.ActionID]++
 }
 
-// WIP: mover este func a func interna?
 func (r *Runtime) deactivateContext(actx base.IActionContext) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

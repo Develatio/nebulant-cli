@@ -90,8 +90,6 @@ func (m *Manager) PrepareIRB(irb *blueprint.IRBlueprint) {
 }
 
 // WIP: parece que el ctrl+v da problemas :(
-// WIP: ya podemos ir palante y patrás, y saltar entre threads
-// WIP: con n avanzamos hacia adelante, pero ejecutando el action, implementar s, que avanzará sin ejecutar
 
 // Run func
 func (m *Manager) Run() error {
@@ -108,7 +106,7 @@ func (m *Manager) Run() error {
 				PanicTrace: debug.Stack(),
 			})
 		}
-		cast.PushEvent(cast.EventManagerOut, m.ExecutionUUID)
+		cast.PushEvent(cast.EventRuntimeOut, m.ExecutionUUID)
 	}()
 	if exit {
 		return nil
@@ -116,7 +114,7 @@ func (m *Manager) Run() error {
 
 	m.Logger.LogDebug("[Manager] Starting...")
 
-	cast.PushEvent(cast.EventManagerStarting, m.ExecutionUUID)
+	cast.PushEvent(cast.EventRuntimeStarting, m.ExecutionUUID)
 	if m.IRB.StartAction == nil {
 		return fmt.Errorf("[Manager] First action id not found")
 	}
@@ -177,7 +175,7 @@ func (m *Manager) Run() error {
 	// start to run
 	m.Runtime.NewThread(startActionContext)
 
-	cast.PushEvent(cast.EventManagerStarted, m.ExecutionUUID)
+	cast.PushEvent(cast.EventRuntimeStarted, m.ExecutionUUID)
 	m.Logger.ParanoicLogDebug("after push event")
 	m.Logger.ParanoicLogDebug("after set manager state")
 	m.Logger.LogDebug("[Manager] Ready")
@@ -208,14 +206,14 @@ func (m *Manager) Run() error {
 	elapsedTime := time.Since(startTime).String()
 	m.Logger.LogInfo("[Manager] stats: " + strconv.Itoa(m.Stats.actions) + " actions executed by " + strconv.Itoa(m.Stats.stages) + " stages in " + elapsedTime)
 	if m.ExecutionUUID != nil {
-		m.Logger.LogDebug("Sending EventManagerOut for UUID" + *m.ExecutionUUID)
+		m.Logger.LogDebug("Sending EventRuntimeOut for UUID" + *m.ExecutionUUID)
 	} else {
-		m.Logger.LogDebug("Sending EventManagerOut for no UUID")
+		m.Logger.LogDebug("Sending EventRuntimeOut for no UUID")
 	}
 
-	cast.PushEvent(cast.EventManagerOut, m.ExecutionUUID)
-	// m.internalRegistry.SetManagerState(cast.EventManagerOut)
-	// m.ExternalRegistry.SetManagerState(cast.EventManagerOut)
+	cast.PushEvent(cast.EventRuntimeOut, m.ExecutionUUID)
+	// m.internalRegistry.SetManagerState(cast.EventRuntimeOut)
+	// m.ExternalRegistry.SetManagerState(cast.EventRuntimeOut)
 	m.Logger.LogDebug("[Manager] out")
 	return nil
 }
