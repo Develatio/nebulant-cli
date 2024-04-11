@@ -28,6 +28,7 @@ import (
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
+	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/nsterm"
 )
 
@@ -588,7 +589,8 @@ func (t *Thread) _runCurrent() {
 		}
 		nexts, err = provider.OnActionErrorHook(aout)
 		// update action err on provider err hook err (nil will be ignored)
-		aerr = errors.Join(aerr, err)
+
+		aerr = errors.Join(fmt.Errorf("%s %s KO", action.ActionID, action.ActionName), aerr, err)
 		if nexts == nil {
 			nexts = action.NextAction.NextKo
 		}
@@ -612,9 +614,15 @@ func (t *Thread) _runCurrent() {
 		// WIP: aquí sería un buen lugar para devolver info
 		// a runtime
 		t.done = append(t.done, actx)
+		if t.ExitCode > 0 {
+			cast.LogErr(t.ExitErr.Error(), t.runtime.irb.ExecutionUUID)
+		}
 		return
 	case 1:
 		// reset exit code and err if exists
+		if t.ExitCode > 0 && config.DEBUG {
+			cast.LogWarn(t.ExitErr.Error(), t.runtime.irb.ExecutionUUID)
+		}
 		t.ExitCode = 0
 		t.ExitErr = nil
 		nactx := t.runtime.NewAContext(actx, nexts[0])
@@ -819,6 +827,10 @@ func (r *Runtime) ExitCode() int {
 
 func (r *Runtime) Error() error {
 	return errors.Join(r.exitErrs...)
+}
+
+func (r *Runtime) Errors() []error {
+	return r.exitErrs
 }
 
 func (r *Runtime) NewEventListener() *base.EventListener {
