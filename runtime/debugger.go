@@ -135,13 +135,13 @@ func (d *debugger) Detach(actionMFD io.ReadWriteCloser) {
 
 	go func() {
 		_, _ = io.Copy(sfd, actionMFD)
-		fmt.Println("out of io.Copy(sfd, actionMFD)")
+		// fmt.Println("out of io.Copy(sfd, actionMFD)")
 		mfd.Close()
 		vpty.Close()
 	}()
 	go func() {
 		_, _ = io.Copy(actionMFD, sfd)
-		fmt.Println("out of io.Copy(actionMFD, sfd)")
+		// fmt.Println("out of io.Copy(actionMFD, sfd)")
 		sfd.Close()
 		vpty.Close()
 	}()
@@ -167,11 +167,11 @@ func (d *debugger) Attach(clientFD io.ReadWriteCloser, num int) error {
 
 	go func() {
 		_, _ = io.Copy(clientFD, mOutFD)
-		fmt.Println("out of atachment io.Copy(clientFD, mOutFD)")
+		// fmt.Println("out of atachment io.Copy(clientFD, mOutFD)")
 		mOutFD.Close()
 	}()
 	_, _ = io.Copy(mOutFD, clientFD)
-	fmt.Println("out of atachment io.Copy(mfd, clientFD)")
+	// fmt.Println("out of atachment io.Copy(mfd, clientFD)")
 
 	// go func() {
 	// 	_, _ = io.Copy(actionMustarFD, clientFD)
@@ -652,6 +652,25 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 	fs.Parse(argv)
 
 	switch string(fs.Arg(0)) {
+	case "nebu!":
+		fmt.Fprintf(clientFD, "lant!\n")
+	case "h", "help", "hh", "ayuda", "ajuda", "jelp", "jalp", "aiuda", "aiudapremo", "?":
+		fmt.Fprintf(clientFD, `
+	h - This help txt ;)
+	j - Jump to another thread
+	n - Runs the next step
+	ll - Prints current cursor position
+	set - Sets new vars values
+	p var - Prints the value of the variable "var" 
+	u - Goes up to previous step 
+	desc - Prints thread/action properties
+	th - Prints current thread
+	shell - Open new local shell
+	c - Continues running the blueprint
+	q - Quits debugger. Have a nice day.
+	exit - Like q. You are a nice person.
+
+`)
 	case "c":
 		d.runtime.Play()
 	case "ll":
@@ -857,9 +876,6 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 			}
 		}
 		fmt.Fprintf(clientFD, "cannot found thread of %p\n", d.cursor)
-
-	case "d":
-
 	case "desc":
 		if fs.Arg(1) == "" {
 			if d.cursor == nil {
@@ -904,6 +920,16 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 					fmt.Fprintf(clientFD, "\tName: %v\n", d.cursor.GetAction().ActionName)
 					fmt.Fprintf(clientFD, "\tParents: %v\n", d.cursor.Parents())
 					fmt.Fprintf(clientFD, "\tChildren: %v\n", d.cursor.Children())
+					action := d.cursor.GetAction()
+					if action != nil {
+						var prettyJSON bytes.Buffer
+						err = json.Indent(&prettyJSON, action.Parameters, "", "    ")
+						if err != nil {
+							prettyJSON.Write([]byte(err.Error()))
+
+						}
+						fmt.Fprintf(clientFD, "\tParameters: %s\n", prettyJSON.String())
+					}
 				}
 			}
 			return
