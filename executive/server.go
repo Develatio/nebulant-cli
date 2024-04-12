@@ -67,6 +67,7 @@ func InitServerMode() chan error {
 	srv.AddView(`/blueprint/.+$`, blueprintView)
 	srv.AddView(`/autocomplete/$`, autocompleteView)
 	srv.AddView(`/assets/(.+)$`, assetsView)
+	srv.AddView(`/proxy.html$`, proxyView)
 
 	cast.LogInfo("The server mode is designed to be used with the Builder: "+config.FrontUrl, nil)
 	return srv.ServeIfNot()
@@ -673,4 +674,32 @@ func assetsView(w http.ResponseWriter, r *http.Request, matches [][]string) {
 		}
 		return
 	}
+}
+
+func proxyView(w http.ResponseWriter, r *http.Request, matches [][]string) {
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != "GET" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		resp := &GenericResponse{
+			Code:             "E01",
+			Fail:             true,
+			Errors:           []string{http.StatusText(http.StatusMethodNotAllowed)},
+			ValidationErrors: nil,
+		}
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			http.Error(w, "E01 "+err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("X-Frame-Options", "DENY")
+	w.Header().Set("Cache-Control", "no-cache")
+
+	w.Write([]byte(assets.PROXYHTTP))
 }

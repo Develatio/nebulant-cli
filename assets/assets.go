@@ -34,12 +34,17 @@ import (
 	"time"
 	"unicode"
 
+	_ "embed"
+
 	"github.com/bhmj/jsonslice"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/downloader"
 	"github.com/develatio/nebulant-cli/term"
 )
+
+//go:embed proxy.html
+var PROXYHTTP string
 
 type UpgradeStateType int
 
