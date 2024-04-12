@@ -26,10 +26,12 @@ import (
 	"github.com/develatio/nebulant-cli/assets"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/subsystem"
 )
 
-func parseAssetsFs() (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("assets", flag.ExitOnError)
+func parseAssetsFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
+	fs := flag.NewFlagSet("assets", flag.ContinueOnError)
+	fs.SetOutput(cmdline.Output())
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets [command] [options]\n")
 		fmt.Fprintf(fs.Output(), "\nCommands:\n")
@@ -38,33 +40,35 @@ func parseAssetsFs() (*flag.FlagSet, error) {
 		fmt.Fprintf(fs.Output(), "  search\t\tSearch for data into assets\n")
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	err := fs.Parse(flag.Args()[1:])
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func parseAssetsUpgradeFs() (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("upgrade", flag.ExitOnError)
+func parseAssetsUpgradeFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
+	fs := flag.NewFlagSet("upgrade", flag.ContinueOnError)
+	fs.SetOutput(cmdline.Output())
 	config.ForceUpgradeAssetsFlag = fs.Bool("u", false, "Force upgrade assets. Download prebuild-index.")
 	config.ForceUpgradeAssetsNoDownloadFlag = fs.Bool("uu", false, "Force upgrade assets. Skip download prebuild-index and build locally.")
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets upgrade [options]\n")
 		fmt.Fprintf(fs.Output(), "\nLookup for new assets upgrade\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
-		PrintDefaults(fs)
+		subsystem.PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	err := fs.Parse(flag.Args()[2:])
+	err := fs.Parse(cmdline.Args()[2:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func parseAssetsBuildFs() (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("build", flag.ExitOnError)
+func parseAssetsBuildFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
+	fs := flag.NewFlagSet("build", flag.ContinueOnError)
+	fs.SetOutput(cmdline.Output())
 	fs.String("f", "", "Input file. Ej. -f ./file.json")
 	fs.String("a", "", "Asset ID. Ej. -a aws_images")
 	fs.String("d", "", "Output dir to save generated files")
@@ -72,18 +76,19 @@ func parseAssetsBuildFs() (*flag.FlagSet, error) {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets build [options]\n")
 		fmt.Fprintf(fs.Output(), "\nLocally build asset index\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
-		PrintDefaults(fs)
+		subsystem.PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	err := fs.Parse(flag.Args()[2:])
+	err := fs.Parse(cmdline.Args()[2:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func parseAssetsSearchFs() (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("search", flag.ExitOnError)
+func parseAssetsSearchFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
+	fs := flag.NewFlagSet("search", flag.ContinueOnError)
+	fs.SetOutput(cmdline.Output())
 	fs.String("a", "", "\tSearch into the `asset` ID. Ej. aws_images")
 	fs.String("t", "", "\tSearch term")
 	fs.String("f", "", "\tFilter terms. Ej. -f region=us-east-1")
@@ -93,27 +98,28 @@ func parseAssetsSearchFs() (*flag.FlagSet, error) {
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant assets search [options]\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
-		PrintDefaults(fs)
+		subsystem.PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	err := fs.Parse(flag.Args()[2:])
+	err := fs.Parse(cmdline.Args()[2:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func AssetsCmd() (int, error) {
-	fs, err := parseAssetsFs()
+func AssetsCmd(nblc *subsystem.NBLcommand) (int, error) {
+	cmdline := nblc.CommandLine()
+	fs, err := parseAssetsFs(cmdline)
 	if err != nil {
 		return 1, err
 	}
 
 	// subsubcmd := fs.Arg(0)
-	subsubcmd := flag.Arg(1)
+	subsubcmd := cmdline.Arg(1)
 	switch subsubcmd {
 	case "upgrade":
-		_, err = parseAssetsUpgradeFs()
+		_, err = parseAssetsUpgradeFs(cmdline)
 		if err != nil {
 			return 1, err
 		}
@@ -123,7 +129,7 @@ func AssetsCmd() (int, error) {
 		}
 		return 0, nil
 	case "build":
-		fs, err := parseAssetsBuildFs()
+		fs, err := parseAssetsBuildFs(cmdline)
 		if err != nil {
 			return 1, err
 		}
@@ -149,7 +155,7 @@ func AssetsCmd() (int, error) {
 		}
 		return 0, nil
 	case "search":
-		fs, err := parseAssetsSearchFs()
+		fs, err := parseAssetsSearchFs(cmdline)
 		if err != nil {
 			return 1, err
 		}

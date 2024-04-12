@@ -24,17 +24,19 @@ import (
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/subsystem"
 )
 
-func parseServeFs() (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("serve", flag.ExitOnError)
+func parseServeFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
+	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
+	fs.SetOutput(cmdline.Output())
 	config.AddrFlag = fs.String("b", config.SERVER_ADDR+":"+config.SERVER_PORT, "Bind addr:port (ipv4) or [::1]:port (ipv6)")
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant serve [options]\n")
 		fmt.Fprintf(fs.Output(), "\nOptions:\n")
-		PrintDefaults(fs)
+		subsystem.PrintDefaults(fs)
 	}
-	err := fs.Parse(flag.Args()[1:])
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
@@ -62,8 +64,8 @@ func parseServeFs() (*flag.FlagSet, error) {
 	return fs, nil
 }
 
-func ServeCmd() (int, error) {
-	_, err := parseServeFs()
+func ServeCmd(nblc *subsystem.NBLcommand) (int, error) {
+	_, err := parseServeFs(nblc.CommandLine())
 	if err != nil {
 		return 1, err
 	}
@@ -74,11 +76,10 @@ func ServeCmd() (int, error) {
 		cast.LogErr(err.Error(), nil)
 		panic(err.Error())
 	}
-	executive.InitServerMode(config.SERVER_ADDR, config.SERVER_PORT)
-
-	executive.ServerWaiter.Wait() // None to wait if server mode is disabled
-	if executive.ServerError != nil {
-		return 2, executive.ServerError
+	errc := executive.InitServerMode()
+	err = <-errc
+	if err != nil {
+		return 2, err
 	}
 	executive.MDirector.Wait() // None to wait if director has stoped
 	return 0, nil

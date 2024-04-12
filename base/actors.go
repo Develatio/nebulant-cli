@@ -17,8 +17,62 @@
 package base
 
 import (
+	"io"
+
 	"github.com/develatio/nebulant-cli/blueprint"
 )
+
+type ActionContextRunStatus int
+
+type ContextType int
+
+const (
+	ContextTypeRegular ContextType = iota // one parent, one child
+	ContextTypeThread                     // one parent, many children
+	ContextTypeJoin                       // many parents, one child
+)
+
+const (
+	RunStatusReady ActionContextRunStatus = iota
+	RunStatusArranging
+	RunStatusRunning
+	RunStatusDone
+)
+
+// ActionContext interface
+type IActionContext interface {
+	Type() ContextType
+	Parent(IActionContext)
+	Parents() []IActionContext
+	Child(IActionContext)
+	Children() []IActionContext
+	IsThreadPoint() bool
+	IsJoinPoint() bool
+	GetAction() *blueprint.Action
+	SetStore(IStore)
+	GetStore() IStore
+	// SetProvider(IProvider)
+	// GetProvider() IProvider
+	Done() <-chan struct{}
+	WithCancelCause()
+	WithEventListener(*EventListener)
+	EventListener() *EventListener
+	Cancel(error)
+	WithRunFunc(func() (*ActionOutput, error))
+	RunAction() (*ActionOutput, error)
+	SetRunStatus(ActionContextRunStatus)
+	GetRunStatus() ActionContextRunStatus
+	//
+	GetSluvaFD() io.ReadWriteCloser
+	GetMustarFD() io.ReadWriteCloser
+	//
+	// the func that runs on DebugInit call
+	WithDebugInitFunc(func())
+	// returns the fd in wich the action can
+	// read/write to interact with  user,
+	// commonly the sluva FD of vpty
+	DebugInit()
+}
 
 // IActor interface
 type IActor interface {

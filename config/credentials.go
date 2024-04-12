@@ -160,7 +160,7 @@ func Login(credential *Credential) (*cookiejar.Jar, error) {
 	sso_login_url := url.URL{
 		Scheme: BackendProto,
 		Host:   BackendURLDomain,
-		Path:   "/apiv1/authx/sso/login/",
+		Path:   "/v1/sso/login/",
 	}
 
 	pwd := strings.Split(*credential.AuthToken, ":")[0]

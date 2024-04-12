@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/develatio/nebulant-cli/ipc"
+	"github.com/develatio/nebulant-cli/subsystem"
 )
 
 // strict *bool by default is false
@@ -33,22 +34,23 @@ import (
 // true: all errors are printed
 var strict *bool
 
-func parseReadVar() (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("readvar", flag.ExitOnError)
+func parseReadVar(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
+	fs := flag.NewFlagSet("readvar", flag.ContinueOnError)
+	fs.SetOutput(cmdline.Output())
 	strict = fs.Bool("strict", false, "Force err msg instead empty string")
 	fs.Usage = func() {
 		fmt.Fprint(fs.Output(), "\nUsage: nebulant readvar [variable name] [flags]\n")
-		PrintDefaults(fs)
+		subsystem.PrintDefaults(fs)
 	}
-	err := fs.Parse(flag.Args()[1:])
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func ReadvarCmd() (int, error) {
-	_, err := parseReadVar()
+func ReadvarCmd(nblc *subsystem.NBLcommand) (int, error) {
+	_, err := parseReadVar(nblc.CommandLine())
 	if err != nil {
 		return 1, err
 	}

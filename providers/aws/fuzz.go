@@ -16,26 +16,35 @@
 
 package aws
 
-import "github.com/develatio/nebulant-cli/blueprint"
+// import (
+// 	"github.com/develatio/nebulant-cli/blueprint"
+// 	"github.com/develatio/nebulant-cli/runtime"
+// )
 
-// Fuzz func
-// TODO: #error Currently only Linux is supported. More info: issue #2
-func Fuzz(data []byte) int {
-	bp, err := blueprint.NewFromBytes(data)
-	if err != nil {
-		if bp != nil {
-			panic("bp != nil on error")
-		}
-		return 0
-	}
+// // Fuzz func
+// // TODO: #error Currently only Linux is supported. More info: issue #2
+// func Fuzz(data []byte) int {
+// 	bp, err := blueprint.NewFromBytes(data)
+// 	if err != nil {
+// 		if bp != nil {
+// 			panic("bp != nil on error")
+// 		}
+// 		return 0
+// 	}
 
-	aws := new(Provider)
-	aout, aerr := aws.HandleAction(&bp.Actions[0])
-	if aerr != nil {
-		if aout != nil {
-			panic("bp != nil on error")
-		}
-		return 0
-	}
-	return 1
-}
+// 	irb, err := blueprint.GenerateIRB(bp, &blueprint.IRBGenConfig{})
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	rt := runtime.NewRuntime(irb)
+// 	actx := rt.NewAContext(nil, &bp.Actions[0])
+// 	aws := new(Provider)
+// 	aout, aerr := aws.HandleAction(actx)
+// 	if aerr != nil {
+// 		if aout != nil {
+// 			panic("bp != nil on error")
+// 		}
+// 		return 0
+// 	}
+// 	return 1
+// }

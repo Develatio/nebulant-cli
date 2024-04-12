@@ -20,6 +20,7 @@ package term
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/chzyer/readline"
 	"github.com/manifoldco/promptui"
@@ -29,6 +30,10 @@ import (
 // Stdin = NewRawReader()
 // Stdout = NewANSIWriter(Stdout)
 // Stderr = NewANSIWriter(Stderr)
+
+var GenuineOsStdout *os.File = os.Stdout
+var GenuineOsStderr *os.File = os.Stderr
+var GenuineOsStdin *os.File = os.Stdin
 
 var Stdout = readline.Stdout
 var Stderr = readline.Stderr

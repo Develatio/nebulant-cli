@@ -22,6 +22,5 @@ import "github.com/develatio/nebulant-cli/blueprint"
 type IManager interface {
 	PrepareIRB(irb *blueprint.IRBlueprint)
 	GetStore() IStore
-	InitNewStageFromActionID(action *blueprint.Action) (IStage, error)
 	Run() error
 }

@@ -20,10 +20,10 @@ package interactive
 
 import (
 	"net"
-	"os"
 
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/manifoldco/promptui"
@@ -35,7 +35,7 @@ type menuItem struct {
 	Cmd         string
 }
 
-func Loop() error {
+func Loop(nblc *subsystem.NBLcommand) error {
 	menuItems := []*menuItem{
 		{Name: "Serve ", Description: "Start server mode at " + net.JoinHostPort(config.SERVER_ADDR, config.SERVER_PORT), Cmd: "serve"},
 		{Name: "Build ", Description: "Open builder app and start server mode", Cmd: "build"},
@@ -57,7 +57,8 @@ L:
 			Items:     menuItems,
 			Size:      len(menuItems),
 			Templates: templates,
-			Stdout:    term.NoBellStdout,
+			Stdout:    nblc.Stdout,
+			Stdin:     nblc.Stdin,
 		}
 		i, _, err := prompt.Run()
 		if err != nil {
@@ -69,7 +70,7 @@ L:
 		// case "args":
 		// 	util.PrintUsage(nil)
 		case "exit":
-			os.Exit(0)
+			break L
 		case "serve":
 			term.PrintInfo("Starting server mode...\n")
 			term.PrintInfo("You can also start server mode using -s argument\n")
@@ -78,15 +79,15 @@ L:
 				term.PrintErr(err.Error() + "\n")
 				continue
 			}
-			executive.InitServerMode(config.SERVER_ADDR, config.SERVER_PORT)
-			executive.ServerWaiter.Wait()
-			if executive.ServerError != nil {
-				term.PrintErr(executive.ServerError.Error() + "\n")
+			errc := executive.InitServerMode()
+			err = <-errc
+			if err != nil {
+				term.PrintErr(err.Error() + "\n")
 				continue
 			}
 			executive.MDirector.Wait()
 		case "path":
-			err := Path()
+			err := Path(nblc)
 			if err != nil {
 				term.PrintErr(err.Error() + "\n")
 				continue
@@ -103,16 +104,16 @@ L:
 				term.PrintErr(err.Error() + "\n")
 				continue
 			}
-			executive.InitServerMode(config.SERVER_ADDR, config.SERVER_PORT)
-			executive.ServerWaiter.Wait()
-			if executive.ServerError != nil {
-				term.PrintErr(executive.ServerError.Error() + "\n")
+			errc := executive.InitServerMode()
+			err = <-errc
+			if err != nil {
+				term.PrintErr(err.Error() + "\n")
 				continue
 			}
 			executive.MDirector.Wait()
 			break L
 		case "browse":
-			err := Browser()
+			err := Browser(nblc)
 			if err != nil {
 				term.PrintErr(err.Error() + "\n")
 				continue

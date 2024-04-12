@@ -23,6 +23,10 @@ import (
 	"os"
 )
 
+var GenuineOsStdout *os.File = os.Stdout
+var GenuineOsStderr *os.File = os.Stderr
+var GenuineOsStdin *os.File = os.Stdin
+
 var Stdout = os.Stdout
 var Stderr = os.Stderr
 var Stdin = os.Stdin

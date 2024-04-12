@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/develatio/nebulant-cli/cast"
+	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/term"
 )
 
@@ -43,17 +44,18 @@ func newBar() {
 	}
 }
 
-func parseTestsFs() (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("debugterm", flag.ExitOnError)
-	err := fs.Parse(flag.Args()[1:])
+func parseTestsFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
+	fs := flag.NewFlagSet("debugterm", flag.ContinueOnError)
+	fs.SetOutput(cmdline.Output())
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func DebugtermCmd() (int, error) {
-	_, err := parseTestsFs()
+func DebugtermCmd(nblc *subsystem.NBLcommand) (int, error) {
+	_, err := parseTestsFs(nblc.CommandLine())
 	if err != nil {
 		return 1, err
 	}

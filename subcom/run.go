@@ -23,23 +23,25 @@ import (
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/subsystem"
 )
 
-func parseRunFs() (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("run", flag.ExitOnError)
+func parseRunFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
+	fs := flag.NewFlagSet("run", flag.ContinueOnError)
+	fs.SetOutput(cmdline.Output())
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant run [path or nebulant:// protocol] [--varname=varvalue --varname=varvalue]\n")
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	err := fs.Parse(flag.Args()[1:])
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func RunCmd() (int, error) {
-	fs, err := parseRunFs()
+func RunCmd(nblc *subsystem.NBLcommand) (int, error) {
+	fs, err := parseRunFs(nblc.CommandLine())
 	if err != nil {
 		return 1, err
 	}
@@ -64,7 +66,7 @@ func RunCmd() (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	executive.MDirector.HandleIRB <- irb
+	executive.MDirector.HandleIRB <- &executive.HandleIRBConfig{IRB: irb}
 	executive.MDirector.Wait()
 	return 0, nil
 }

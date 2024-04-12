@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"runtime/debug"
@@ -32,6 +32,7 @@ import (
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/manifoldco/promptui"
@@ -71,11 +72,13 @@ type resultsBlueprint struct {
 	Results []*blueprintSerializer `json:"results"`
 }
 
+// TODO: move to common, this code is duplicated in
+// runtime/debugger.go
 func httpReq(method string, path string, body interface{}) ([]byte, error) {
 	url := url.URL{
 		Scheme: config.BackendProto,
 		Host:   config.BackendURLDomain,
-		Path:   "/apiv1/" + path,
+		Path:   "/v1/" + path,
 	}
 	rawBody, err := json.Marshal(body)
 	if err != nil {
@@ -99,7 +102,7 @@ func httpReq(method string, path string, body interface{}) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	rawbody, err := ioutil.ReadAll(resp.Body)
+	rawbody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -110,13 +113,13 @@ func httpReq(method string, path string, body interface{}) ([]byte, error) {
 	return rawbody, nil
 }
 
-func Browser() error {
+func Browser(nblc *subsystem.NBLcommand) error {
 	if config.CREDENTIAL.AuthToken == nil {
-		return fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token.")
+		return fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token")
 	}
 
 	term.PrintInfo("Looking for collections...\n")
-	data, err := httpReq("GET", "authx/me/", nil)
+	data, err := httpReq("GET", "me/", nil)
 	if err != nil {
 		return err
 	}
@@ -138,14 +141,14 @@ func Browser() error {
 	}
 	rp.Results = append(rp.Results, &collectionSerializer{Name: "Back"})
 	fmt.Printf("\r")
-	err = promptCollection(rp.Results)
+	err = promptCollection(nblc, rp.Results)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func promptCollection(collections []*collectionSerializer) error {
+func promptCollection(nblc *subsystem.NBLcommand, collections []*collectionSerializer) error {
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}:",
 		Active:   term.EmojiSet["BackhandIndexPointingRight"] + " {{ .Name | magenta }} {{if .UUID}} ({{ .BlueprintsCount | red }}) {{end}}",
@@ -163,7 +166,8 @@ L:
 			Label:     "Select collection",
 			Items:     collections,
 			Templates: templates,
-			Stdout:    term.NoBellStdout,
+			Stdout:    nblc.Stdout,
+			Stdin:     nblc.Stdin,
 			HideHelp:  true,
 		}
 		i, _, err := prompt.Run()
@@ -186,7 +190,7 @@ L:
 			return err
 		}
 		rd.Results = append(rd.Results, &blueprintSerializer{Name: "Back"})
-		err = promptBlueprint(rd.Results)
+		err = promptBlueprint(nblc, rd.Results)
 		if err != nil {
 			return err
 		}
@@ -194,7 +198,7 @@ L:
 	return nil
 }
 
-func promptBlueprint(collections []*blueprintSerializer) error {
+func promptBlueprint(nblc *subsystem.NBLcommand, collections []*blueprintSerializer) error {
 	defer func() {
 		if r := recover(); r != nil {
 			cast.LogErr("Unrecoverable error found. Feel free to send us feedback", nil)
@@ -233,7 +237,8 @@ L:
 			Label:     "Select Blueprint",
 			Items:     collections,
 			Templates: templates,
-			Stdout:    term.NoBellStdout,
+			Stdout:    nblc.Stdout,
+			Stdin:     nblc.Stdin,
 			HideHelp:  true,
 		}
 		i, _, err := prompt.Run()
@@ -256,7 +261,7 @@ L:
 		if err != nil {
 			return err
 		}
-		executive.MDirector.HandleIRB <- irb
+		executive.MDirector.HandleIRB <- &executive.HandleIRBConfig{IRB: irb}
 		executive.MDirector.Wait()
 		executive.MDirector.Clean()
 	}

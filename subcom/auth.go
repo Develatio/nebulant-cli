@@ -22,10 +22,12 @@ import (
 
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/subsystem"
 )
 
-func parseAuthFs() (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("auth", flag.ExitOnError)
+func parseAuthFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
+	fs := flag.NewFlagSet("auth", flag.ContinueOnError)
+	fs.SetOutput(cmdline.Output())
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant auth [command] [options]\n")
 		fmt.Fprintf(fs.Output(), "\nCommands:\n")
@@ -33,21 +35,22 @@ func parseAuthFs() (*flag.FlagSet, error) {
 		// fmt.Fprintf(fs.Output(), "  login\t\tLogin\n")
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	err := fs.Parse(flag.Args()[1:])
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func AuthCmd() (int, error) {
-	fs, err := parseAuthFs()
+func AuthCmd(nblc *subsystem.NBLcommand) (int, error) {
+	cmdline := nblc.CommandLine()
+	fs, err := parseAuthFs(cmdline)
 	if err != nil {
 		return 1, err
 	}
 
 	// subsubcmd := fs.Arg(0)
-	subsubcmd := flag.Arg(1)
+	subsubcmd := cmdline.Arg(1)
 	switch subsubcmd {
 	case "newtoken":
 		err := config.RequestToken()

@@ -24,11 +24,12 @@ import (
 
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/term"
 	"github.com/manifoldco/promptui"
 )
 
-func Path() error {
+func Path(nblc *subsystem.NBLcommand) error {
 	validate := func(input string) error {
 		if len(input) <= 0 {
 			return nil
@@ -48,6 +49,8 @@ func Path() error {
 	prompt := promptui.Prompt{
 		Label:    "Path",
 		Validate: validate,
+		Stdout:   nblc.Stdout,
+		Stdin:    nblc.Stdin,
 	}
 	path, err := prompt.Run()
 	if err != nil {
@@ -66,7 +69,7 @@ func Path() error {
 	if err != nil {
 		return err
 	}
-	executive.MDirector.HandleIRB <- irb
+	executive.MDirector.HandleIRB <- &executive.HandleIRBConfig{IRB: irb}
 	executive.MDirector.Wait()
 	executive.MDirector.Clean()
 	return nil

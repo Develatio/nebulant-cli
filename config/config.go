@@ -69,6 +69,9 @@ var FrontOriginPre string = "https://builder.nebulant.dev"
 // DEBUG conf
 var DEBUG bool = false
 
+// PARANOICDEBUG conf
+var PARANOICDEBUG bool = false
+
 // PROFILING conf
 var PROFILING bool = false
 
@@ -87,6 +90,21 @@ var SERVER_ADDR = "localhost"
 // Server port
 var SERVER_PORT = "15678"
 
+// Server cert file path
+var SERVER_CERT = ""
+
+// Server key file path
+var SERVER_KEY = ""
+
+// Bridge addr
+var BRIDGE_ADDR = ""
+
+// Bridge port
+var BRIDGE_PORT = "16789"
+
+// Bridge secret
+var BRIDGE_SECRET = os.Getenv("NEBULANT_BRIDGE_SECRET")
+
 // AssetDescriptorURL conf
 var AssetDescriptorURL = "https://builder-assets.nebulant.io/assets.json"
 
@@ -97,8 +115,10 @@ var UpdateDescriptorURL string = "https://releases.nebulant.io/version.json"
 
 var ServerModeFlag *bool
 var AddrFlag *string
+var BridgeAddrFlag *string
 var VersionFlag *bool
 var DebugFlag *bool
+var ParanoicDebugFlag *bool
 var Ipv6Flag *bool
 var DisableColorFlag *bool
 var UpgradeAssetsFlag *bool
@@ -107,6 +127,14 @@ var LookupAssetFlag *string
 var ForceTerm *bool
 var BuildAssetIndexFlag *string
 var ForceUpgradeAssetsNoDownloadFlag *bool
+var BridgeSecretFlag *string
+var BridgeOriginFlag *string
+
+var BridgeCertPathFlag *string
+var BridgeKeyPathFlag *string
+var BridgeXtermRootPath *string
+
+var ForceNoTerm = false
 
 func AppHomePath() string {
 	var userHomePath string

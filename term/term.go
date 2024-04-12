@@ -70,6 +70,8 @@ var EraseLine string = "\033[K"
 var EraseLineFromCursor string = "\033[0K"
 var EraseEntireLine string = "\033[2K"
 
+var IdentifyDevice string = "\033Z"
+
 var mls *MultilineStdout = nil
 
 // https://github.com/manifoldco/promptui/issues/49
@@ -92,6 +94,9 @@ func isTerminal() bool {
 	if config.ForceTerm != nil && *config.ForceTerm {
 		return true
 	}
+	if config.ForceNoTerm {
+		return false
+	}
 	return term.IsTerminal(int(os.Stdout.Fd()))
 }
 
@@ -106,7 +111,6 @@ func Selectable(prompt string, options []string) (int, error) {
 func openMultilineStdout() {
 	if mls == nil {
 		mls = &MultilineStdout{}
-
 		mls.SetMainStdout(Stdout)
 		mls.Init()
 		log.SetOutput(mls)
@@ -136,6 +140,8 @@ func Print(a ...interface{}) (n int, err error) {
 	return fmt.Fprint(Stdout, a...)
 }
 
+// I know, this is too intrusive
+// way to check emoji support
 func configEmojiSupport() error {
 	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {

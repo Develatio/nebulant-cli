@@ -41,7 +41,7 @@ func InitDirector(serverMode bool, interactiveMode bool) error {
 	MDirector = &Director{
 		managers:          make(map[*Manager]*blueprint.IRBlueprint),
 		managersByIRB:     make(map[*blueprint.IRBlueprint]*Manager),
-		HandleIRB:         make(chan *blueprint.IRBlueprint, 10),
+		HandleIRB:         make(chan *HandleIRBConfig, 10),
 		ExecInstruction:   make(chan *ExecCtrlInstruction, 10),
 		UnregisterManager: make(chan *Manager, 10),
 		directorWaiter:    directorWaiter,
@@ -52,12 +52,17 @@ func InitDirector(serverMode bool, interactiveMode bool) error {
 	return nil
 }
 
+type HandleIRBConfig struct {
+	Manager *Manager
+	IRB     *blueprint.IRBlueprint
+}
+
 // Director struct
 type Director struct {
 	ExecInstruction   chan *ExecCtrlInstruction
 	serverMode        bool
 	interactiveMode   bool
-	HandleIRB         chan *blueprint.IRBlueprint
+	HandleIRB         chan *HandleIRBConfig
 	UnregisterManager chan *Manager
 	StopDirector      chan int
 	directorWaiter    *sync.WaitGroup
@@ -88,37 +93,59 @@ L:
 			cast.LogInfo("[Director] Received instruction with id "+*instr.ExecutionUUID, nil)
 			if len(d.managers) <= 0 {
 				cast.LogInfo("[Director] No managers available", nil)
-				cast.PushEvent(cast.EventManagerOut, instr.ExecutionUUID)
+				cast.PushEvent(cast.EventRuntimeOut, instr.ExecutionUUID)
 				continue
 			}
 			managerFound := false
 			for manager := range d.managers {
-				if instr.ExecutionUUID != nil && *manager.ExecutionUUID != *instr.ExecutionUUID {
-					continue
-				}
-				managerFound = true
-				cast.LogInfo("[Director] Sending Instruction to Manager", nil)
-				select {
-				case manager.execInstruction <- instr:
-				default:
-					// Hey! How's it going developer?
+				if instr.ExecutionUUID != nil && *manager.ExecutionUUID == *instr.ExecutionUUID {
+					managerFound = true
+					cast.LogInfo("[Director] Sending Instruction to Runtime", nil)
+					switch instr.Instruction {
+					case ExecStop:
+						manager.Runtime.Stop()
+					case ExecStart:
+						manager.Runtime.Play()
+					case ExecPause:
+						manager.Runtime.Pause()
+					case ExecResume:
+						manager.Runtime.Play()
+					case ExecState:
+						cast.LogInfo("NOOP instruction", nil)
+					case ExecEmancipation:
+						cast.LogInfo("NOOP instruction", nil)
+					}
+					break
 				}
 			}
 			if !managerFound {
 				cast.LogInfo("[Director] No manager found for instruction", nil)
-				cast.PushEvent(cast.EventManagerOut, instr.ExecutionUUID)
+				cast.PushEvent(cast.EventRuntimeOut, instr.ExecutionUUID)
 			}
-		case irb := <-d.HandleIRB:
+		case hirbcfg := <-d.HandleIRB:
+			irb := hirbcfg.IRB
+			manager := hirbcfg.Manager
+
+			// if manager is nil, hirbcfg.IRB should be configured
+			if manager == nil {
+				manager = NewManager(d.serverMode)
+				manager.PrepareIRB(irb)
+			}
+
+			// if irb is nil, manager.IRB should be configured
+			if irb == nil {
+				irb = manager.IRB
+			}
+
 			if irb.BP.BuilderWarnings > 0 {
 				cast.LogWarn("This blueprint has "+fmt.Sprintf("%v", irb.BP.BuilderWarnings)+" warnings from the builder", irb.BP.ExecutionUUID)
 			}
-			manager := NewManager()
 			d.managersByIRB[irb] = manager
 			d.managers[manager] = irb
 			extra := make(map[string]interface{})
 			extra["manager"] = manager
 			cast.PushEventWithExtra(cast.EventRegisteredManager, irb.BP.ExecutionUUID, extra)
-			manager.PrepareIRB(irb)
+			cast.LogDebug("[Director] sending irb to manager...", nil)
 			go func() {
 				exit := false
 				defer func() {
@@ -153,14 +180,18 @@ L:
 				defer func() {
 					d.UnregisterManager <- manager
 				}()
+				cast.LogDebug("Starting manager loop...", nil)
 				err := manager.Run()
 				if err != nil {
 					cast.LogErr(err.Error(), nil)
 				}
+				cast.LogDebug("[Director] manager has end Run()", nil)
 			}()
 		case manager := <-d.UnregisterManager:
 			cast.LogInfo("[Director] Unregistering Manager", nil)
-			exitCode := manager.ExternalRegistry.ExitCode
+			// exitCode := manager.ExternalRegistry.ExitCode
+			exitCode := manager.Runtime.ExitCode()
+
 			manager.reset()
 			irb := d.managers[manager]
 			delete(d.managers, manager)

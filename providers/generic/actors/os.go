@@ -26,13 +26,14 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"os/user"
-	"runtime"
 	"strconv"
 	"strings"
 
+	"github.com/creack/pty"
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/ipc"
+	"github.com/develatio/nebulant-cli/term"
+	nebulant_term "github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/joho/godotenv"
 )
@@ -56,14 +57,17 @@ type runLocalParameters struct {
 	// PrivateKeyPath *string `json:"keyfile"`
 	// Password       *string `json:"password"`
 	// Port           *string `json:"port"`
-	Vars               map[string]string `json:"vars"`
-	DumpJSON           *bool             `json:"dump_json"`
-	ScriptText         *string           `json:"script"`
-	ScriptParameters   *string           `json:"scriptParameters"`
-	ScriptName         string            `json:"scriptName"`
-	Command            *string           `json:"command"`
-	CommandAsSingleArg bool              `json:"pass_to_entrypoint_as_single_param"`
-	Entrypoint         *string           `json:"entrypoint"`
+	Vars                map[string]string `json:"vars"`
+	DumpJSON            *bool             `json:"dump_json"`
+	ScriptText          *string           `json:"script"`
+	ScriptParameters    *string           `json:"scriptParameters"`
+	ScriptName          string            `json:"scriptName"`
+	Command             *string           `json:"command"`
+	CommandAsSingleArg  bool              `json:"pass_to_entrypoint_as_single_param"`
+	Entrypoint          *string           `json:"entrypoint"`
+	OpenDbgShellAfter   bool              `json:"open_dbg_shell_after"`
+	OpenDbgShellBefore  bool              `json:"open_dbg_shell_before"`
+	OpenDbgShellOnerror bool              `json:"open_dbg_shell_onerror"`
 }
 
 type readFileParameters struct {
@@ -75,6 +79,39 @@ type writeFileParameters struct {
 	FilePath    *string `json:"file_path" validate:"required"`
 	Content     *string `json:"content" validate:"required"`
 	Interpolate bool    `json:"interpolate"`
+}
+
+func newLocalDebugShell(ctx *ActionContext, failed *exec.Cmd) error {
+	shell, err := nebulant_term.DetermineOsShell()
+	if err != nil {
+		ctx.Logger.LogErr(err.Error())
+		return err
+	}
+
+	ctx.DebugInit()
+
+	mst := ctx.GetMustarFD()
+	defer mst.Close()
+	svu := ctx.GetSluvaFD() // bring sluva to tty
+
+	ctx.Logger.LogInfo(fmt.Sprintf("original exec: %s", strings.Join(failed.Args, " ")))
+
+	cmd := exec.Command(shell)
+	cmd.Env = failed.Env
+	f, err := pty.Start(cmd)
+	if err != nil {
+		return err
+	}
+
+	// copy sluva to os pty
+	go func() { _, _ = io.Copy(f, svu) }()
+
+	// copy os pty to sluva
+	_, err = io.Copy(svu, f)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // RunLocalScript func
@@ -128,60 +165,11 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	if p.Entrypoint == nil || p.Entrypoint != nil && len(strings.Replace(*p.Entrypoint, " ", "", -1)) <= 0 {
-		var shell string
-		switch runtime.GOOS {
-		case "windows":
-			shell = os.Getenv("COMSPEC")
-			if len(shell) <= 0 {
-				shell = "cmd.exe"
-			}
-		case "darwin":
-			user, err := user.Current()
-			if err != nil {
-				return nil, err
-			}
-			argv, err := util.CommandLineToArgv("dscl /Search -read \"/Users/" + user.Username + "\" UserShell")
-			if err != nil {
-				return nil, err
-			}
-			out, err := exec.Command(argv[0], argv[1:]...).Output() // #nosec G204 -- allowed here
-			if err != nil {
-				return nil, err
-			}
-			shell = string(out)
-			shell = strings.Replace(shell, "UserShell: ", "", 1)
-			shell = strings.Trim(shell, "\n")
-			if len(shell) <= 0 {
-				shell = "/bin/zsh"
-			}
-		case "linux", "openbsd", "freebsd":
-			user, err := user.Current()
-			if err != nil {
-				return nil, err
-			}
-			out, err := exec.Command("getent", "passwd", user.Uid).Output() // #nosec G204 -- allowed here
-			if err != nil {
-				return nil, err
-			}
-			parts := strings.SplitN(string(out), ":", 7)
-			if len(parts) < 7 || parts[0] == "" || parts[0][0] == '+' || parts[0][0] == '-' {
-				return nil, fmt.Errorf("cannot determine OS shell")
-			}
-			shell = parts[6]
-			shell = strings.Trim(shell, "\n")
-			if len(shell) <= 0 {
-				shell = "/bin/bash"
-			}
+		shell, err := term.DetermineOsShell()
+		if err != nil {
+			return nil, err
 		}
-		ss := strings.Split(string(shell), string(os.PathSeparator))
-		rr := ss[len(ss)-1]
-		rr = strings.ToLower(rr)
-		switch rr {
-		case "zsh", "bash", "tcsh", "csh", "ksh", "ash", "rc", "bash.exe":
-			shell = shell + " -c"
-		case "cmd.exe":
-			shell = shell + " /c"
-		}
+
 		p.Entrypoint = &shell
 		p.CommandAsSingleArg = true
 	}
@@ -283,6 +271,15 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		err = cmdRunError.(*net.OpError).Err
 	} else {
 		err = cmdRunError
+	}
+
+	if err != nil && p.OpenDbgShellOnerror {
+		ctx.Logger.LogErr(errors.Join(fmt.Errorf("exec fail"), err.(error)).Error())
+		ctx.Logger.LogInfo("waiting for debug session to finish")
+		dbgErr := newLocalDebugShell(ctx, cmd)
+		if dbgErr != nil {
+			err = errors.Join(dbgErr, err)
+		}
 	}
 
 	aout := base.NewActionOutput(ctx.Action, result, nil)

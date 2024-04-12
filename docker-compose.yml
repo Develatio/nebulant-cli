@@ -1,0 +1,36 @@
+version: "3.4"
+name: nebulant
+
+services:
+  bridge:
+    container_name: nebulant_bridge
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: develatio/nebulant_bridge
+    command: "/app/dist/nebulant-bridge -x -b 0.0.0.0:16789 -bs ultrasecret -c server.crt -k server.key"
+    ports:
+      - 16788:16789
+    networks:
+      - nebulant-private
+      - nebulant-lan
+  # cli:
+  #   container_name: nebulant_cli
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   image: develatio/nebulant_cli
+  #   command: "/app/dist/nebulant -x serve"
+  #   ports:
+  #     - 15678:15678
+  #   networks:
+  #     - nebulant
+  #     - nebulant-external
+
+
+networks:
+  nebulant-private:
+    name: nebulant-private
+  nebulant-lan:
+    name: nebulant-lan
+    external: true

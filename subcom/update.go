@@ -21,29 +21,31 @@ import (
 	"fmt"
 
 	"github.com/develatio/nebulant-cli/cast"
+	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/update"
 )
 
 var forceupdate *bool
 
-func parseUpdate() (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("update", flag.ExitOnError)
+func parseUpdate(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
+	fs := flag.NewFlagSet("update", flag.ContinueOnError)
+	fs.SetOutput(cmdline.Output())
 	forceupdate = fs.Bool("f", false, "force update")
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant update [options]\n")
-		fmt.Fprintf(flag.CommandLine.Output(), "\nOptions:\n")
-		PrintDefaults(fs)
+		fmt.Fprintf(cmdline.Output(), "\nOptions:\n")
+		subsystem.PrintDefaults(fs)
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
-	err := fs.Parse(flag.Args()[1:])
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func UpdateCmd() (int, error) {
-	_, err := parseUpdate()
+func UpdateCmd(nblc *subsystem.NBLcommand) (int, error) {
+	_, err := parseUpdate(nblc.CommandLine())
 	if err != nil {
 		return 1, err
 	}

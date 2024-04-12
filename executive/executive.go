@@ -16,10 +16,6 @@
 
 package executive
 
-import (
-	"github.com/develatio/nebulant-cli/blueprint"
-)
-
 // ExecCtrlInstructionID int
 type ExecCtrlInstructionID int
 
@@ -73,16 +69,17 @@ const (
 	ActionNotRunning
 )
 
-type stageReport struct {
-	stage           *Stage
-	reportReason    StageReportReason
-	actionID        string
-	actionRunStatus ActionRunStatus
-	LastAction      *blueprint.Action
-	Next            []*blueprint.Action
-	ExitCode        int
-	Error           error
-	Panic           bool
-	PanicValue      interface{}
-	PanicTrace      []byte
-}
+// type stageReport struct {
+// 	stage           *Stage
+// 	reportReason    StageReportReason
+// 	actionID        string
+// 	actionRunStatus ActionRunStatus
+// 	// LastAction      *blueprint.Action
+// 	LastActionContext base.IActionContext
+// 	Next              []*blueprint.Action
+// 	ExitCode          int
+// 	Error             error
+// 	Panic             bool
+// 	PanicValue        interface{}
+// 	PanicTrace        []byte
+// }
