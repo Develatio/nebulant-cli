@@ -57,6 +57,11 @@ type unassignFloatingIPParameters struct {
 	FloatingIP *hcFloatingIPWrap `json:"floating_ip" validate:"required"`
 }
 
+type FloatingIPListResultWithMeta struct {
+	*schema.FloatingIPListResponse
+	Meta schema.Meta `json:"meta"`
+}
+
 // CreateFloatingIP func
 func CreateFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
@@ -115,6 +120,26 @@ func DeleteFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	aout := base.NewActionOutput(ctx.Action, nil, nil)
 	return aout, nil
+}
+
+func FindFloatingIPs(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &hcloud.FloatingIPListOpts{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	_, response, err := ctx.HClient.FloatingIP.List(context.Background(), *input)
+	if err != nil {
+		return nil, err
+	}
+
+	output := &FloatingIPListResultWithMeta{}
+	return GenericHCloudOutput(ctx, response, output)
 }
 
 func FindOneFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
