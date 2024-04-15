@@ -89,8 +89,6 @@ func (m *Manager) PrepareIRB(irb *blueprint.IRBlueprint) {
 	}
 }
 
-// WIP: parece que el ctrl+v da problemas :(
-
 // Run func
 func (m *Manager) Run() error {
 	exit := false
