@@ -42,7 +42,7 @@ func (v *hcFloatingIPWrap) unwrap() (*hcloud.FloatingIP, error) {
 }
 
 type findOneFloatingIPParameters struct {
-	ID *int64 `json:"id"`
+	ID *string `json:"id"`
 }
 
 type assignFloatingIPParameters struct {
@@ -161,7 +161,11 @@ func FindOneFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	output := &schema.FloatingIPGetResponse{}
 	if input.ID != nil {
-		_, response, err := ctx.HClient.FloatingIP.GetByID(context.Background(), *input.ID)
+		int64id, err := strconv.ParseInt(*input.ID, 10, 64)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *input.ID), err)
+		}
+		_, response, err := ctx.HClient.FloatingIP.GetByID(context.Background(), int64id)
 		if err != nil {
 			return nil, err
 		}
