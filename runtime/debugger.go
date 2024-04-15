@@ -251,11 +251,7 @@ func (d *debugger) startLocalTermMode() {
 func (d *debugger) startServerMode(started chan struct{}) error {
 	d.running = true
 	d.remote = true
-	// TODO: lookup for available port
-	// return http.ListenAndServe("localhost:6565", d)
-	// WIP: este ejecution UUID queremos que sea así?
-	// qué pasa cuando dos usuarios ejecutan el mismo BP
-	// en el mismo cli?
+	// TODO: lookup for available port?
 	id := d.runtime.irb.ExecutionUUID
 	srv := nhttpd.GetServer()
 	srv.AddView(`/debugger/`+*id, d.debuggerView)

@@ -39,14 +39,14 @@ func InitDirector(serverMode bool, interactiveMode bool) error {
 	directorWaiter := &sync.WaitGroup{}
 	directorWaiter.Add(1) // self
 	MDirector = &Director{
-		managers:          make(map[*Manager]*blueprint.IRBlueprint),
-		managersByIRB:     make(map[*blueprint.IRBlueprint]*Manager),
-		HandleIRB:         make(chan *HandleIRBConfig, 10),
-		ExecInstruction:   make(chan *ExecCtrlInstruction, 10),
-		UnregisterManager: make(chan *Manager, 10),
-		directorWaiter:    directorWaiter,
-		serverMode:        serverMode,
-		interactiveMode:   interactiveMode,
+		managers:              make(map[*Manager]*blueprint.IRBlueprint),
+		managersByExecutionID: make(map[string]*Manager),
+		HandleIRB:             make(chan *HandleIRBConfig, 10),
+		ExecInstruction:       make(chan *ExecCtrlInstruction, 10),
+		UnregisterManager:     make(chan *Manager, 10),
+		directorWaiter:        directorWaiter,
+		serverMode:            serverMode,
+		interactiveMode:       interactiveMode,
 	}
 	go MDirector.startDirector()
 	return nil
@@ -59,16 +59,16 @@ type HandleIRBConfig struct {
 
 // Director struct
 type Director struct {
-	ExecInstruction   chan *ExecCtrlInstruction
-	serverMode        bool
-	interactiveMode   bool
-	HandleIRB         chan *HandleIRBConfig
-	UnregisterManager chan *Manager
-	StopDirector      chan int
-	directorWaiter    *sync.WaitGroup
-	managers          map[*Manager]*blueprint.IRBlueprint
-	managersByIRB     map[*blueprint.IRBlueprint]*Manager
-	ExitCode          int
+	ExecInstruction       chan *ExecCtrlInstruction
+	serverMode            bool
+	interactiveMode       bool
+	HandleIRB             chan *HandleIRBConfig
+	UnregisterManager     chan *Manager
+	StopDirector          chan int
+	directorWaiter        *sync.WaitGroup
+	managers              map[*Manager]*blueprint.IRBlueprint
+	managersByExecutionID map[string]*Manager
+	ExitCode              int
 }
 
 // Wait func
@@ -128,6 +128,10 @@ L:
 
 			// if manager is nil, hirbcfg.IRB should be configured
 			if manager == nil {
+				if _, exists := d.managersByExecutionID[*irb.BP.ExecutionUUID]; exists {
+					cast.LogErr("[Director] bp already running...", irb.BP.ExecutionUUID)
+					continue
+				}
 				manager = NewManager(d.serverMode)
 				manager.PrepareIRB(irb)
 			}
@@ -135,12 +139,16 @@ L:
 			// if irb is nil, manager.IRB should be configured
 			if irb == nil {
 				irb = manager.IRB
+				if _, exists := d.managersByExecutionID[*irb.BP.ExecutionUUID]; exists {
+					cast.LogErr("[Director] bp already running...", irb.BP.ExecutionUUID)
+					continue
+				}
 			}
 
 			if irb.BP.BuilderWarnings > 0 {
 				cast.LogWarn("This blueprint has "+fmt.Sprintf("%v", irb.BP.BuilderWarnings)+" warnings from the builder", irb.BP.ExecutionUUID)
 			}
-			d.managersByIRB[irb] = manager
+			d.managersByExecutionID[*irb.BP.ExecutionUUID] = manager
 			d.managers[manager] = irb
 			extra := make(map[string]interface{})
 			extra["manager"] = manager
@@ -195,7 +203,7 @@ L:
 			manager.reset()
 			irb := d.managers[manager]
 			delete(d.managers, manager)
-			delete(d.managersByIRB, irb)
+			delete(d.managersByExecutionID, *irb.ExecutionUUID)
 			if len(d.managers) <= 0 && !d.serverMode {
 				d.Clean()
 				d.ExitCode = exitCode
