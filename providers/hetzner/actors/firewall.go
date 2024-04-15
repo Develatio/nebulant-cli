@@ -56,6 +56,10 @@ type setRulesParameters struct {
 	Firewall *hcFirewallWrap             `json:"firewall" validate:"required"` // only Firewall.ID is really used
 }
 
+type findOneFirewallParameters struct {
+	ID *string `json:"id"`
+}
+
 type FirewallListResponseWithMeta struct {
 	*schema.FirewallListResponse
 	Meta schema.Meta `json:"meta"`
@@ -140,27 +144,60 @@ func FindFirewalls(ctx *ActionContext) (*base.ActionOutput, error) {
 }
 
 func FindOneFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
-	aout, err := FindFirewalls(ctx)
-	if err != nil {
+	var err error
+	input := &findOneFirewallParameters{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
 	}
+
 	if ctx.Rehearsal {
 		return nil, nil
 	}
-	if len(aout.Records) <= 0 {
-		return nil, fmt.Errorf("no firewall found")
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
 	}
-	raw := aout.Records[0].Value.(*FirewallListResponseWithMeta)
-	found := len(raw.Firewalls)
-	if found > 1 {
-		return nil, fmt.Errorf("too many results")
+
+	output := &schema.FirewallGetResponse{}
+	if input.ID != nil {
+		int64id, err := strconv.ParseInt(*input.ID, 10, 64)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *input.ID), err)
+		}
+		_, response, err := ctx.HClient.Firewall.GetByID(context.Background(), int64id)
+		if err != nil {
+			return nil, err
+		}
+		err = UnmarshallHCloudToSchema(response, output)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		aout, err := FindFirewalls(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if ctx.Rehearsal {
+			return nil, nil
+		}
+		if len(aout.Records) <= 0 {
+			return nil, fmt.Errorf("no firewall found")
+		}
+		raw := aout.Records[0].Value.(*FirewallListResponseWithMeta)
+		found := len(raw.Firewalls)
+		if found > 1 {
+			return nil, fmt.Errorf("too many results")
+		}
+		if found <= 0 {
+			return nil, fmt.Errorf("no firewall found")
+		}
+		output.Firewall = raw.Firewalls[0]
 	}
-	if found <= 0 {
-		return nil, fmt.Errorf("no firewall found")
-	}
-	id := fmt.Sprintf("%v", raw.Firewalls[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.Firewalls[0], &id)
-	return aout, nil
+
+	id := fmt.Sprintf("%v", output.Firewall.ID)
+	return base.NewActionOutput(ctx.Action, output, &id), nil
 }
 
 func ApplyToResourcesFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
