@@ -179,7 +179,7 @@ func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err != nil {
 		return nil, err
 	}
-	input.AttachOpts.Server.ID = hsrv.ID
+	input.AttachOpts.Server = hsrv
 
 	_, response, err := ctx.HClient.Volume.AttachWithOpts(context.Background(), hvol, input.AttachOpts)
 	if err != nil {
