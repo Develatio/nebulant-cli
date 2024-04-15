@@ -44,6 +44,7 @@ func (v *hcVolumeWrap) unwrap() (*hcloud.Volume, error) {
 type volumeAttachParameters struct {
 	AttachOpts hcloud.VolumeAttachOpts `json:"attach_opts" validate:"required"`
 	Volume     *hcVolumeWrap           `json:"volume" validate:"required"` // only Volume.ID is really used
+	Server     *hcServerWrap           `json:"server" validate:"required"` // only Server.ID is really used
 }
 
 type VolumeListResponseWithMeta struct {
@@ -173,6 +174,12 @@ func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	hsrv, err := input.Server.unwrap()
+	if err != nil {
+		return nil, err
+	}
+	input.AttachOpts.Server.ID = hsrv.ID
 
 	_, response, err := ctx.HClient.Volume.AttachWithOpts(context.Background(), hvol, input.AttachOpts)
 	if err != nil {
