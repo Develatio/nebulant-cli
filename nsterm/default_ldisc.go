@@ -226,12 +226,13 @@ func (d *DefaultLdisc) ReceiveMustarBuff(n int, mInFD *PortFD) {
 
 	// write to (line edit)
 	if d.CursorOffset < len(d.RuneBuff) {
+		rr := []rune(string(data_b))
 		nbr := make([]rune, 0)
 		nbr = append(nbr, d.RuneBuff[0:d.CursorOffset]...)
-		nbr = append(nbr, data_r)
+		nbr = append(nbr, rr...)
 		nbr = append(nbr, d.RuneBuff[d.CursorOffset:]...)
 		d.RuneBuff = nbr
-		d.CursorOffset = d.CursorOffset + 1 // data_r len == 1
+		d.CursorOffset = d.CursorOffset + len(rr)
 		//eco
 		mInFD.Write(data_b)
 		// complete line
@@ -242,7 +243,8 @@ func (d *DefaultLdisc) ReceiveMustarBuff(n int, mInFD *PortFD) {
 		return
 	}
 
-	d.RuneBuff = append(d.RuneBuff, data_r)
+	rr := []rune(string(data_b))
+	d.RuneBuff = append(d.RuneBuff, rr...)
 	d.CursorOffset = d.CursorOffset + len(data_b)
 	// eco
 	mInFD.Write(data_b)
