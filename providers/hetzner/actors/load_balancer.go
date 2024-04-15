@@ -42,8 +42,33 @@ func (v *hcLoadBalancerWrap) unwrap() (*hcloud.LoadBalancer, error) {
 	return &hcloud.LoadBalancer{ID: int64id}, nil
 }
 
+type hcLoadBalancerAttachToNetworkOptsWrap struct {
+	*hcloud.LoadBalancerAttachToNetworkOpts
+	Network *hcNetworkWrap `json:"network"`
+	IP      *string        `json:"ip"`
+}
+
+func (v *hcLoadBalancerAttachToNetworkOptsWrap) unwrap() (*hcloud.LoadBalancerAttachToNetworkOpts, error) {
+	out := &hcloud.LoadBalancerAttachToNetworkOpts{}
+	if v.Network != nil {
+		net, err := v.Network.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Network = net
+	}
+	if v.IP != nil {
+		ip := net.ParseIP(*v.IP)
+		if ip == nil {
+			return nil, fmt.Errorf("invalid ip addr")
+		}
+		out.IP = ip
+	}
+	return out, nil
+}
+
 type loadbalancerAttachToNetworkParameters struct {
-	AttachOpts   hcloud.LoadBalancerAttachToNetworkOpts `json:"opts" validate:"required"`
+	AttachOpts   *hcLoadBalancerAttachToNetworkOptsWrap `json:"opts" validate:"required"`
 	LoadBalancer *hcLoadBalancerWrap                    `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
 }
 
@@ -213,8 +238,12 @@ func AttachToNetworkLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error)
 	if err != nil {
 		return nil, err
 	}
+	opts, err := input.AttachOpts.unwrap()
+	if err != nil {
+		return nil, err
+	}
 
-	_, response, err := ctx.HClient.LoadBalancer.AttachToNetwork(context.Background(), hlb, input.AttachOpts)
+	_, response, err := ctx.HClient.LoadBalancer.AttachToNetwork(context.Background(), hlb, *opts)
 	if err != nil {
 		return nil, err
 	}
