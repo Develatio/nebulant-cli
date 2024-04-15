@@ -49,7 +49,8 @@ type assignFloatingIPParameters struct {
 	// Only FloatingIP.ID is really ussed
 	FloatingIP *hcFloatingIPWrap `json:"floating_ip" validate:"required"`
 	// only Server.ID is really ussed
-	Server *hcloud.Server `json:"server" validate:"required"`
+	// Server *hcloud.Server `json:"server" validate:"required"`
+	Server *hcServerWrap `json:"server" validate:"required"`
 }
 
 type unassignFloatingIPParameters struct {
@@ -218,7 +219,12 @@ func AssignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.FloatingIP.Assign(context.Background(), hfip, input.Server)
+	hsrv, err := input.Server.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.FloatingIP.Assign(context.Background(), hfip, hsrv)
 	if err != nil {
 		return nil, err
 	}
