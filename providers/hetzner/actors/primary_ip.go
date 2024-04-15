@@ -63,9 +63,9 @@ func (v *hcPrimaryIPAssignOptsWrap) unwrap() (*hcloud.PrimaryIPAssignOpts, error
 	if err != nil {
 		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
 	}
-	int64aid, err := strconv.ParseInt(*v.ID, 10, 64)
+	int64aid, err := strconv.ParseInt(*v.AssigneeID, 10, 64)
 	if err != nil {
-		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 AssigneeID", *v.AssigneeID), err)
 	}
 	return &hcloud.PrimaryIPAssignOpts{ID: int64id, AssigneeID: int64aid}, nil
 }
