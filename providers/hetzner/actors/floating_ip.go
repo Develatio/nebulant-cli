@@ -42,7 +42,7 @@ func (v *hcFloatingIPWrap) unwrap() (*hcloud.FloatingIP, error) {
 }
 
 type findOneFloatingIPParameters struct {
-	IdOrName *string `json:"id_or_name" validate:"required"`
+	ID *int64 `json:"id"`
 }
 
 type assignFloatingIPParameters struct {
@@ -159,16 +159,35 @@ func FindOneFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.FloatingIP.Get(context.Background(), *input.IdOrName)
-	if err != nil {
-		return nil, err
+	output := &schema.FloatingIPGetResponse{}
+	if input.ID != nil {
+		_, response, err := ctx.HClient.FloatingIP.GetByID(context.Background(), *input.ID)
+		if err != nil {
+			return nil, err
+		}
+		err = UnmarshallHCloudToSchema(response, output)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		aout, err := FindFloatingIPs(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if len(aout.Records) <= 0 {
+			return nil, fmt.Errorf("no floating ip found")
+		}
+		raw := aout.Records[0].Value.(*FloatingIPListResultWithMeta)
+		found := len(raw.FloatingIPs)
+		if found > 1 {
+			return nil, fmt.Errorf("too many results")
+		}
+		if found <= 0 {
+			return nil, fmt.Errorf("no floating ip found")
+		}
+		output.FloatingIP = raw.FloatingIPs[0]
 	}
 
-	output := &schema.FloatingIPGetResponse{}
-	err = UnmarshallHCloudToSchema(response, output)
-	if err != nil {
-		return nil, err
-	}
 	sid := fmt.Sprintf("%v", output.FloatingIP.ID)
 	return base.NewActionOutput(ctx.Action, output.FloatingIP, &sid), nil
 }
