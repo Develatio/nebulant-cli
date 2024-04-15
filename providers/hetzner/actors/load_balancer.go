@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
@@ -54,6 +55,40 @@ type loadbalancerDetachFromNetworkParameters struct {
 type LoadBalancerListResponseWithMeta struct {
 	*schema.LoadBalancerListResponse
 	Meta schema.Meta `json:"meta"`
+}
+
+type hcLoadBalancerAddIPTargetOptsWrap struct {
+	*hcloud.LoadBalancerAddIPTargetOpts
+	IP string `json:"ip" validate:"required"`
+}
+
+func (v *hcLoadBalancerAddIPTargetOptsWrap) unwrap() (*hcloud.LoadBalancerAddIPTargetOpts, error) {
+	ip := net.ParseIP(v.IP)
+	if ip == nil {
+		return nil, fmt.Errorf("invalid ip addr")
+	}
+	return &hcloud.LoadBalancerAddIPTargetOpts{IP: ip}, nil
+}
+
+type hcLoadBalancerAddServerTargetOptsWrap struct {
+	*hcloud.LoadBalancerAddServerTargetOpts
+	Server *hcServerWrap `validate:"required"`
+}
+
+type loadbalancerAddTargetParameters struct {
+	Type              string                                         `json:"type" validate:"required"`
+	IPOpts            *hcLoadBalancerAddIPTargetOptsWrap             `json:"ip_opts"`
+	LabelSelectorOpts *hcloud.LoadBalancerAddLabelSelectorTargetOpts `json:"label_selector_opts"`
+	ServerOpts        *hcLoadBalancerAddServerTargetOptsWrap         `json:"server_opts"`
+	LoadBalancer      *hcLoadBalancerWrap                            `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
+}
+
+type loadbalancerRemoveTargetParameters struct {
+	Type          string              `json:"type" validate:"required"`
+	IP            *string             `json:"ip"`
+	LabelSelector *string             `json:"label_selector"`
+	Server        *hcServerWrap       `json:"server"`
+	LoadBalancer  *hcLoadBalancerWrap `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
 }
 
 func CreateLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -215,5 +250,134 @@ func DetachFromNetworkLoadBalancer(ctx *ActionContext) (*base.ActionOutput, erro
 	}
 
 	output := &schema.LoadBalancerActionDetachFromNetworkResponse{}
+	return GenericHCloudOutput(ctx, response, output)
+}
+
+func AddTargetToLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &loadbalancerAddTargetParameters{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	hlb, err := input.LoadBalancer.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	var response *hcloud.Response
+	switch input.Type {
+	case "server":
+		if input.ServerOpts == nil {
+			return nil, fmt.Errorf("please set server opts (server_opts)")
+		}
+		hsrv, err := input.ServerOpts.Server.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		opts := &hcloud.LoadBalancerAddServerTargetOpts{
+			Server:       hsrv,
+			UsePrivateIP: input.ServerOpts.UsePrivateIP,
+		}
+		_, response, err = ctx.HClient.LoadBalancer.AddServerTarget(context.Background(), hlb, *opts)
+		if err != nil {
+			return nil, err
+		}
+	case "ip":
+		if input.IPOpts == nil {
+			return nil, fmt.Errorf("please set ip opts (op_opts)")
+		}
+		opts, err := input.IPOpts.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		_, response, err = ctx.HClient.LoadBalancer.AddIPTarget(context.Background(), hlb, *opts)
+		if err != nil {
+			return nil, err
+		}
+	case "label_selector":
+		if input.LabelSelectorOpts == nil {
+			return nil, fmt.Errorf("please, set label selector opts (label_selector_opts)")
+		}
+		_, response, err = ctx.HClient.LoadBalancer.AddLabelSelectorTarget(context.Background(), hlb, *input.LabelSelectorOpts)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("invalid resource type")
+
+	}
+
+	output := &schema.LoadBalancerActionAddTargetResponse{}
+	return GenericHCloudOutput(ctx, response, output)
+}
+
+func RemoveTargetToLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &loadbalancerRemoveTargetParameters{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	hlb, err := input.LoadBalancer.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	var response *hcloud.Response
+	switch input.Type {
+	case "server":
+		if input.Server == nil {
+			return nil, fmt.Errorf("please, provide server data")
+		}
+		hsrv, err := input.Server.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		_, response, err = ctx.HClient.LoadBalancer.RemoveServerTarget(context.Background(), hlb, hsrv)
+		if err != nil {
+			return nil, err
+		}
+	case "ip":
+		if input.IP == nil {
+			return nil, fmt.Errorf("please provide ip data")
+		}
+		ip := net.ParseIP(*input.IP)
+		if ip == nil {
+			return nil, fmt.Errorf("invalid ip addr")
+		}
+		_, response, err = ctx.HClient.LoadBalancer.RemoveIPTarget(context.Background(), hlb, ip)
+		if err != nil {
+			return nil, err
+		}
+	case "label_selector":
+		_, response, err = ctx.HClient.LoadBalancer.RemoveLabelSelectorTarget(context.Background(), hlb, *input.LabelSelector)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("invalid resource type")
+
+	}
+
+	output := &schema.LoadBalancerActionRemoveTargetResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }

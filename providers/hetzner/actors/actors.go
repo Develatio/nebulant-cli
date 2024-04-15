@@ -144,6 +144,9 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"delete_ssh_key":  {F: DeleteSSHKey, N: NextOKKO},
 	"find_ssh_keys":   {F: FindSSHKeys, N: NextOKKO},
 	"findone_ssh_key": {F: FindOneSSHKey, N: NextOKKO},
+
+	"add_target":    {F: AddTargetToLoadBalancer, N: NextOKKO},
+	"remove_target": {F: RemoveTargetToLoadBalancer, N: NextOKKO},
 }
 
 // GenericHCloudOutput unmarshall response into v and return ActionContext with
