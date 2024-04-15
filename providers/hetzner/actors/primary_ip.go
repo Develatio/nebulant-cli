@@ -200,7 +200,7 @@ func FindOnePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 }
 
 func AssignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
-	input := hcPrimaryIPAssignOptsWrap{}
+	input := &hcPrimaryIPAssignOptsWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
