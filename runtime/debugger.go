@@ -260,8 +260,12 @@ func (d *debugger) startServerMode(started chan struct{}) error {
 	srv := nhttpd.GetServer()
 	srv.AddView(`/debugger/`+*id, d.debuggerView)
 	d.close = srv.ServeIfNot()
-	d.l(fmt.Sprintf("New local debugger started at address %s/debugger/%s", srv.GetAddr(), *id))
-	d.l("Use `nebulant-cli debugger <debug address>` to get attached to debug session")
+	scheme := "ws"
+	if srv.GetScheme() == "https" {
+		scheme = "wss"
+	}
+	d.l("New local debugger started")
+	d.l(fmt.Sprintf("Use `nebulant debugger %s://%s/debugger/%s` to get attached to local debug session", scheme, srv.GetAddr(), *id))
 	started <- struct{}{}
 	err := <-d.close
 	d.remote = false

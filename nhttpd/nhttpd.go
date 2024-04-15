@@ -45,6 +45,7 @@ type Httpd struct {
 	validOrigins map[string]bool
 	on           bool
 	srv          *http.Server
+	scheme       string
 	errors       []error
 	consumers    []chan error
 	urls         map[*regexp.Regexp]ViewFunc
@@ -178,6 +179,7 @@ func (h *Httpd) ServeIfNot() chan error {
 				h.errors = append(h.errors, fmt.Errorf("TLS server err: empty key path"))
 				return
 			}
+			h.scheme = "https"
 			if err = h.srv.ListenAndServeTLS(*h.certPath, *h.keyPath); err != nil {
 				err = errors.Join(fmt.Errorf("TLS server err. cert path: %s", *h.certPath), err)
 				h.errors = append(h.errors, err)
@@ -186,6 +188,7 @@ func (h *Httpd) ServeIfNot() chan error {
 		}
 
 		// Insecure Server
+		h.scheme = "http"
 		err = h.srv.ListenAndServe()
 		if err = errors.Join(fmt.Errorf("server err"), err); err != nil {
 			h.errors = append(h.errors, err)
@@ -195,6 +198,13 @@ func (h *Httpd) ServeIfNot() chan error {
 }
 
 func (h *Httpd) GetAddr() string {
+	if h.srv != nil {
+		return h.srv.Addr
+	}
+	return h.addr
+}
+
+func (h *Httpd) GetScheme() string {
 	if h.srv != nil {
 		return h.srv.Addr
 	}
