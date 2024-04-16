@@ -218,7 +218,7 @@ func FindOneLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	return aout, nil
 }
 
-func AttachToNetworkLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
+func AttachLoadBalancerToNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &loadbalancerAttachToNetworkParameters{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
@@ -252,7 +252,7 @@ func AttachToNetworkLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error)
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func DetachFromNetworkLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
+func DetachLoadBalancerFromNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &loadbalancerDetachFromNetworkParameters{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {

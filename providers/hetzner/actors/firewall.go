@@ -200,7 +200,7 @@ func FindOneFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 	return base.NewActionOutput(ctx.Action, output, &id), nil
 }
 
-func ApplyToResourcesFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
+func ApplyFirewallToResources(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &applyResourcesParameters{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
@@ -230,7 +230,7 @@ func ApplyToResourcesFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func RemoveFromResourcesFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
+func RemoveFirewallFromResources(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &removeResourcesParameters{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {

@@ -116,8 +116,8 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"delete_firewall":                {F: DeleteFirewall, N: NextOKKO},
 	"find_firewalls":                 {F: FindFirewalls, N: NextOKKO},
 	"findone_firewall":               {F: FindOneFirewall, N: NextOKKO},
-	"apply_to_resources_firewall":    {F: ApplyToResourcesFirewall, N: NextOKKO},
-	"remove_from_resources_firewall": {F: RemoveFromResourcesFirewall, N: NextOKKO},
+	"apply_firewall_to_resources":    {F: ApplyFirewallToResources, N: NextOKKO},
+	"remove_firewall_from_resources": {F: RemoveFirewallFromResources, N: NextOKKO},
 	"set_rules_firewall":             {F: SetRulesFirewall, N: NextOKKO},
 
 	"find_isos":   {F: FindISOs, N: NextOKKO},
@@ -127,8 +127,8 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"delete_load_balancer":               {F: DeleteLoadBalancer, N: NextOKKO},
 	"find_load_balancers":                {F: FindLoadBalancers, N: NextOKKO},
 	"findone_load_balancer":              {F: FindOneLoadBalancer, N: NextOKKO},
-	"attach_to_network_load_balancer":    {F: AttachToNetworkLoadBalancer, N: NextOKKO},
-	"dettach_from_network_load_balancer": {F: DetachFromNetworkLoadBalancer, N: NextOKKO},
+	"attach_load_balancer_to_network":    {F: AttachLoadBalancerToNetwork, N: NextOKKO},
+	"dettach_load_balancer_from_network": {F: DetachLoadBalancerFromNetwork, N: NextOKKO},
 
 	"find_locations":   {F: FindLocations, N: NextOKKO},
 	"findone_location": {F: FindOneLocation, N: NextOKKO},
