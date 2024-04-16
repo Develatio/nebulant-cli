@@ -28,6 +28,36 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
+type hcFirewallResourceServerWrap struct {
+	*hcloud.FirewallResourceServer
+	ID *string `json:"id"`
+}
+
+func (v *hcFirewallResourceServerWrap) unwrap() (*hcloud.FirewallResourceServer, error) {
+	int64id, err := strconv.ParseInt(*v.ID, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.ID), err)
+	}
+	return &hcloud.FirewallResourceServer{ID: int64id}, nil
+}
+
+type hcFirewallResourceWrap struct {
+	*hcloud.FirewallResource
+	Server *hcFirewallResourceServerWrap
+}
+
+func (v *hcFirewallResourceWrap) unwrap() (*hcloud.FirewallResource, error) {
+	out := &hcloud.FirewallResource{Type: v.Type, LabelSelector: v.LabelSelector}
+	if v.Server != nil {
+		s, err := v.Server.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Server = s
+	}
+	return out, nil
+}
+
 type hcFirewallWrap struct {
 	*hcloud.Firewall
 	ID *string `validate:"required"`
@@ -42,8 +72,8 @@ func (v *hcFirewallWrap) unwrap() (*hcloud.Firewall, error) {
 }
 
 type applyResourcesParameters struct {
-	Resources []hcloud.FirewallResource `json:"resources" validate:"required"`
-	Firewall  *hcFirewallWrap           `json:"firewall" validate:"required"` // only Firewall.ID is really used
+	Resources []hcFirewallResourceWrap `json:"resources" validate:"required"`
+	Firewall  *hcFirewallWrap          `json:"firewall" validate:"required"` // only Firewall.ID is really used
 }
 
 type removeResourcesParameters struct {
@@ -221,7 +251,16 @@ func ApplyFirewallToResources(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Firewall.ApplyResources(context.Background(), hfwall, input.Resources)
+	var resources []hcloud.FirewallResource
+	for _, rr := range input.Resources {
+		hres, err := rr.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		resources = append(resources, *hres)
+	}
+
+	_, response, err := ctx.HClient.Firewall.ApplyResources(context.Background(), hfwall, resources)
 	if err != nil {
 		return nil, err
 	}
