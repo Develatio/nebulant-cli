@@ -376,7 +376,7 @@ func AddTargetToLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	return GenericHCloudOutput(ctx, response, output)
 }
 
-func RemoveTargetToLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
+func RemoveTargetFromLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &loadbalancerRemoveTargetParameters{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {

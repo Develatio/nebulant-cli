@@ -129,6 +129,8 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"findone_load_balancer":              {F: FindOneLoadBalancer, N: NextOKKO},
 	"attach_load_balancer_to_network":    {F: AttachLoadBalancerToNetwork, N: NextOKKO},
 	"dettach_load_balancer_from_network": {F: DetachLoadBalancerFromNetwork, N: NextOKKO},
+	"add_target_to_load_balancer":        {F: AddTargetToLoadBalancer, N: NextOKKO},
+	"remove_target_from_load_balancer":   {F: RemoveTargetFromLoadBalancer, N: NextOKKO},
 
 	"find_locations":   {F: FindLocations, N: NextOKKO},
 	"findone_location": {F: FindOneLocation, N: NextOKKO},
@@ -144,9 +146,6 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"delete_ssh_key":  {F: DeleteSSHKey, N: NextOKKO},
 	"find_ssh_keys":   {F: FindSSHKeys, N: NextOKKO},
 	"findone_ssh_key": {F: FindOneSSHKey, N: NextOKKO},
-
-	"add_target":    {F: AddTargetToLoadBalancer, N: NextOKKO},
-	"remove_target": {F: RemoveTargetToLoadBalancer, N: NextOKKO},
 }
 
 // GenericHCloudOutput unmarshall response into v and return ActionContext with
