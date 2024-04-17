@@ -241,6 +241,11 @@ func UnassignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
 	int64id, err := strconv.ParseInt(input.ID, 10, 64)
 	if err != nil {
 		return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", input.ID), err)
