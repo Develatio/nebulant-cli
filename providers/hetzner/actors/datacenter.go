@@ -42,6 +42,10 @@ func FindDatacenters(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
 	_, response, err := ctx.HClient.Datacenter.List(context.Background(), *input)
 	if err != nil {
 		return nil, err

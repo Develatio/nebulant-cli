@@ -121,6 +121,11 @@ func FindVolumes(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
 	_, response, err := ctx.HClient.Volume.List(context.Background(), *input)
 	if err != nil {
 		return nil, err
