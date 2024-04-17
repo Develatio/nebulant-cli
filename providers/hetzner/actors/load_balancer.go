@@ -340,8 +340,10 @@ func AddTargetToLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 			return nil, err
 		}
 		opts := &hcloud.LoadBalancerAddServerTargetOpts{
-			Server:       hsrv,
-			UsePrivateIP: input.ServerOpts.UsePrivateIP,
+			Server: hsrv,
+		}
+		if input.ServerOpts != nil && input.ServerOpts.UsePrivateIP != nil {
+			opts.UsePrivateIP = input.ServerOpts.UsePrivateIP
 		}
 		_, response, err = ctx.HClient.LoadBalancer.AddServerTarget(context.Background(), hlb, *opts)
 		if err != nil {
