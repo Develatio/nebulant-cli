@@ -99,8 +99,8 @@ func (j *joinPointContext) Children() []base.IActionContext {
 }
 
 func (j *joinPointContext) Type() base.ContextType { return base.ContextTypeJoin }
-func (j *joinPointContext) IsThreadPoint() bool    { return true }
-func (j *joinPointContext) IsJoinPoint() bool      { return false }
+func (j *joinPointContext) IsThreadPoint() bool    { return false }
+func (j *joinPointContext) IsJoinPoint() bool      { return true }
 
 func (j *joinPointContext) GetAction() *blueprint.Action {
 	return j.action
@@ -108,7 +108,8 @@ func (j *joinPointContext) GetAction() *blueprint.Action {
 
 func (j *joinPointContext) WithRunFunc(f func() (*base.ActionOutput, error)) {}
 func (j *joinPointContext) RunAction() (*base.ActionOutput, error) {
-	return nil, fmt.Errorf("this kind of actx has no executable action") // maybe in a future
+	return nil, nil
+	// return nil, fmt.Errorf("this kind of actx has no executable action") // maybe in a future
 }
 
 func (j *joinPointContext) SetRunStatus(s base.ActionContextRunStatus) {
@@ -544,6 +545,11 @@ func (t *Thread) _runCurrent() {
 	if action.JoinThreadsPoint {
 		t.runtime.activateContext(actx)
 		if t.runtime.IsRunningParentsOf(actx) {
+			// here the thread should end. Other threads
+			// will reexec this action at thread finish.
+			// Once there is no running parents, the last
+			// thread is reused to continue the run of
+			// actions connected to join point.
 			return
 		}
 		t.runtime.deactivateContext(actx)
@@ -755,6 +761,7 @@ func (t *Thread) Init() {
 
 type Runtime struct {
 	mu            sync.Mutex
+	ru            sync.Mutex
 	serverMode    bool
 	state         base.RuntimeState
 	activeThreads map[*Thread]bool
@@ -1153,6 +1160,8 @@ func (r *Runtime) NewAContextThread(parent base.IActionContext, actions []*bluep
 }
 
 func (r *Runtime) NewAContextJoin(parent base.IActionContext, action *blueprint.Action) base.IActionContext {
+	r.ru.Lock()
+	defer r.ru.Unlock()
 	if _, exists := r.activeJoinPoints[action.ActionID]; exists {
 		jpoint := r.activeJoinPoints[action.ActionID]
 		// add new parent to join point

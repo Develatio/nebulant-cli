@@ -77,7 +77,9 @@ func NewStore() *Store {
 // Merge func
 func (s *Store) Merge(source base.IStore) {
 	ss := source.(*Store)
+
 	for k, v := range ss.recordsByRefName {
+		s.logger.LogDebug(fmt.Sprintf("mergin refname %s", v.RefName))
 		s.recordsByRefName[k] = v
 	}
 	for k, v := range ss.recordsByActionID {
@@ -86,9 +88,12 @@ func (s *Store) Merge(source base.IStore) {
 	for k, v := range ss.aoutByActionID {
 		s.aoutByActionID[k] = v
 	}
-	for k, v := range ss.providers {
-		s.providers[k] = v
-	}
+	// NOTE: on Store merge, skip copy providers, because there
+	// is an istance of store inside the provider, so the relation
+	// provider <-> store should not be altered
+	// for k, v := range ss.providers {
+	// 	s.providers[k] = v
+	// }
 	for k, v := range ss.private {
 		s.private[k] = v
 	}
@@ -351,7 +356,7 @@ func (s *Store) Interpolate(sourcetext *string) error {
 
 		record, exists := s.recordsByRefName[refname]
 		if !exists {
-			return fmt.Errorf("var reference " + refname + " does not exists (ES1)")
+			return fmt.Errorf("var reference %s does not exists (ES1) (store:%p)", refname, s)
 		}
 
 		// refpath -> .foo.bar or [foo.bar] or empty if no path provided

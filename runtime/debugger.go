@@ -795,10 +795,10 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 			for _, actx := range d.runtime.GetStack() {
 				action := actx.GetAction()
 				if action.Output != nil {
-					fmt.Fprintf(clientFD, "- %s \t : %p (%s)\n", action.ActionName, actx, *action.Output)
+					fmt.Fprintf(clientFD, "- name:%s \t : actx:%p (outputname:%s) (store:%p)\n", action.ActionName, actx, *action.Output, actx.GetStore())
 					continue
 				}
-				fmt.Fprintf(clientFD, "- %s \t : %p\n", action.ActionName, actx)
+				fmt.Fprintf(clientFD, "- name:%s \t : actx:%p (outputname:null) (store:%p)\n", action.ActionName, actx, actx.GetStore())
 			}
 			return
 		}
@@ -837,6 +837,24 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 				}
 				fmt.Fprint(clientFD, ppp)
 				fmt.Fprintf(clientFD, "\n")
+				return
+			}
+			store := actx.GetStore()
+			if aa[0] == fmt.Sprintf("%p", store) {
+				v, err := store.GetRawJSONValues()
+				if err != nil {
+					fmt.Fprint(clientFD, err.Error())
+					fmt.Fprintf(clientFD, "\n")
+					return
+				}
+				enc, err := json.MarshalIndent(v, "", "    ")
+				if err != nil {
+					fmt.Fprint(clientFD, err.Error())
+					fmt.Fprintf(clientFD, "\n")
+					return
+				}
+				fmt.Fprint(clientFD, "storage dump:")
+				fmt.Fprintf(clientFD, "%s\n", enc)
 				return
 			}
 		}
@@ -920,6 +938,7 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 					fmt.Fprintf(clientFD, "\tName: %v\n", d.cursor.GetAction().ActionName)
 					fmt.Fprintf(clientFD, "\tParents: %v\n", d.cursor.Parents())
 					fmt.Fprintf(clientFD, "\tChildren: %v\n", d.cursor.Children())
+					fmt.Fprintf(clientFD, "\tStore: %p\n", d.cursor.GetStore())
 					action := d.cursor.GetAction()
 					if action != nil {
 						var prettyJSON bytes.Buffer
@@ -939,7 +958,6 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 		for th := range threads {
 			fmt.Fprintf(clientFD, "comparing %p against %s\n", th, fs.Arg(1))
 			if fmt.Sprintf("%p", th) == fs.Arg(1) {
-
 				state := th.GetState()
 				statetxt := ""
 				switch state {
