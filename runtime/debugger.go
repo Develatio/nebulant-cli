@@ -78,10 +78,11 @@ func NewDebugger(r *Runtime) *debugger {
 		// currentBreakPoint: breakpoint,
 		// manager: breakpoint.stage.manager,
 		//
-		runtime:  r,
-		qq:       make(chan *client, 100),
-		stop:     make(chan struct{}),
-		rclients: make(map[*client]bool),
+		runtime:   r,
+		qq:        make(chan *client, 100),
+		stop:      make(chan struct{}),
+		rclients:  make(map[*client]bool),
+		elistener: r.NewEventListener(),
 	}
 	// debugger.breakPoints = append(debugger.breakPoints, breakpoint)
 	debuggers[r] = debugger
@@ -97,19 +98,22 @@ func (d *debugger) GetCursor() base.IActionContext {
 }
 
 type debugger struct {
+	// used to block debugger
+	waiting bool
 	runtime *Runtime
 	// manager *Manager
 	// breakPoints       []*breakPoint
 	// currentBreakPoint *breakPoint
-	detach   []*nsterm.VPTY2
-	running  bool
-	remote   bool
-	rclients map[*client]bool
-	lclient  *client
-	cursor   base.IActionContext
-	qq       chan *client
-	stop     chan struct{}
-	close    chan error
+	detach    []*nsterm.VPTY2
+	running   bool
+	remote    bool
+	rclients  map[*client]bool
+	lclient   *client
+	cursor    base.IActionContext
+	qq        chan *client
+	stop      chan struct{}
+	close     chan error
+	elistener *base.EventListener
 }
 
 func (d *debugger) l(msg string) {
@@ -634,15 +638,52 @@ func printActxTrace(fd io.Writer, actx base.IActionContext, pointer bool) {
 ////
 
 func (d *debugger) hightLightCursor() {
+	if d.cursor == nil {
+		return
+	}
 	action := d.cursor.GetAction()
 	active_ids := d.runtime.GetActiveActionIds()
 	active_ids = append(active_ids, action.ActionID)
 	cast.PushState(active_ids, cast.EventRuntimeStarted, d.runtime.irb.ExecutionUUID)
 }
 
+func (d *debugger) WriteToAllClients(txt string) {
+	for cc := range d.rclients {
+		fmt.Fprint(cc.GetFD(), txt)
+	}
+	if d.lclient != nil {
+		fmt.Fprint(d.lclient.GetFD(), txt)
+	}
+}
+
+func (d *debugger) Wait() {
+	d.waiting = true
+	defer func() { d.waiting = false }()
+	d.WriteToAllClients("continue normal run...\n")
+	event := d.elistener.WaitUntil([]base.EventCode{
+		base.RuntimeEndEvent,
+		base.DebugOnEvent,
+	})
+	if event == base.RuntimeEndEvent {
+		d.WriteToAllClients("bp run finished, bye.\n")
+		// close all clients
+		for cc := range d.rclients {
+			go cc.close()
+		}
+		if d.lclient != nil {
+			d.lclient.close()
+		}
+	}
+	d.WriteToAllClients("New breakpoint\n")
+}
+
 func (d *debugger) ExecCmd(cc *client, cmd string) {
 	cast.LogDebug(fmt.Sprintf("processing command %s", cmd), nil)
 	clientFD := cc.GetFD()
+	if d.waiting {
+		fmt.Fprint(clientFD, "waiting next breakpoint...\n")
+		return
+	}
 
 	argv, err := shlex.Split(cmd)
 	if err != nil {
@@ -673,6 +714,8 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 `)
 	case "c":
 		d.runtime.Play()
+		d.cursor = nil
+		d.Wait()
 	case "ll":
 		printActxTrace(clientFD, d.cursor, true)
 	// case "hl":
@@ -1057,6 +1100,10 @@ func (c *client) Raw(activate bool) {
 
 func (c *client) GetFD() io.ReadWriteCloser {
 	return c.sluvaFD
+}
+
+func (c *client) close() {
+	c.conn.Close()
 }
 
 func (c *client) start(attach bool) {

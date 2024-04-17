@@ -39,23 +39,40 @@ type IEvent interface {
 }
 
 type EventListener struct {
-	events chan IEvent
+	events  chan IEvent
+	discard chan IEvent
+	// when ReadUntil or WaitUntil are
+	// called. If not, this reading is
+	// false and all events sended to
+	// this listener will be discarded
+	reading bool
 }
 
 func (e *EventListener) EventChan() chan IEvent {
+	if !e.reading {
+		go func() {
+			<-e.discard
+		}()
+		return e.discard
+	}
 	return e.events
 }
 
 // Len: returns the count of events
 // awaiting to be readed
-func (e *EventListener) Len() int {
-	return len(e.events)
-}
+// func (e *EventListener) Len() int {
+// 	return len(e.events)
+// }
 
 // Read all events until EventCode are found, return
 // true if EventCode gets found. Return false if events
 // chan gets empty without any ocurrence of EventCode
 func (e *EventListener) ReadUntil(ec EventCode) bool {
+	if e.reading {
+		panic("hey dev, this is your fault, never call listener two times!")
+	}
+	e.reading = true
+	defer func() { e.reading = false }()
 	for {
 		select {
 		case evt := <-e.events:
@@ -72,6 +89,11 @@ func (e *EventListener) ReadUntil(ec EventCode) bool {
 // Waits for ocurrence of any of given EventCode, returns
 // the first EventCode found
 func (e *EventListener) WaitUntil(ecs []EventCode) EventCode {
+	if e.reading {
+		panic("hey dev, this is your fault, never call listener two times!")
+	}
+	e.reading = true
+	defer func() { e.reading = false }()
 	for {
 		evt := <-e.events
 		for _, ec := range ecs {
@@ -84,7 +106,8 @@ func (e *EventListener) WaitUntil(ecs []EventCode) EventCode {
 
 func NewEventListener() *EventListener {
 	return &EventListener{
-		events: make(chan IEvent, 10),
+		events:  make(chan IEvent, 10),
+		discard: make(chan IEvent, 10),
 	}
 }
 

@@ -363,7 +363,7 @@ const (
 type threadStackCtrl struct {
 	confirm chan struct{}
 	back    bool
-	skipRun bool
+	// skipRun bool
 	// reset   bool
 }
 
@@ -406,6 +406,9 @@ func (t *Thread) Pause() {
 }
 
 func (t *Thread) Play() {
+	if t.state == base.RuntimeStatePlay {
+		return
+	}
 	t.state = base.RuntimeStatePlay
 	close(t.step)
 }
@@ -930,6 +933,7 @@ func (r *Runtime) _setRunDebugFunc(actx base.IActionContext) {
 
 		// serve debuger
 		dbg := NewDebugger(r)
+		go r.evDispatcher.Dispatch(&runtimeEvent{ecode: base.DebugOnEvent})
 		dbg.SetCursor(actx)
 
 		if dbg.running {
@@ -940,6 +944,7 @@ func (r *Runtime) _setRunDebugFunc(actx base.IActionContext) {
 		// this Start func calls this.IsServerMode
 		// to start in local shell or in server mode
 		go dbg.Start()
+		go r.evDispatcher.Dispatch(&runtimeEvent{ecode: base.DebugOffEvent})
 		return nil, nil
 	})
 }
@@ -1012,6 +1017,7 @@ func (r *Runtime) setDebugInitFunc(actx base.IActionContext) {
 
 		// serve debuger
 		dbg := NewDebugger(r)
+		go r.evDispatcher.Dispatch(&runtimeEvent{ecode: base.DebugOnEvent})
 		dbg.SetCursor(actx)
 
 		// init detached vpty iface
@@ -1029,6 +1035,7 @@ func (r *Runtime) setDebugInitFunc(actx base.IActionContext) {
 		// this Start func calls this.IsServerMode
 		// to start in local shell or in server mode
 		go dbg.Start()
+		go r.evDispatcher.Dispatch(&runtimeEvent{ecode: base.DebugOffEvent})
 	})
 }
 
