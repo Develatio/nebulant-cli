@@ -77,8 +77,8 @@ type applyResourcesParameters struct {
 }
 
 type removeResourcesParameters struct {
-	Resources []hcloud.FirewallResource `json:"resources" validate:"required"`
-	Firewall  *hcFirewallWrap           `json:"firewall" validate:"required"` // only Firewall.ID is really used
+	Resources []hcFirewallResourceWrap `json:"resources" validate:"required"`
+	Firewall  *hcFirewallWrap          `json:"firewall" validate:"required"` // only Firewall.ID is really used
 }
 
 type setRulesParameters struct {
@@ -295,7 +295,16 @@ func RemoveFirewallFromResources(ctx *ActionContext) (*base.ActionOutput, error)
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Firewall.RemoveResources(context.Background(), hfwall, input.Resources)
+	var resources []hcloud.FirewallResource
+	for _, rr := range input.Resources {
+		hres, err := rr.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		resources = append(resources, *hres)
+	}
+
+	_, response, err := ctx.HClient.Firewall.RemoveResources(context.Background(), hfwall, resources)
 	if err != nil {
 		return nil, err
 	}
