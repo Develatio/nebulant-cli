@@ -67,13 +67,30 @@ func (v *hcLoadBalancerAttachToNetworkOptsWrap) unwrap() (*hcloud.LoadBalancerAt
 	return out, nil
 }
 
+type hcLoadBalancerDetachFromNetworkOptsWrap struct {
+	*hcloud.LoadBalancerDetachFromNetworkOpts
+	Network *hcNetworkWrap `json:"network"`
+}
+
+func (v *hcLoadBalancerDetachFromNetworkOptsWrap) unwrap() (*hcloud.LoadBalancerDetachFromNetworkOpts, error) {
+	out := &hcloud.LoadBalancerDetachFromNetworkOpts{}
+	if v.Network != nil {
+		net, err := v.Network.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Network = net
+	}
+	return out, nil
+}
+
 type loadbalancerAttachToNetworkParameters struct {
 	AttachOpts   *hcLoadBalancerAttachToNetworkOptsWrap `json:"opts" validate:"required"`
 	LoadBalancer *hcLoadBalancerWrap                    `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
 }
 
 type loadbalancerDetachFromNetworkParameters struct {
-	DetachOpts   hcloud.LoadBalancerDetachFromNetworkOpts `json:"opts" validate:"required"`
+	DetachOpts   *hcLoadBalancerDetachFromNetworkOptsWrap `json:"opts" validate:"required"`
 	LoadBalancer *hcLoadBalancerWrap                      `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
 }
 
@@ -277,8 +294,12 @@ func DetachLoadBalancerFromNetwork(ctx *ActionContext) (*base.ActionOutput, erro
 	if err != nil {
 		return nil, err
 	}
+	opts, err := input.DetachOpts.unwrap()
+	if err != nil {
+		return nil, err
+	}
 
-	_, response, err := ctx.HClient.LoadBalancer.DetachFromNetwork(context.Background(), hlb, input.DetachOpts)
+	_, response, err := ctx.HClient.LoadBalancer.DetachFromNetwork(context.Background(), hlb, *opts)
 	if err != nil {
 		return nil, err
 	}
