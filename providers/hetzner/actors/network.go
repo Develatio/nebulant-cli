@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
@@ -41,6 +42,103 @@ func (v *hcNetworkWrap) unwrap() (*hcloud.Network, error) {
 	return &hcloud.Network{ID: int64id}, nil
 }
 
+type hcNetworkRouteWrap struct {
+	*hcloud.NetworkRoute
+	Gateway     *string `json:"gateway"`
+	Destination *string `json:"destination"`
+}
+
+func (v *hcNetworkRouteWrap) unwrap() (*hcloud.NetworkRoute, error) {
+	out := &hcloud.NetworkRoute{}
+	if v.Destination != nil {
+		_, nn, err := net.ParseCIDR(*v.Destination)
+		if err != nil {
+			return nil, err
+		}
+		out.Destination = nn
+	}
+	if v.Gateway != nil {
+		ip := net.ParseIP(*v.Gateway)
+		if ip == nil {
+			return nil, fmt.Errorf("invalid gateway addr")
+		}
+		out.Gateway = ip
+	}
+	return out, nil
+}
+
+type hcNetworkSubnetWrap struct {
+	*hcloud.NetworkSubnet
+	IPRange   *string `json:"ip_range"`
+	Gateway   *string `json:"gateway"`
+	VSwitchID *string `json:"vswitch_id"`
+}
+
+func (v *hcNetworkSubnetWrap) unwrap() (*hcloud.NetworkSubnet, error) {
+	out := &hcloud.NetworkSubnet{
+		Type:        v.Type,
+		NetworkZone: v.NetworkZone,
+	}
+	if v.VSwitchID != nil {
+		int64id, err := strconv.ParseInt(*v.VSwitchID, 10, 64)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *v.VSwitchID), err)
+		}
+		out.VSwitchID = int64id
+	}
+	if v.IPRange != nil {
+		_, nn, err := net.ParseCIDR(*v.IPRange)
+		if err != nil {
+			return nil, err
+		}
+		out.IPRange = nn
+	}
+	if v.Gateway != nil {
+		ip := net.ParseIP(*v.Gateway)
+		if ip == nil {
+			return nil, fmt.Errorf("invalid gateway addr")
+		}
+		out.Gateway = ip
+	}
+	return out, nil
+}
+
+type hcNetworkCreateOptsWrap struct {
+	*hcloud.NetworkCreateOpts
+	IPRange *string                `json:"ip_range"`
+	Subnets []*hcNetworkSubnetWrap `json:"subnets"`
+	Routes  []*hcNetworkRouteWrap  `json:"routes"`
+}
+
+func (v *hcNetworkCreateOptsWrap) unwrap() (*hcloud.NetworkCreateOpts, error) {
+	out := &hcloud.NetworkCreateOpts{
+		Name:   v.Name,
+		Labels: v.Labels,
+	}
+	if v.IPRange != nil {
+		_, nn, err := net.ParseCIDR(*v.IPRange)
+		if err != nil {
+			return nil, err
+		}
+		out.IPRange = nn
+	}
+	for _, s := range v.Subnets {
+		ss, err := s.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Subnets = append(out.Subnets, *ss)
+	}
+	for _, s := range v.Routes {
+		ss, err := s.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Routes = append(out.Routes, *ss)
+	}
+	return out, nil
+}
+
 type NetworkListResponseWithMeta struct {
 	*schema.NetworkListResponse
 	Meta schema.Meta `json:"meta"`
@@ -48,7 +146,7 @@ type NetworkListResponseWithMeta struct {
 
 func CreateNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	input := &hcloud.NetworkCreateOpts{}
+	input := &hcNetworkCreateOptsWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -63,7 +161,12 @@ func CreateNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Network.Create(context.Background(), *input)
+	opts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Network.Create(context.Background(), *opts)
 	if err != nil {
 		return nil, err
 	}
