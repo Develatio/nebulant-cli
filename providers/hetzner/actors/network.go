@@ -120,6 +120,12 @@ func (v *hcNetworkCreateOptsWrap) unwrap() (*hcloud.NetworkCreateOpts, error) {
 		if err != nil {
 			return nil, err
 		}
+		if nn == nil {
+			return nil, fmt.Errorf("invalid ip value %s: nil result", *v.IPRange)
+		}
+		if nn.String() == "" {
+			return nil, fmt.Errorf("invalid ip value %s: empty result", *v.IPRange)
+		}
 		out.IPRange = nn
 	}
 	for _, s := range v.Subnets {
