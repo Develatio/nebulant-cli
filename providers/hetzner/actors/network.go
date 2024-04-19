@@ -18,6 +18,7 @@ package actors
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -154,7 +155,7 @@ func CreateNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcNetworkCreateOptsWrap{}
 
-	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+	if err := json.Unmarshal(ctx.Action.Parameters, input); err != nil {
 		return nil, err
 	}
 
