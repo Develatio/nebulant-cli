@@ -18,8 +18,10 @@ package actors
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
@@ -54,6 +56,68 @@ func (v *hcFirewallResourceWrap) unwrap() (*hcloud.FirewallResource, error) {
 			return nil, err
 		}
 		out.Server = s
+	}
+	return out, nil
+}
+
+type hcFirewallRuleWrap struct {
+	*hcloud.FirewallRule
+	SourceIPs      []*string `json:"source_ips"`
+	DestinationIPs []*string `json:"destination_ips"`
+}
+
+func (v *hcFirewallRuleWrap) unwrap() (*hcloud.FirewallRule, error) {
+	out := &hcloud.FirewallRule{
+		Direction:   v.Direction,
+		Protocol:    v.Protocol,
+		Port:        v.Port,
+		Description: v.Description,
+	}
+	for _, sip := range v.SourceIPs {
+		_, nn, err := net.ParseCIDR(*sip)
+		if err != nil {
+			return nil, err
+		}
+		out.SourceIPs = append(out.SourceIPs, *nn)
+	}
+	for _, dip := range v.DestinationIPs {
+		_, nn, err := net.ParseCIDR(*dip)
+		if err != nil {
+			return nil, err
+		}
+		out.DestinationIPs = append(out.DestinationIPs, *nn)
+	}
+	return out, nil
+}
+
+type hcFirewallCreateOptsWrap struct {
+	*hcloud.FirewallCreateOpts
+	Rules   []*hcFirewallRuleWrap     `json:"rules"`
+	ApplyTo []*hcFirewallResourceWrap `json:"apply_to"`
+}
+
+func (v *hcFirewallCreateOptsWrap) unwrap() (*hcloud.FirewallCreateOpts, error) {
+	// Name    string
+	// Labels  map[string]string
+	// Rules   []FirewallRule
+	// ApplyTo []FirewallResource
+	out := &hcloud.FirewallCreateOpts{
+		Name:   v.Name,
+		Labels: v.Labels,
+	}
+	for _, r := range v.Rules {
+		rr, err := r.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Rules = append(out.Rules, *rr)
+	}
+	for _, a := range v.ApplyTo {
+		ato, err := a.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.ApplyTo = append(out.ApplyTo, *ato)
 	}
 	return out, nil
 }
@@ -97,9 +161,9 @@ type FirewallListResponseWithMeta struct {
 
 func CreateFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	input := &hcloud.FirewallCreateOpts{}
+	input := &hcFirewallCreateOptsWrap{}
 
-	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+	if err := json.Unmarshal(ctx.Action.Parameters, input); err != nil {
 		return nil, err
 	}
 
@@ -112,7 +176,12 @@ func CreateFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Firewall.Create(context.Background(), *input)
+	opts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Firewall.Create(context.Background(), *opts)
 	if err != nil {
 		return nil, err
 	}
