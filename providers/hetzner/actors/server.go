@@ -20,7 +20,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
+
+	"encoding/json"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -49,6 +52,71 @@ type findOneServerParameters struct {
 type ServerListResponseWithMeta struct {
 	*schema.ServerListResponse
 	Meta schema.Meta `json:"meta"`
+}
+
+type hcServerAttachToNetworkOptsWrap struct {
+	*hcloud.ServerAttachToNetworkOpts
+	Server   *hcServerWrap  `json:"server"`
+	Network  *hcNetworkWrap `json:"network"`
+	IP       *string        `json:"ip"`
+	AliasIPs []*string      `json:"alias_ips"`
+}
+
+func (v *hcServerAttachToNetworkOptsWrap) unwrap() (*hcloud.ServerAttachToNetworkOpts, error) {
+	out := &hcloud.ServerAttachToNetworkOpts{}
+	if v.Network != nil {
+		n, err := v.Network.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Network = n
+	}
+	if v.IP != nil {
+		ip := net.ParseIP(*v.IP)
+		if ip == nil {
+			return nil, fmt.Errorf("invalid ip addr %s", *v.IP)
+		}
+		out.IP = ip
+	}
+	for _, al := range v.AliasIPs {
+		ip := net.ParseIP(*al)
+		if ip == nil {
+			return nil, fmt.Errorf("invalid alias ip addr %s", *al)
+		}
+		out.AliasIPs = append(out.AliasIPs, ip)
+	}
+	return out, nil
+}
+
+type hcServerDetachFromNetworkOptsWrap struct {
+	*hcloud.ServerDetachFromNetworkOpts
+	Server  *hcServerWrap  `json:"server"`
+	Network *hcNetworkWrap `json:"network"`
+}
+
+func (v *hcServerDetachFromNetworkOptsWrap) unwrap() (*hcloud.ServerDetachFromNetworkOpts, error) {
+	out := &hcloud.ServerDetachFromNetworkOpts{}
+	if v.Network != nil {
+		n, err := v.Network.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Network = n
+	}
+	return out, nil
+}
+
+type hcServerCreateImageOptsWrap struct {
+	*hcloud.ServerCreateImageOpts
+	Server *hcServerWrap `json:"server"`
+}
+
+func (v *hcServerCreateImageOptsWrap) unwrap() (*hcloud.ServerCreateImageOpts, error) {
+	return &hcloud.ServerCreateImageOpts{
+		Type:        v.Type,
+		Description: v.Description,
+		Labels:      v.Labels,
+	}, nil
 }
 
 func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -255,5 +323,113 @@ func PowerOffServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	output := &schema.ServerActionPoweroffResponse{}
+	return GenericHCloudOutput(ctx, response, output)
+}
+
+func AttachServerToNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
+	input := &hcServerAttachToNetworkOptsWrap{}
+
+	if err := json.Unmarshal(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	opts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	hsrv, err := input.Server.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Server.AttachToNetwork(context.Background(), hsrv, *opts)
+	if err != nil {
+		return nil, err
+	}
+
+	output := &schema.ServerActionAttachToNetworkResponse{}
+	return GenericHCloudOutput(ctx, response, output)
+}
+
+func DetachServerFromNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
+	input := &hcServerDetachFromNetworkOptsWrap{}
+
+	if err := json.Unmarshal(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	opts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	hsrv, err := input.Server.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Server.DetachFromNetwork(context.Background(), hsrv, *opts)
+	if err != nil {
+		return nil, err
+	}
+
+	output := &schema.ServerActionDetachFromNetworkResponse{}
+	return GenericHCloudOutput(ctx, response, output)
+}
+
+func CreateImageFromServer(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
+	input := &hcServerCreateImageOptsWrap{}
+
+	if err := json.Unmarshal(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	opts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	hsrv, err := input.Server.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Server.CreateImage(context.Background(), hsrv, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	output := &schema.ServerActionCreateImageResponse{}
 	return GenericHCloudOutput(ctx, response, output)
 }
