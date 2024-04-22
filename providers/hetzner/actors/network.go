@@ -151,6 +151,44 @@ type NetworkListResponseWithMeta struct {
 	Meta schema.Meta `json:"meta"`
 }
 
+type hcNetworkAddSubnetOptsWrap struct {
+	*hcloud.NetworkAddSubnetOpts
+	Subnet  *hcNetworkSubnetWrap `json:"subnet" validate:"required"`
+	Network *hcNetworkWrap       `json:"network" validate:"required"`
+}
+
+func (v *hcNetworkAddSubnetOptsWrap) unwrap() (*hcloud.NetworkAddSubnetOpts, error) {
+	if v.Subnet != nil {
+		return nil, fmt.Errorf("no subnet data")
+	}
+	hnet, err := v.Subnet.unwrap()
+	if err != nil {
+		return nil, err
+	}
+	return &hcloud.NetworkAddSubnetOpts{
+		Subnet: *hnet,
+	}, nil
+}
+
+type hcNetworkDeleteSubnetOptsWrap struct {
+	*hcloud.NetworkDeleteSubnetOpts
+	Subnet  *hcNetworkSubnetWrap `json:"subnet" validate:"required"`
+	Network *hcNetworkWrap       `json:"network" validate:"required"`
+}
+
+func (v *hcNetworkDeleteSubnetOptsWrap) unwrap() (*hcloud.NetworkDeleteSubnetOpts, error) {
+	if v.Subnet != nil {
+		return nil, fmt.Errorf("no subnet data")
+	}
+	hnet, err := v.Subnet.unwrap()
+	if err != nil {
+		return nil, err
+	}
+	return &hcloud.NetworkDeleteSubnetOpts{
+		Subnet: *hnet,
+	}, nil
+}
+
 func CreateNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcNetworkCreateOptsWrap{}
@@ -261,4 +299,74 @@ func FindOneNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	id := fmt.Sprintf("%v", raw.Networks[0].ID)
 	aout = base.NewActionOutput(ctx.Action, raw.Networks[0], &id)
 	return aout, nil
+}
+
+func AddSubnetToNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
+	input := &hcNetworkAddSubnetOptsWrap{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	opts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+	hnet, err := input.Network.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Network.AddSubnet(context.Background(), hnet, *opts)
+	if err != nil {
+		return nil, err
+	}
+
+	output := &schema.NetworkActionAddSubnetResponse{}
+	return GenericHCloudOutput(ctx, response, output)
+}
+
+func DeleteSubnetFromNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
+	input := &hcNetworkDeleteSubnetOptsWrap{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	opts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+	hnet, err := input.Network.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Network.DeleteSubnet(context.Background(), hnet, *opts)
+	if err != nil {
+		return nil, err
+	}
+
+	output := &schema.NetworkActionDeleteSubnetResponse{}
+	return GenericHCloudOutput(ctx, response, output)
 }

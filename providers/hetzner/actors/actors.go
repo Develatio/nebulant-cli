@@ -100,10 +100,12 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"detach_from_network":      {F: DetachServerFromNetwork, N: NextOKKO},
 	"create_image_from_server": {F: CreateImageFromServer, N: NextOKKO},
 
-	"create_network":  {F: CreateNetwork, N: NextOKKO},
-	"delete_network":  {F: DeleteNetwork, N: NextOKKO},
-	"find_networks":   {F: FindNetworks, N: NextOKKO},
-	"findone_network": {F: FindOneNetwork, N: NextOKKO},
+	"create_network":             {F: CreateNetwork, N: NextOKKO},
+	"delete_network":             {F: DeleteNetwork, N: NextOKKO},
+	"find_networks":              {F: FindNetworks, N: NextOKKO},
+	"findone_network":            {F: FindOneNetwork, N: NextOKKO},
+	"add_subnet_to_network":      {F: AddSubnetToNetwork, N: NextOKKO},
+	"delete_subnet_from_network": {F: DeleteSubnetFromNetwork, N: NextOKKO},
 
 	"create_volume":  {F: CreateVolume, N: NextOKKO},
 	"delete_volume":  {F: DeleteVolume, N: NextOKKO},

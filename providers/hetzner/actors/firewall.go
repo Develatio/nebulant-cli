@@ -97,10 +97,6 @@ type hcFirewallCreateOptsWrap struct {
 }
 
 func (v *hcFirewallCreateOptsWrap) unwrap() (*hcloud.FirewallCreateOpts, error) {
-	// Name    string
-	// Labels  map[string]string
-	// Rules   []FirewallRule
-	// ApplyTo []FirewallResource
 	out := &hcloud.FirewallCreateOpts{
 		Name:   v.Name,
 		Labels: v.Labels,
