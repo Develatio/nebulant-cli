@@ -158,7 +158,7 @@ type hcNetworkAddSubnetOptsWrap struct {
 }
 
 func (v *hcNetworkAddSubnetOptsWrap) unwrap() (*hcloud.NetworkAddSubnetOpts, error) {
-	if v.Subnet != nil {
+	if v.Subnet == nil {
 		return nil, fmt.Errorf("no subnet data")
 	}
 	hnet, err := v.Subnet.unwrap()
@@ -177,7 +177,7 @@ type hcNetworkDeleteSubnetOptsWrap struct {
 }
 
 func (v *hcNetworkDeleteSubnetOptsWrap) unwrap() (*hcloud.NetworkDeleteSubnetOpts, error) {
-	if v.Subnet != nil {
+	if v.Subnet == nil {
 		return nil, fmt.Errorf("no subnet data")
 	}
 	hnet, err := v.Subnet.unwrap()
