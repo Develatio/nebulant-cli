@@ -90,15 +90,15 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"findone_image": {F: FindOneImage, N: NextOKKO},
 	"delete_image":  {F: FindOneImage, N: NextOKKO},
 
-	"create_server":            {F: CreateServer, N: NextOKKO},
-	"delete_server":            {F: DeleteServer, N: NextOKKO},
-	"find_servers":             {F: FindServers, N: NextOKKO},
-	"findone_server":           {F: FindOneServer, N: NextOKKO},
-	"start_server":             {F: PowerOnServer, N: NextOKKO},  // poweron server
-	"stop_server":              {F: PowerOffServer, N: NextOKKO}, // poweroff server
-	"attach_to_network":        {F: AttachServerToNetwork, N: NextOKKO},
-	"detach_from_network":      {F: DetachServerFromNetwork, N: NextOKKO},
-	"create_image_from_server": {F: CreateImageFromServer, N: NextOKKO},
+	"create_server":              {F: CreateServer, N: NextOKKO},
+	"delete_server":              {F: DeleteServer, N: NextOKKO},
+	"find_servers":               {F: FindServers, N: NextOKKO},
+	"findone_server":             {F: FindOneServer, N: NextOKKO},
+	"start_server":               {F: PowerOnServer, N: NextOKKO},  // poweron server
+	"stop_server":                {F: PowerOffServer, N: NextOKKO}, // poweroff server
+	"attach_server_to_network":   {F: AttachServerToNetwork, N: NextOKKO},
+	"detach_server_from_network": {F: DetachServerFromNetwork, N: NextOKKO},
+	"create_image_from_server":   {F: CreateImageFromServer, N: NextOKKO},
 
 	"create_network":             {F: CreateNetwork, N: NextOKKO},
 	"delete_network":             {F: DeleteNetwork, N: NextOKKO},
