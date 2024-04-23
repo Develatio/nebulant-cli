@@ -76,9 +76,12 @@ type hcNetworkSubnetWrap struct {
 }
 
 func (v *hcNetworkSubnetWrap) unwrap() (*hcloud.NetworkSubnet, error) {
-	out := &hcloud.NetworkSubnet{
-		Type:        v.Type,
-		NetworkZone: v.NetworkZone,
+	out := &hcloud.NetworkSubnet{}
+	if v.Type != "" {
+		out.Type = v.Type
+	}
+	if v.NetworkZone != "" {
+		out.NetworkZone = v.NetworkZone
 	}
 	if v.VSwitchID != nil {
 		int64id, err := strconv.ParseInt(*v.VSwitchID, 10, 64)
