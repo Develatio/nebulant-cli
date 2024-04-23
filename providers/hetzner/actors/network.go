@@ -70,31 +70,21 @@ func (v *hcNetworkRouteWrap) unwrap() (*hcloud.NetworkRoute, error) {
 
 type hcNetworkSubnetWrap struct {
 	*hcloud.NetworkSubnet
-	IPRange     *string     `json:"ip_range"`
-	Gateway     *string     `json:"gateway"`
-	VSwitchID   *string     `json:"vswitch_id"`
-	Type        interface{} `json:"type"`
-	NetworkZone interface{} `json:"network_zone"`
+	IPRange     *string `json:"ip_range"`
+	Gateway     *string `json:"gateway"`
+	VSwitchID   *string `json:"vswitch_id"`
+	Type        *string `json:"type"`
+	NetworkZone *string `json:"network_zone"`
 }
 
 func (v *hcNetworkSubnetWrap) unwrap() (*hcloud.NetworkSubnet, error) {
 	out := &hcloud.NetworkSubnet{}
 	if v.Type != nil {
-		if tt, ok := v.Type.(hcloud.NetworkSubnetType); ok {
-			out.Type = tt
-		} else {
-			return nil, fmt.Errorf("unknown subnet type")
-		}
+		out.Type = hcloud.NetworkSubnetType(*v.Type)
 	}
-
 	if v.NetworkZone != nil {
-		if nz, ok := v.NetworkZone.(hcloud.NetworkZone); ok {
-			out.NetworkZone = nz
-		} else {
-			return nil, fmt.Errorf("unknown network zone")
-		}
+		out.NetworkZone = hcloud.NetworkZone(*v.NetworkZone)
 	}
-
 	if v.VSwitchID != nil {
 		int64id, err := strconv.ParseInt(*v.VSwitchID, 10, 64)
 		if err != nil {
