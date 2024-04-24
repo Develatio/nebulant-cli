@@ -115,7 +115,7 @@ func FindOneImage(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 	if len(aout.Records) <= 0 {
-		return nil, fmt.Errorf("no image found")
+		return nil, fmt.Errorf("no image found (E1)")
 	}
 	raw := aout.Records[0].Value.(*ImageListResponseWithMeta)
 	found := len(raw.Images)
@@ -123,7 +123,7 @@ func FindOneImage(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, fmt.Errorf("too many results")
 	}
 	if found <= 0 {
-		return nil, fmt.Errorf("no image found")
+		return nil, fmt.Errorf("no image found (E2)")
 	}
 	id := fmt.Sprintf("%v", raw.Images[0].ID)
 	aout = base.NewActionOutput(ctx.Action, raw.Images[0], &id)
