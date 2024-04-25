@@ -133,9 +133,26 @@ type loadbalancerRemoveTargetParameters struct {
 	LoadBalancer  *hcLoadBalancerWrap `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
 }
 
+type hcLoadBalancerCreateOptsWrap struct {
+	*hcloud.LoadBalancerCreateOpts
+	Network *hcNetworkWrap `json:"network"`
+}
+
+func (v *hcLoadBalancerCreateOptsWrap) unwrap() (*hcloud.LoadBalancerCreateOpts, error) {
+	out := &hcloud.LoadBalancerCreateOpts{}
+	if v.Network != nil {
+		net, err := v.Network.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Network = net
+	}
+	return out, nil
+}
+
 func CreateLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	input := &hcloud.LoadBalancerCreateOpts{}
+	input := &hcLoadBalancerCreateOptsWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -150,7 +167,12 @@ func CreateLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.LoadBalancer.Create(context.Background(), *input)
+	opts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.LoadBalancer.Create(context.Background(), *opts)
 	if err != nil {
 		return nil, err
 	}
