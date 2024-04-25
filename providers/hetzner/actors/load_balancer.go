@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
@@ -44,23 +45,28 @@ func (v *hcLoadBalancerWrap) unwrap() (*hcloud.LoadBalancer, error) {
 
 type hcLoadBalancerAttachToNetworkOptsWrap struct {
 	*hcloud.LoadBalancerAttachToNetworkOpts
-	Network *hcNetworkWrap `json:"network"`
-	IP      *string        `json:"ip"`
+	Network           *hcNetworkWrap `json:"network"`
+	IP                *string        `json:"ip"`
+	lookupAvailableIP *net.IPNet
 }
 
 func (v *hcLoadBalancerAttachToNetworkOptsWrap) unwrap() (*hcloud.LoadBalancerAttachToNetworkOpts, error) {
 	out := &hcloud.LoadBalancerAttachToNetworkOpts{}
 	if v.Network != nil {
-		net, err := v.Network.unwrap()
+		n, err := v.Network.unwrap()
 		if err != nil {
 			return nil, err
 		}
-		out.Network = net
+		out.Network = n
 	}
 	if v.IP != nil {
 		ip := net.ParseIP(*v.IP)
 		if ip == nil {
-			return nil, fmt.Errorf("invalid ip addr")
+			_, nn, err := net.ParseCIDR(*v.IP)
+			if err != nil {
+				return nil, err
+			}
+			v.lookupAvailableIP = nn
 		}
 		out.IP = ip
 	}
@@ -286,7 +292,53 @@ func AttachLoadBalancerToNetwork(ctx *ActionContext) (*base.ActionOutput, error)
 	if err != nil {
 		return nil, err
 	}
+	if opts.Network == nil {
+		return nil, fmt.Errorf("please, provide network id")
+	}
 
+	if input.AttachOpts.lookupAvailableIP != nil {
+		ipnet := input.AttachOpts.lookupAvailableIP
+		hnetID := opts.Network.ID
+		hnet, _, err := ctx.HClient.Network.GetByID(context.Background(), hnetID)
+		if err != nil {
+			return nil, err
+		}
+		found := false
+		for _, ss := range hnet.Subnets {
+			if ss.IPRange.String() == ipnet.String() {
+				found = true
+				break
+			}
+		}
+		if found {
+			return nil, fmt.Errorf("cannot found subnet %s", ipnet.String())
+		}
+		p, err := netip.ParsePrefix(ipnet.String())
+		if err != nil {
+			return nil, err
+		}
+		p = p.Masked()
+		addr := p.Addr()
+		for {
+			if !p.Contains(addr) {
+				return nil, fmt.Errorf("cannot determine a valid ip for subnet %s", ipnet.String())
+			}
+			opts.IP = net.ParseIP(addr.String())
+			_, response, err := ctx.HClient.LoadBalancer.AttachToNetwork(context.Background(), hlb, *opts)
+			if err != nil {
+				if hcloud.ErrorCode(err.Error()) == hcloud.ErrorCodeIPNotAvailable {
+					// ok, already used ip, keep trying
+					ctx.Logger.LogWarn(fmt.Sprintf("ip %s already used. Still looking for a valid ip...", opts.IP.String()))
+					addr = addr.Next()
+					continue
+				}
+				return nil, err
+			}
+			ctx.Logger.LogInfo(fmt.Sprintf("valid ip %s found for subnet %s", opts.IP.String(), ipnet.String()))
+			output := &schema.LoadBalancerActionAttachToNetworkResponse{}
+			return GenericHCloudOutput(ctx, response, output)
+		}
+	}
 	_, response, err := ctx.HClient.LoadBalancer.AttachToNetwork(context.Background(), hlb, *opts)
 	if err != nil {
 		return nil, err
