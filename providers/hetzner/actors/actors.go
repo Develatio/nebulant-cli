@@ -88,7 +88,7 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 
 	"find_images":   {F: FindImages, N: NextOKKO},
 	"findone_image": {F: FindOneImage, N: NextOKKO},
-	"delete_image":  {F: FindOneImage, N: NextOKKO},
+	"delete_image":  {F: DeleteImage, N: NextOKKO},
 
 	"create_server":              {F: CreateServer, N: NextOKKO},
 	"delete_server":              {F: DeleteServer, N: NextOKKO},
