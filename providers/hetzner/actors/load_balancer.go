@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/netip"
 	"strconv"
+	"time"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -305,12 +306,13 @@ func AttachLoadBalancerToNetwork(ctx *ActionContext) (*base.ActionOutput, error)
 		}
 		found := false
 		for _, ss := range hnet.Subnets {
+			ctx.Logger.LogDebug(fmt.Sprintf("found subnet %s", ss.IPRange.String()))
 			if ss.IPRange.String() == ipnet.String() {
 				found = true
 				break
 			}
 		}
-		if found {
+		if !found {
 			return nil, fmt.Errorf("cannot found subnet %s", ipnet.String())
 		}
 		p, err := netip.ParsePrefix(ipnet.String())
@@ -320,18 +322,31 @@ func AttachLoadBalancerToNetwork(ctx *ActionContext) (*base.ActionOutput, error)
 		p = p.Masked()
 		addr := p.Addr()
 		for {
+			time.Sleep(500 * time.Millisecond)
+			ctx.Logger.LogDebug(fmt.Sprintf("looking for ip %s", addr.String()))
+			if addr.As4()[3] == 0 {
+				ctx.Logger.LogDebug(fmt.Sprintf("skip mask ip %s", addr.String()))
+				addr = addr.Next()
+				continue
+			}
+			if addr.As4()[3] == 255 {
+				ctx.Logger.LogDebug(fmt.Sprintf("skip bcast ip %s", addr.String()))
+				addr = addr.Next()
+				continue
+			}
 			if !p.Contains(addr) {
 				return nil, fmt.Errorf("cannot determine a valid ip for subnet %s", ipnet.String())
 			}
 			opts.IP = net.ParseIP(addr.String())
 			_, response, err := ctx.HClient.LoadBalancer.AttachToNetwork(context.Background(), hlb, *opts)
-			if err != nil {
-				if hcloud.ErrorCode(err.Error()) == hcloud.ErrorCodeIPNotAvailable {
+			if herr, ok := err.(hcloud.Error); ok {
+				if herr.Code == hcloud.ErrorCodeIPNotAvailable {
 					// ok, already used ip, keep trying
 					ctx.Logger.LogWarn(fmt.Sprintf("ip %s already used. Still looking for a valid ip...", opts.IP.String()))
 					addr = addr.Next()
 					continue
 				}
+			} else if err != nil {
 				return nil, err
 			}
 			ctx.Logger.LogInfo(fmt.Sprintf("valid ip %s found for subnet %s", opts.IP.String(), ipnet.String()))
