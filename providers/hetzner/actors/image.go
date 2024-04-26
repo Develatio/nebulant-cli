@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
@@ -43,7 +44,26 @@ func (v *hcImageWrap) unwrap() (*hcloud.Image, error) {
 
 type ImageListResponseWithMeta struct {
 	*schema.ImageListResponse
-	Meta schema.Meta `json:"meta"`
+	Meta   schema.Meta    `json:"meta"`
+	Images []schema.Image `json:"images"`
+}
+
+type hcImageListOptsWrap struct {
+	*hcloud.ImageListOpts
+	Description *string `json:"description"`
+}
+
+func (v *hcImageListOptsWrap) unwrap() (*hcloud.ImageListOpts, error) {
+	return &hcloud.ImageListOpts{
+		Type:              v.Type,
+		BoundTo:           v.BoundTo,
+		Name:              v.Name,
+		Sort:              v.Sort,
+		Status:            v.Status,
+		IncludeDeprecated: v.IncludeDeprecated,
+		Architecture:      v.Architecture,
+	}, nil
+
 }
 
 func DeleteImage(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -82,7 +102,7 @@ func DeleteImage(ctx *ActionContext) (*base.ActionOutput, error) {
 
 func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	input := &hcloud.ImageListOpts{}
+	input := &hcImageListOptsWrap{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -97,13 +117,58 @@ func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Image.List(context.Background(), *input)
+	opts, err := input.unwrap()
 	if err != nil {
 		return nil, err
 	}
 
-	output := &ImageListResponseWithMeta{}
-	return GenericHCloudOutput(ctx, response, output)
+	if input.Description != nil {
+		var images []schema.Image
+		opts.Page = 1     // min allowed (0 means no page)
+		opts.PerPage = 50 // max allowed
+		r := regexp.MustCompile(`(?i)` + *input.Description + ``)
+		for {
+			_, _rsp, err := ctx.HClient.Image.List(context.Background(), *opts)
+			if err != nil {
+				return nil, err
+			}
+			_v := &ImageListResponseWithMeta{}
+			err = UnmarshallHCloudToSchema(_rsp, _v)
+			if err != nil {
+				return nil, err
+			}
+			if len(_v.Images) <= 0 {
+				break
+			}
+			for _, im := range _v.Images {
+				if r.MatchString(im.Description) {
+					images = append(images, im)
+				}
+			}
+			if _rsp.Meta.Pagination.NextPage == 0 {
+				break
+			}
+			opts.Page = _rsp.Meta.Pagination.NextPage
+		}
+		output := &ImageListResponseWithMeta{
+			Images: images,
+			Meta: schema.Meta{
+				Pagination: &schema.MetaPagination{
+					Page:         1,
+					LastPage:     1,
+					NextPage:     0,
+					TotalEntries: len(images),
+				},
+			},
+		}
+		return base.NewActionOutput(ctx.Action, output, nil), nil
+	}
+
+	_, response, err := ctx.HClient.Image.List(context.Background(), *opts)
+	if err != nil {
+		return nil, err
+	}
+	return GenericHCloudOutput(ctx, response, &ImageListResponseWithMeta{})
 }
 
 func FindOneImage(ctx *ActionContext) (*base.ActionOutput, error) {
