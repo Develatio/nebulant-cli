@@ -146,7 +146,17 @@ type hcLoadBalancerCreateOptsWrap struct {
 }
 
 func (v *hcLoadBalancerCreateOptsWrap) unwrap() (*hcloud.LoadBalancerCreateOpts, error) {
-	out := &hcloud.LoadBalancerCreateOpts{}
+	out := &hcloud.LoadBalancerCreateOpts{
+		Name:             v.Name,
+		LoadBalancerType: v.LoadBalancerType,
+		Algorithm:        v.Algorithm,
+		Location:         v.Location,
+		NetworkZone:      v.NetworkZone,
+		Labels:           v.Labels,
+		Targets:          v.Targets,
+		Services:         v.Services,
+		PublicInterface:  v.PublicInterface,
+	}
 	if v.Network != nil {
 		net, err := v.Network.unwrap()
 		if err != nil {
