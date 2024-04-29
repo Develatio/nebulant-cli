@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
@@ -122,8 +123,15 @@ func (v *hcServerCreateImageOptsWrap) unwrap() (*hcloud.ServerCreateImageOpts, e
 func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcloud.ServerCreateOpts{}
+	output := &schema.ServerCreateResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -141,8 +149,21 @@ func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.ServerCreateResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for server %v...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {

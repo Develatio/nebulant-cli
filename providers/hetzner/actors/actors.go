@@ -17,12 +17,15 @@
 package actors
 
 import (
+	"context"
+	"fmt"
 	"io"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
+	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
 )
 
 // ActionContext struct
@@ -32,6 +35,23 @@ type ActionContext struct {
 	Action    *blueprint.Action
 	Store     base.IStore
 	Logger    base.ILogger
+}
+
+func (a *ActionContext) WaitForAndLog(action schema.Action, msg string) error {
+	act := hcloud.ActionFromSchema(action)
+	okCh, errCh := a.HClient.Action.WatchProgress(context.Background(), act)
+	var err error
+L:
+	for {
+		select {
+		case progress := <-okCh:
+			a.Logger.LogInfo(fmt.Sprintf(msg, progress))
+		case err = <-errCh:
+			// on sucess, err is nil
+			break L
+		}
+	}
+	return err
 }
 
 func UnmarshallHCloudToSchema(response *hcloud.Response, v interface{}) error {
