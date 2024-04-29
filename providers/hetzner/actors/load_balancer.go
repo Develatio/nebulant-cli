@@ -140,9 +140,42 @@ type loadbalancerRemoveTargetParameters struct {
 	LoadBalancer  *hcLoadBalancerWrap `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
 }
 
+type hcLoadBalancerCreateOptsServiceWrap struct {
+	*hcloud.LoadBalancerCreateOptsService
+	ListenPort      *string
+	DestinationPort *string
+}
+
+func (v *hcLoadBalancerCreateOptsServiceWrap) unwrap() (*hcloud.LoadBalancerCreateOptsService, error) {
+	out := &hcloud.LoadBalancerCreateOptsService{
+		Protocol:      v.Protocol,
+		Proxyprotocol: v.Proxyprotocol,
+		HTTP:          v.HTTP,
+		HealthCheck:   v.HealthCheck,
+	}
+	if v.ListenPort != nil {
+		intPort, err := strconv.ParseInt(*v.ListenPort, 10, 32)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use '%v' as int", *v.ListenPort), err)
+		}
+		ii := int(intPort)
+		out.ListenPort = &ii
+	}
+	if v.DestinationPort != nil {
+		intPort, err := strconv.ParseInt(*v.DestinationPort, 10, 32)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use '%v' as int", *v.DestinationPort), err)
+		}
+		ii := int(intPort)
+		out.DestinationPort = &ii
+	}
+	return out, nil
+}
+
 type hcLoadBalancerCreateOptsWrap struct {
 	*hcloud.LoadBalancerCreateOpts
-	Network *hcNetworkWrap `json:"network"`
+	Network  *hcNetworkWrap `json:"network"`
+	Services []hcLoadBalancerCreateOptsServiceWrap
 }
 
 func (v *hcLoadBalancerCreateOptsWrap) unwrap() (*hcloud.LoadBalancerCreateOpts, error) {
@@ -154,8 +187,14 @@ func (v *hcLoadBalancerCreateOptsWrap) unwrap() (*hcloud.LoadBalancerCreateOpts,
 		NetworkZone:      v.NetworkZone,
 		Labels:           v.Labels,
 		Targets:          v.Targets,
-		Services:         v.Services,
 		PublicInterface:  v.PublicInterface,
+	}
+	for _, ss := range v.Services {
+		hsv, err := ss.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Services = append(out.Services, *hsv)
 	}
 	if v.Network != nil {
 		net, err := v.Network.unwrap()
