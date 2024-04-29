@@ -18,11 +18,13 @@ package actors
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
@@ -55,8 +57,15 @@ type VolumeListResponseWithMeta struct {
 func CreateVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcloud.VolumeCreateOpts{}
+	output := &schema.VolumeCreateResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -74,8 +83,21 @@ func CreateVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.VolumeCreateResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(*output.Action, "Waiting for volume %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func DeleteVolume(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -161,8 +183,15 @@ func FindOneVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 
 func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &volumeAttachParameters{}
+	output := &schema.VolumeActionAttachVolumeResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -170,7 +199,7 @@ func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	err := ctx.Store.DeepInterpolation(input)
+	err = ctx.Store.DeepInterpolation(input)
 	if err != nil {
 		return nil, err
 	}
@@ -191,15 +220,35 @@ func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.VolumeActionAttachVolumeResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for volume attach %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func DetachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	// only volume.ID is really used
 	input := &hcVolumeWrap{}
+	output := &schema.VolumeActionDetachVolumeResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -207,7 +256,7 @@ func DetachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	err := ctx.Store.DeepInterpolation(input)
+	err = ctx.Store.DeepInterpolation(input)
 	if err != nil {
 		return nil, err
 	}
@@ -222,6 +271,19 @@ func DetachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.VolumeActionDetachVolumeResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for volume detach %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }

@@ -18,6 +18,7 @@ package actors
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
@@ -261,8 +263,15 @@ func (v *hcLoadBalancerCreateOptsWrap) unwrap() (*hcloud.LoadBalancerCreateOpts,
 func CreateLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcLoadBalancerCreateOptsWrap{}
+	output := &schema.LoadBalancerCreateResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -285,8 +294,21 @@ func CreateLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.LoadBalancerCreateResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for load balancer %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func DeleteLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -377,11 +399,17 @@ func AttachLoadBalancerToNetwork(ctx *ActionContext) (*base.ActionOutput, error)
 		return nil, err
 	}
 
+	internalparams := &blueprint.InternalParameters{}
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
+		return nil, err
+	}
+
 	if ctx.Rehearsal {
 		return nil, nil
 	}
 
-	err := ctx.Store.DeepInterpolation(input)
+	err = ctx.Store.DeepInterpolation(input)
 	if err != nil {
 		return nil, err
 	}
@@ -452,7 +480,21 @@ func AttachLoadBalancerToNetwork(ctx *ActionContext) (*base.ActionOutput, error)
 			}
 			ctx.Logger.LogInfo(fmt.Sprintf("valid ip %s found for subnet %s", opts.IP.String(), ipnet.String()))
 			output := &schema.LoadBalancerActionAttachToNetworkResponse{}
-			return GenericHCloudOutput(ctx, response, output)
+			aout, err := GenericHCloudOutput(ctx, response, output)
+			if err != nil {
+				return nil, err
+			}
+			if internalparams.Waiters != nil {
+				for _, wnam := range internalparams.Waiters {
+					if wnam == "success" {
+						err = ctx.WaitForAndLog(output.Action, "Waiting for lb attach %v%...")
+						if err != nil {
+							return nil, err
+						}
+					}
+				}
+			}
+			return aout, err
 		}
 	}
 	_, response, err := ctx.HClient.LoadBalancer.AttachToNetwork(context.Background(), hlb, *opts)
@@ -461,13 +503,34 @@ func AttachLoadBalancerToNetwork(ctx *ActionContext) (*base.ActionOutput, error)
 	}
 
 	output := &schema.LoadBalancerActionAttachToNetworkResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for lb attach %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func DetachLoadBalancerFromNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &loadbalancerDetachFromNetworkParameters{}
+	output := &schema.LoadBalancerActionDetachFromNetworkResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -475,7 +538,7 @@ func DetachLoadBalancerFromNetwork(ctx *ActionContext) (*base.ActionOutput, erro
 		return nil, nil
 	}
 
-	err := ctx.Store.DeepInterpolation(input)
+	err = ctx.Store.DeepInterpolation(input)
 	if err != nil {
 		return nil, err
 	}
@@ -494,8 +557,21 @@ func DetachLoadBalancerFromNetwork(ctx *ActionContext) (*base.ActionOutput, erro
 		return nil, err
 	}
 
-	output := &schema.LoadBalancerActionDetachFromNetworkResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for lb detach %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func AddTargetToLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {

@@ -54,6 +54,23 @@ L:
 	return err
 }
 
+func (a *ActionContext) WaitForManyAndLog(actions []schema.Action, msg string) error {
+	act := hcloud.ActionsFromSchema(actions)
+	okCh, errCh := a.HClient.Action.WatchOverallProgress(context.Background(), act)
+	var err error
+L:
+	for {
+		select {
+		case progress := <-okCh:
+			a.Logger.LogInfo(fmt.Sprintf(msg, progress))
+		case err = <-errCh:
+			// on sucess, err is nil
+			break L
+		}
+	}
+	return err
+}
+
 func UnmarshallHCloudToSchema(response *hcloud.Response, v interface{}) error {
 	var body []byte
 	body, err := io.ReadAll(response.Response.Body)

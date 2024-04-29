@@ -25,6 +25,7 @@ import (
 	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
@@ -302,6 +303,7 @@ func FindOneFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 
 func ApplyFirewallToResources(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &applyResourcesParameters{}
+	output := &schema.FirewallActionApplyToResourcesResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
 		return nil, err
@@ -310,8 +312,13 @@ func ApplyFirewallToResources(ctx *ActionContext) (*base.ActionOutput, error) {
 	if ctx.Rehearsal {
 		return nil, nil
 	}
+	internalparams := &blueprint.InternalParameters{}
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
+		return nil, err
+	}
 
-	err := ctx.Store.DeepInterpolation(input)
+	err = ctx.Store.DeepInterpolation(input)
 	if err != nil {
 		return nil, err
 	}
@@ -335,8 +342,21 @@ func ApplyFirewallToResources(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.FirewallActionApplyToResourcesResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForManyAndLog(output.Actions, "Waiting for fw resources %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func RemoveFirewallFromResources(ctx *ActionContext) (*base.ActionOutput, error) {
