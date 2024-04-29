@@ -140,10 +140,56 @@ type loadbalancerRemoveTargetParameters struct {
 	LoadBalancer  *hcLoadBalancerWrap `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
 }
 
+type hcLoadBalancerCreateOptsServiceHealthCheckWrap struct {
+	*hcloud.LoadBalancerCreateOptsServiceHealthCheck
+	Port     *string
+	Interval *string
+	Timeout  *string
+	Retries  *string
+}
+
+func (v *hcLoadBalancerCreateOptsServiceHealthCheckWrap) unwrap() (*hcloud.LoadBalancerCreateOptsServiceHealthCheck, error) {
+	out := &hcloud.LoadBalancerCreateOptsServiceHealthCheck{}
+	if v.Port != nil {
+		intPort, err := strconv.ParseInt(*v.Port, 10, 32)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use port '%v' as int", *v.Port), err)
+		}
+		ii := int(intPort)
+		out.Port = &ii
+	}
+	if v.Retries != nil {
+		intRetries, err := strconv.ParseInt(*v.Retries, 10, 32)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use retries '%v' as int", *v.Retries), err)
+		}
+		ii := int(intRetries)
+		out.Port = &ii
+	}
+	if v.Timeout != nil {
+		intTimeout, err := strconv.ParseInt(*v.Timeout, 10, 64)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use timeout '%v' as int seconds", *v.Timeout), err)
+		}
+		d := time.Duration(intTimeout) * time.Second
+		out.Timeout = &d
+	}
+	if v.Interval != nil {
+		intInterval, err := strconv.ParseInt(*v.Interval, 10, 64)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use interval '%v' as int seconds", *v.Interval), err)
+		}
+		d := time.Duration(intInterval) * time.Second
+		out.Interval = &d
+	}
+	return out, nil
+}
+
 type hcLoadBalancerCreateOptsServiceWrap struct {
 	*hcloud.LoadBalancerCreateOptsService
 	ListenPort      *string
 	DestinationPort *string
+	HealthCheck     *hcLoadBalancerCreateOptsServiceHealthCheckWrap
 }
 
 func (v *hcLoadBalancerCreateOptsServiceWrap) unwrap() (*hcloud.LoadBalancerCreateOptsService, error) {
@@ -151,7 +197,6 @@ func (v *hcLoadBalancerCreateOptsServiceWrap) unwrap() (*hcloud.LoadBalancerCrea
 		Protocol:      v.Protocol,
 		Proxyprotocol: v.Proxyprotocol,
 		HTTP:          v.HTTP,
-		HealthCheck:   v.HealthCheck,
 	}
 	if v.ListenPort != nil {
 		intPort, err := strconv.ParseInt(*v.ListenPort, 10, 32)
@@ -168,6 +213,13 @@ func (v *hcLoadBalancerCreateOptsServiceWrap) unwrap() (*hcloud.LoadBalancerCrea
 		}
 		ii := int(intPort)
 		out.DestinationPort = &ii
+	}
+	if v.HealthCheck != nil {
+		hh, err := v.HealthCheck.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.HealthCheck = hh
 	}
 	return out, nil
 }
