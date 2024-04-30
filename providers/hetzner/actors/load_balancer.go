@@ -576,8 +576,15 @@ func DetachLoadBalancerFromNetwork(ctx *ActionContext) (*base.ActionOutput, erro
 
 func AddTargetToLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &loadbalancerAddTargetParameters{}
+	output := &schema.LoadBalancerActionAddTargetResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -585,7 +592,7 @@ func AddTargetToLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	err := ctx.Store.DeepInterpolation(input)
+	err = ctx.Store.DeepInterpolation(input)
 	if err != nil {
 		return nil, err
 	}
@@ -640,14 +647,34 @@ func AddTargetToLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	}
 
-	output := &schema.LoadBalancerActionAddTargetResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for target addition %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func RemoveTargetFromLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &loadbalancerRemoveTargetParameters{}
+	output := &schema.LoadBalancerActionRemoveTargetResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -655,7 +682,7 @@ func RemoveTargetFromLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error
 		return nil, nil
 	}
 
-	err := ctx.Store.DeepInterpolation(input)
+	err = ctx.Store.DeepInterpolation(input)
 	if err != nil {
 		return nil, err
 	}
@@ -701,6 +728,19 @@ func RemoveTargetFromLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error
 
 	}
 
-	output := &schema.LoadBalancerActionRemoveTargetResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for target rm from lb %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }

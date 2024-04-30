@@ -170,8 +170,15 @@ func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only Server.ID attr are really used
 	input := &hcServerWrap{}
+	output := &schema.ServerDeleteResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -194,8 +201,21 @@ func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.ServerDeleteResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for server delete %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func FindServers(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -287,8 +307,15 @@ func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only Server.ID are really used
 	input := &hcServerWrap{}
+	output := &schema.ServerActionPoweronResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -311,16 +338,36 @@ func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.ServerActionPoweronResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for server power on %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func PowerOffServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	// only Server.ID are really used
 	input := &hcServerWrap{}
+	output := &schema.ServerActionPoweroffResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -343,15 +390,35 @@ func PowerOffServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.ServerActionPoweroffResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for server power off %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func AttachServerToNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcServerAttachToNetworkOptsWrap{}
+	output := &schema.ServerActionAttachToNetworkResponse{}
 
 	if err := json.Unmarshal(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -379,15 +446,35 @@ func AttachServerToNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.ServerActionAttachToNetworkResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for server attach to net %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func DetachServerFromNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcServerDetachFromNetworkOptsWrap{}
+	output := &schema.ServerActionDetachFromNetworkResponse{}
 
 	if err := json.Unmarshal(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -415,8 +502,21 @@ func DetachServerFromNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.ServerActionDetachFromNetworkResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for server detach from net %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func CreateImageFromServer(ctx *ActionContext) (*base.ActionOutput, error) {

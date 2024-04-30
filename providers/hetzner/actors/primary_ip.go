@@ -18,11 +18,13 @@ package actors
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
@@ -95,8 +97,15 @@ type PrimaryIPListResultWithMeta struct {
 func CreatePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcPrimaryIPCreateOptsWrap{}
+	output := &schema.PrimaryIPCreateResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -119,8 +128,21 @@ func CreatePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.PrimaryIPCreateResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(*output.Action, "Waiting for primary ip %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func DeletePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -206,8 +228,16 @@ func FindOnePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 
 func AssignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &hcPrimaryIPAssignOptsWrap{}
+	// ok to use hcloud instead scheme here
+	output := &hcloud.PrimaryIPAssignResult{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -215,7 +245,7 @@ func AssignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	err := ctx.Store.DeepInterpolation(input)
+	err = ctx.Store.DeepInterpolation(input)
 	if err != nil {
 		return nil, err
 	}
@@ -230,15 +260,34 @@ func AssignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	// ok to use hcloud instead scheme here
-	output := &hcloud.PrimaryIPAssignResult{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for primary ip assignation %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func UnassignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &unassignPrimaryIPParameters{}
+	output := &hcloud.PrimaryIPAssignResult{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -246,7 +295,7 @@ func UnassignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	err := ctx.Store.DeepInterpolation(input)
+	err = ctx.Store.DeepInterpolation(input)
 	if err != nil {
 		return nil, err
 	}
@@ -261,6 +310,19 @@ func UnassignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &hcloud.PrimaryIPAssignResult{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for primary ip unassignation %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }

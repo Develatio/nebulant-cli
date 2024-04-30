@@ -278,8 +278,15 @@ func AssignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 func UnassignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &unassignFloatingIPParameters{}
+	output := &schema.FloatingIPActionUnassignResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -302,6 +309,19 @@ func UnassignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.FloatingIPActionUnassignRequest{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for floating ip unassignation %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }

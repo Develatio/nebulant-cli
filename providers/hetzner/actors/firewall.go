@@ -159,8 +159,15 @@ type FirewallListResponseWithMeta struct {
 func CreateFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcFirewallCreateOptsWrap{}
+	output := &schema.FirewallCreateResponse{}
 
 	if err := json.Unmarshal(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -183,8 +190,21 @@ func CreateFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.FirewallCreateResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForManyAndLog(output.Actions, "Waiting for firewall %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func DeleteFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -361,8 +381,15 @@ func ApplyFirewallToResources(ctx *ActionContext) (*base.ActionOutput, error) {
 
 func RemoveFirewallFromResources(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &removeResourcesParameters{}
+	output := &schema.FirewallActionRemoveFromResourcesResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -370,7 +397,7 @@ func RemoveFirewallFromResources(ctx *ActionContext) (*base.ActionOutput, error)
 		return nil, nil
 	}
 
-	err := ctx.Store.DeepInterpolation(input)
+	err = ctx.Store.DeepInterpolation(input)
 	if err != nil {
 		return nil, err
 	}
@@ -394,14 +421,34 @@ func RemoveFirewallFromResources(ctx *ActionContext) (*base.ActionOutput, error)
 		return nil, err
 	}
 
-	output := &schema.FirewallActionRemoveFromResourcesRequest{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForManyAndLog(output.Actions, "Waiting firewall rm %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
 
 func SetRulesFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &setRulesParameters{}
+	output := &schema.FirewallActionSetRulesResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
 		return nil, err
 	}
 
@@ -409,7 +456,7 @@ func SetRulesFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	err := ctx.Store.DeepInterpolation(input)
+	err = ctx.Store.DeepInterpolation(input)
 	if err != nil {
 		return nil, err
 	}
@@ -424,6 +471,19 @@ func SetRulesFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	output := &schema.FirewallActionSetRulesResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForManyAndLog(output.Actions, "Waiting for firewall rules set %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
 }
