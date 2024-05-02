@@ -187,18 +187,50 @@ func (v *hcLoadBalancerCreateOptsServiceHealthCheckWrap) unwrap() (*hcloud.LoadB
 	return out, nil
 }
 
+type hcLoadBalancerCreateOptsServiceHTTPWrap struct {
+	*hcloud.LoadBalancerCreateOptsServiceHTTP
+	CookieLifetime *string
+}
+
+func (v *hcLoadBalancerCreateOptsServiceHTTPWrap) unwrap() (*hcloud.LoadBalancerCreateOptsServiceHTTP, error) {
+	out := &hcloud.LoadBalancerCreateOptsServiceHTTP{
+		CookieName: v.CookieName,
+		// CookieLifetime: v.CookieLifetime,
+		Certificates:   v.Certificates,
+		RedirectHTTP:   v.RedirectHTTP,
+		StickySessions: v.StickySessions,
+	}
+	if v.CookieLifetime != nil {
+		intCookieLifetime, err := strconv.ParseInt(*v.CookieLifetime, 10, 64)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use CookieLifetime '%v' as int seconds", *v.CookieLifetime), err)
+		}
+		d := time.Duration(intCookieLifetime) * time.Second
+		out.CookieLifetime = &d
+	}
+	return out, nil
+}
+
 type hcLoadBalancerCreateOptsServiceWrap struct {
 	*hcloud.LoadBalancerCreateOptsService
 	ListenPort      *string
 	DestinationPort *string
 	HealthCheck     *hcLoadBalancerCreateOptsServiceHealthCheckWrap
+	HTTP            *hcLoadBalancerCreateOptsServiceHTTPWrap
 }
 
 func (v *hcLoadBalancerCreateOptsServiceWrap) unwrap() (*hcloud.LoadBalancerCreateOptsService, error) {
 	out := &hcloud.LoadBalancerCreateOptsService{
 		Protocol:      v.Protocol,
 		Proxyprotocol: v.Proxyprotocol,
-		HTTP:          v.HTTP,
+		// HTTP:          v.HTTP,
+	}
+	if v.HTTP != nil {
+		hhttp, err := v.HTTP.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.HTTP = hhttp
 	}
 	if v.ListenPort != nil {
 		intPort, err := strconv.ParseInt(*v.ListenPort, 10, 32)
