@@ -241,7 +241,7 @@ func (v *hcLoadBalancerCreateOptsServiceHTTPWrap) unwrap() (*hcloud.LoadBalancer
 
 type hcLoadBalancerCreateOptsServiceWrap struct {
 	*hcloud.LoadBalancerCreateOptsService
-	Proxyprotocol   *string
+	Proxyprotocol   *bool
 	Protocol        *string
 	ListenPort      *string
 	DestinationPort *string
@@ -256,11 +256,7 @@ func (v *hcLoadBalancerCreateOptsServiceWrap) unwrap() (*hcloud.LoadBalancerCrea
 		// HTTP:          v.HTTP,
 	}
 	if v.Proxyprotocol != nil {
-		pp, err := strconv.ParseBool(*v.Proxyprotocol)
-		if err != nil {
-			return nil, err
-		}
-		out.Proxyprotocol = &pp
+		out.Proxyprotocol = v.Proxyprotocol
 	}
 	if v.Protocol != nil {
 		out.Protocol = hcloud.LoadBalancerServiceProtocol(*v.Protocol)
