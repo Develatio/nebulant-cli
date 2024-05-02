@@ -48,7 +48,7 @@ func FindDatacenters(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 	_, response, err := ctx.HClient.Datacenter.List(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &DatacenterListResponseWithMeta{}

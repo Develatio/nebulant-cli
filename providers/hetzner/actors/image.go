@@ -91,7 +91,7 @@ func DeleteImage(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	response, err := ctx.HClient.Image.Delete(context.Background(), himg)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	// delete returns scheme like {image:{}}, same as update
@@ -130,7 +130,7 @@ func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 		for {
 			_, _rsp, err := ctx.HClient.Image.List(context.Background(), *opts)
 			if err != nil {
-				return nil, err
+				return nil, HCloudErrResponse(err, _rsp)
 			}
 			_v := &ImageListResponseWithMeta{}
 			err = UnmarshallHCloudToSchema(_rsp, _v)
@@ -166,7 +166,7 @@ func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Image.List(context.Background(), *opts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 	return GenericHCloudOutput(ctx, response, &ImageListResponseWithMeta{})
 }

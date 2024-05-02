@@ -49,7 +49,7 @@ func FindISOs(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.ISO.List(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &ISOListResponseWithMeta{}

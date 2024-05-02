@@ -65,7 +65,7 @@ func CreateSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.SSHKey.Create(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &schema.SSHKeyCreateResponse{}
@@ -95,9 +95,9 @@ func DeleteSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, err = ctx.HClient.SSHKey.Delete(context.Background(), hsshkey)
+	response, err := ctx.HClient.SSHKey.Delete(context.Background(), hsshkey)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout := base.NewActionOutput(ctx.Action, nil, nil)
@@ -122,7 +122,7 @@ func FindSSHKeys(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.SSHKey.List(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &SSHKeyListResponseWithMeta{}

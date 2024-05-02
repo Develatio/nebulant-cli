@@ -125,7 +125,7 @@ func CreatePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.PrimaryIP.Create(context.Background(), *hipcreateopts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -195,7 +195,7 @@ func FindPrimaryIPs(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.PrimaryIP.List(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &PrimaryIPListResultWithMeta{}
@@ -257,7 +257,7 @@ func AssignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.PrimaryIP.Assign(context.Background(), *hipassignopts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -307,7 +307,7 @@ func UnassignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.PrimaryIP.Unassign(context.Background(), int64id)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)

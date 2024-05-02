@@ -429,7 +429,7 @@ func FindLoadBalancers(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.LoadBalancer.List(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &LoadBalancerListResponseWithMeta{}
@@ -497,9 +497,9 @@ func AttachLoadBalancerToNetwork(ctx *ActionContext) (*base.ActionOutput, error)
 	if input.AttachOpts.lookupAvailableIP != nil {
 		ipnet := input.AttachOpts.lookupAvailableIP
 		hnetID := opts.Network.ID
-		hnet, _, err := ctx.HClient.Network.GetByID(context.Background(), hnetID)
+		hnet, response, err := ctx.HClient.Network.GetByID(context.Background(), hnetID)
 		if err != nil {
-			return nil, err
+			return nil, HCloudErrResponse(err, response)
 		}
 		found := false
 		for _, ss := range hnet.Subnets {
@@ -544,7 +544,7 @@ func AttachLoadBalancerToNetwork(ctx *ActionContext) (*base.ActionOutput, error)
 					continue
 				}
 			} else if err != nil {
-				return nil, err
+				return nil, HCloudErrResponse(err, response)
 			}
 			ctx.Logger.LogInfo(fmt.Sprintf("valid ip %s found for subnet %s", opts.IP.String(), ipnet.String()))
 			output := &schema.LoadBalancerActionAttachToNetworkResponse{}
@@ -567,7 +567,7 @@ func AttachLoadBalancerToNetwork(ctx *ActionContext) (*base.ActionOutput, error)
 	}
 	_, response, err := ctx.HClient.LoadBalancer.AttachToNetwork(context.Background(), hlb, *opts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &schema.LoadBalancerActionAttachToNetworkResponse{}
@@ -622,7 +622,7 @@ func DetachLoadBalancerFromNetwork(ctx *ActionContext) (*base.ActionOutput, erro
 
 	_, response, err := ctx.HClient.LoadBalancer.DetachFromNetwork(context.Background(), hlb, *opts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)

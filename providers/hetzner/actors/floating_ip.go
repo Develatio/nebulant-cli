@@ -158,7 +158,7 @@ func FindFloatingIPs(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.FloatingIP.List(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &FloatingIPListResultWithMeta{}
@@ -190,7 +190,7 @@ func FindOneFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 		_, response, err := ctx.HClient.FloatingIP.GetByID(context.Background(), int64id)
 		if err != nil {
-			return nil, err
+			return nil, HCloudErrResponse(err, response)
 		}
 		err = UnmarshallHCloudToSchema(response, output)
 		if err != nil {
@@ -255,7 +255,7 @@ func AssignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.FloatingIP.Assign(context.Background(), hfip, hsrv)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -306,7 +306,7 @@ func UnassignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.FloatingIP.Unassign(context.Background(), hfip)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)

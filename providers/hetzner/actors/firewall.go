@@ -187,7 +187,7 @@ func CreateFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Firewall.Create(context.Background(), *opts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -230,9 +230,9 @@ func DeleteFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, err = ctx.HClient.Firewall.Delete(context.Background(), hfwall)
+	response, err := ctx.HClient.Firewall.Delete(context.Background(), hfwall)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout := base.NewActionOutput(ctx.Action, nil, nil)
@@ -257,7 +257,7 @@ func FindFirewalls(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Firewall.List(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &FirewallListResponseWithMeta{}
@@ -289,7 +289,7 @@ func FindOneFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 		_, response, err := ctx.HClient.Firewall.GetByID(context.Background(), int64id)
 		if err != nil {
-			return nil, err
+			return nil, HCloudErrResponse(err, response)
 		}
 		err = UnmarshallHCloudToSchema(response, output)
 		if err != nil {
@@ -359,7 +359,7 @@ func ApplyFirewallToResources(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Firewall.ApplyResources(context.Background(), hfwall, resources)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -418,7 +418,7 @@ func RemoveFirewallFromResources(ctx *ActionContext) (*base.ActionOutput, error)
 
 	_, response, err := ctx.HClient.Firewall.RemoveResources(context.Background(), hfwall, resources)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -468,7 +468,7 @@ func SetRulesFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Firewall.SetRules(context.Background(), hfwall, input.Opts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)

@@ -146,7 +146,7 @@ func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Server.Create(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -198,7 +198,7 @@ func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Server.DeleteWithResult(context.Background(), hsrv)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -236,7 +236,7 @@ func FindServers(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Server.List(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &ServerListResponseWithMeta{}
@@ -264,7 +264,7 @@ func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 		_, response, err := ctx.HClient.Server.GetByID(context.Background(), int64id)
 		if err != nil {
-			return nil, err
+			return nil, HCloudErrResponse(err, response)
 		}
 		output := &schema.ServerGetResponse{}
 		err = UnmarshallHCloudToSchema(response, output)
@@ -335,7 +335,7 @@ func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Server.Poweron(context.Background(), hsrv)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -387,7 +387,7 @@ func PowerOffServer(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Server.Poweroff(context.Background(), hsrv)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -443,7 +443,7 @@ func AttachServerToNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Server.AttachToNetwork(context.Background(), hsrv, *opts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -499,7 +499,7 @@ func DetachServerFromNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Server.DetachFromNetwork(context.Background(), hsrv, *opts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -555,7 +555,7 @@ func CreateImageFromServer(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Server.CreateImage(context.Background(), hsrv, opts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)

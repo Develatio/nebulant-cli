@@ -219,7 +219,7 @@ func CreateNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Network.Create(context.Background(), *opts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &schema.NetworkCreateResponse{}
@@ -276,7 +276,7 @@ func FindNetworks(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Network.List(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &NetworkListResponseWithMeta{}
@@ -342,7 +342,7 @@ func AddSubnetToNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Network.AddSubnet(context.Background(), hnet, *opts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -397,7 +397,7 @@ func DeleteSubnetFromNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Network.DeleteSubnet(context.Background(), hnet, *opts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)

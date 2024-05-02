@@ -80,7 +80,7 @@ func CreateVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Volume.Create(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -150,7 +150,7 @@ func FindVolumes(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Volume.List(context.Background(), *input)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	output := &VolumeListResponseWithMeta{}
@@ -217,7 +217,7 @@ func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Volume.AttachWithOpts(context.Background(), hvol, input.AttachOpts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
@@ -268,7 +268,7 @@ func DetachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.Volume.Detach(context.Background(), hvol)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
