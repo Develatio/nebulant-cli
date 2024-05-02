@@ -18,6 +18,7 @@ package actors
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
@@ -200,4 +201,12 @@ func GenericHCloudOutput(ctx *ActionContext, response *hcloud.Response, v interf
 
 	aout := base.NewActionOutput(ctx.Action, v, nil)
 	return aout, nil
+}
+
+func HCloudErrResponse(err error, response *hcloud.Response) error {
+	eeb, err1 := io.ReadAll(response.Body)
+	if err1 != nil {
+		return errors.Join(err, err1)
+	}
+	return errors.Join(err, fmt.Errorf(string(eeb)))
 }

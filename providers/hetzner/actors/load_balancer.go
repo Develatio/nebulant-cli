@@ -359,7 +359,7 @@ func CreateLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	_, response, err := ctx.HClient.LoadBalancer.Create(context.Background(), *opts)
 	if err != nil {
-		return nil, err
+		return nil, HCloudErrResponse(err, response)
 	}
 
 	aout, err := GenericHCloudOutput(ctx, response, output)
