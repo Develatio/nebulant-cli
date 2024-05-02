@@ -142,16 +142,44 @@ type loadbalancerRemoveTargetParameters struct {
 	LoadBalancer  *hcLoadBalancerWrap `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
 }
 
+type hcLoadBalancerCreateOptsServiceHealthCheckHTTPWrap struct {
+	*hcloud.LoadBalancerCreateOptsServiceHealthCheckHTTP
+	TLS *bool
+}
+
+func (v *hcLoadBalancerCreateOptsServiceHealthCheckHTTPWrap) unwrap() (*hcloud.LoadBalancerCreateOptsServiceHealthCheckHTTP, error) {
+	out := &hcloud.LoadBalancerCreateOptsServiceHealthCheckHTTP{
+		Domain:      v.Domain,
+		Path:        v.Path,
+		Response:    v.Response,
+		StatusCodes: v.StatusCodes,
+		TLS:         v.TLS,
+	}
+	return out, nil
+}
+
 type hcLoadBalancerCreateOptsServiceHealthCheckWrap struct {
 	*hcloud.LoadBalancerCreateOptsServiceHealthCheck
+	Protocol *string
 	Port     *string
 	Interval *string
 	Timeout  *string
 	Retries  *string
+	HTTP     *hcLoadBalancerCreateOptsServiceHealthCheckHTTPWrap
 }
 
 func (v *hcLoadBalancerCreateOptsServiceHealthCheckWrap) unwrap() (*hcloud.LoadBalancerCreateOptsServiceHealthCheck, error) {
 	out := &hcloud.LoadBalancerCreateOptsServiceHealthCheck{}
+	if v.HTTP != nil {
+		hh, err := v.HTTP.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.HTTP = hh
+	}
+	if v.Protocol != nil {
+		out.Protocol = hcloud.LoadBalancerServiceProtocol(*v.Protocol)
+	}
 	if v.Port != nil {
 		intPort, err := strconv.ParseInt(*v.Port, 10, 32)
 		if err != nil {
@@ -213,6 +241,8 @@ func (v *hcLoadBalancerCreateOptsServiceHTTPWrap) unwrap() (*hcloud.LoadBalancer
 
 type hcLoadBalancerCreateOptsServiceWrap struct {
 	*hcloud.LoadBalancerCreateOptsService
+	Proxyprotocol   *string
+	Protocol        *string
 	ListenPort      *string
 	DestinationPort *string
 	HealthCheck     *hcLoadBalancerCreateOptsServiceHealthCheckWrap
@@ -221,9 +251,19 @@ type hcLoadBalancerCreateOptsServiceWrap struct {
 
 func (v *hcLoadBalancerCreateOptsServiceWrap) unwrap() (*hcloud.LoadBalancerCreateOptsService, error) {
 	out := &hcloud.LoadBalancerCreateOptsService{
-		Protocol:      v.Protocol,
-		Proxyprotocol: v.Proxyprotocol,
+		// Protocol:      v.Protocol,
+		// Proxyprotocol: v.Proxyprotocol,
 		// HTTP:          v.HTTP,
+	}
+	if v.Proxyprotocol != nil {
+		pp, err := strconv.ParseBool(*v.Proxyprotocol)
+		if err != nil {
+			return nil, err
+		}
+		out.Proxyprotocol = &pp
+	}
+	if v.Protocol != nil {
+		out.Protocol = hcloud.LoadBalancerServiceProtocol(*v.Protocol)
 	}
 	if v.HTTP != nil {
 		hhttp, err := v.HTTP.unwrap()
