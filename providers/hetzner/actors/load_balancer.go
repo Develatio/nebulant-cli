@@ -194,7 +194,7 @@ func (v *hcLoadBalancerCreateOptsServiceHealthCheckWrap) unwrap() (*hcloud.LoadB
 			return nil, errors.Join(fmt.Errorf("cannot use retries '%v' as int", *v.Retries), err)
 		}
 		ii := int(intRetries)
-		out.Port = &ii
+		out.Retries = &ii
 	}
 	if v.Timeout != nil {
 		intTimeout, err := strconv.ParseInt(*v.Timeout, 10, 64)
