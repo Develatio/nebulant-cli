@@ -158,6 +158,163 @@ func (v *hcLoadBalancerCreateOptsServiceHealthCheckHTTPWrap) unwrap() (*hcloud.L
 	return out, nil
 }
 
+type hcLoadBalancerAddServiceOptsHealthCheckHTTPWrap struct {
+	*hcloud.LoadBalancerAddServiceOptsHealthCheckHTTP
+}
+
+func (v *hcLoadBalancerAddServiceOptsHealthCheckHTTPWrap) unwrap() (*hcloud.LoadBalancerAddServiceOptsHealthCheckHTTP, error) {
+	out := &hcloud.LoadBalancerAddServiceOptsHealthCheckHTTP{
+		Domain:      v.Domain,
+		Path:        v.Path,
+		Response:    v.Response,
+		StatusCodes: v.StatusCodes,
+		TLS:         v.TLS,
+	}
+	return out, nil
+}
+
+type hcLoadBalancerAddServiceOptsHTTPWrap struct {
+	*hcloud.LoadBalancerAddServiceOptsHTTP
+	CookieLifetime *string
+}
+
+func (v *hcLoadBalancerAddServiceOptsHTTPWrap) unwrap() (*hcloud.LoadBalancerAddServiceOptsHTTP, error) {
+	out := &hcloud.LoadBalancerAddServiceOptsHTTP{
+		CookieName:     v.CookieName,
+		Certificates:   v.Certificates,
+		RedirectHTTP:   v.RedirectHTTP,
+		StickySessions: v.StickySessions,
+	}
+	if v.CookieLifetime != nil {
+		intCookieLifetime, err := strconv.ParseInt(*v.CookieLifetime, 10, 64)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use CookieLifetime '%v' as int seconds", *v.CookieLifetime), err)
+		}
+		d := time.Duration(intCookieLifetime) * time.Second
+		out.CookieLifetime = &d
+	}
+	return out, nil
+}
+
+type hcLoadBalancerAddServiceOptsHealthCheckWrap struct {
+	*hcloud.LoadBalancerAddServiceOptsHealthCheck
+	Protocol *string
+	Port     *string
+	Interval *string
+	Timeout  *string
+	Retries  *string
+	HTTP     *hcLoadBalancerAddServiceOptsHealthCheckHTTPWrap
+}
+
+func (v *hcLoadBalancerAddServiceOptsHealthCheckWrap) unwrap() (*hcloud.LoadBalancerAddServiceOptsHealthCheck, error) {
+	out := &hcloud.LoadBalancerAddServiceOptsHealthCheck{}
+	if v.Protocol != nil {
+		out.Protocol = hcloud.LoadBalancerServiceProtocol(*v.Protocol)
+	}
+	if v.Port != nil {
+		intPort, err := strconv.ParseInt(*v.Port, 10, 32)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use port '%v' as int", *v.Port), err)
+		}
+		ii := int(intPort)
+		out.Port = &ii
+	}
+	if v.Timeout != nil {
+		intTimeout, err := strconv.ParseInt(*v.Timeout, 10, 64)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use timeout '%v' as int seconds", *v.Timeout), err)
+		}
+		d := time.Duration(intTimeout) * time.Second
+		out.Timeout = &d
+	}
+	if v.Interval != nil {
+		intInterval, err := strconv.ParseInt(*v.Interval, 10, 64)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use interval '%v' as int seconds", *v.Interval), err)
+		}
+		d := time.Duration(intInterval) * time.Second
+		out.Interval = &d
+	}
+	if v.Retries != nil {
+		intRetries, err := strconv.ParseInt(*v.Retries, 10, 32)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use retries '%v' as int", *v.Retries), err)
+		}
+		ii := int(intRetries)
+		out.Retries = &ii
+	}
+	if v.HTTP != nil {
+		hh, err := v.HTTP.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.HTTP = hh
+	}
+	return out, nil
+}
+
+type hcLoadBalancerAddServiceOptsWrap struct {
+	*hcloud.LoadBalancerAddServiceOpts
+	Protocol        *string
+	ListenPort      *string
+	DestinationPort *string
+	Proxyprotocol   *bool
+	HTTP            *hcLoadBalancerAddServiceOptsHTTPWrap
+	HealthCheck     *hcLoadBalancerAddServiceOptsHealthCheckWrap
+}
+
+func (v *hcLoadBalancerAddServiceOptsWrap) unwrap() (*hcloud.LoadBalancerAddServiceOpts, error) {
+	out := &hcloud.LoadBalancerAddServiceOpts{}
+	if v.Protocol != nil {
+		out.Protocol = hcloud.LoadBalancerServiceProtocol(*v.Protocol)
+	}
+	if v.ListenPort != nil {
+		intPort, err := strconv.ParseInt(*v.ListenPort, 10, 32)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use '%v' as int", *v.ListenPort), err)
+		}
+		ii := int(intPort)
+		out.ListenPort = &ii
+	}
+	if v.DestinationPort != nil {
+		intPort, err := strconv.ParseInt(*v.DestinationPort, 10, 32)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use '%v' as int", *v.DestinationPort), err)
+		}
+		ii := int(intPort)
+		out.DestinationPort = &ii
+	}
+	if v.Proxyprotocol != nil {
+		out.Proxyprotocol = v.Proxyprotocol
+	}
+	if v.HTTP != nil {
+		hhttp, err := v.HTTP.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.HTTP = hhttp
+	}
+	if v.HealthCheck != nil {
+		hh, err := v.HealthCheck.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.HealthCheck = hh
+	}
+
+	return out, nil
+}
+
+type loadbalancerAddServiceParameters struct {
+	AddServiceOpts *hcLoadBalancerAddServiceOptsWrap `json:"opts" validate:"required"`
+	LoadBalancer   *hcLoadBalancerWrap               `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
+}
+
+type loadbalancerDeleteServiceParameters struct {
+	ListenPort   *string             `json:"listen_port" validate:"required"`
+	LoadBalancer *hcLoadBalancerWrap `json:"load_balancer" validate:"required"` // only LoadBalancer.ID is really used
+}
+
 type hcLoadBalancerCreateOptsServiceHealthCheckWrap struct {
 	*hcloud.LoadBalancerCreateOptsServiceHealthCheck
 	Protocol *string
@@ -811,4 +968,93 @@ func RemoveTargetFromLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error
 		}
 	}
 	return aout, err
+}
+
+func AddServiceToLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &loadbalancerAddServiceParameters{}
+	output := &schema.LoadBalancerActionAddServiceResponse{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err := json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	hlb, err := input.LoadBalancer.unwrap()
+	if err != nil {
+		return nil, err
+	}
+	opts, err := input.AddServiceOpts.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.LoadBalancer.AddService(context.Background(), hlb, *opts)
+	if err != nil {
+		return nil, HCloudErrResponse(err, response)
+	}
+
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for service attach %v%...")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
+}
+
+func DeleteServiceFromLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
+	input := &loadbalancerDeleteServiceParameters{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err := ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	hlb, err := input.LoadBalancer.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	intPort, err := strconv.ParseInt(*input.ListenPort, 10, 64)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("cannot use '%v' as listen port", input.ListenPort), err)
+	}
+
+	_, response, err := ctx.HClient.LoadBalancer.DeleteService(context.Background(), hlb, int(intPort))
+	if err != nil {
+		return nil, HCloudErrResponse(err, response)
+	}
+
+	aout := base.NewActionOutput(ctx.Action, nil, nil)
+	return aout, nil
 }

@@ -174,6 +174,8 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"dettach_load_balancer_from_network": {F: DetachLoadBalancerFromNetwork, N: NextOKKO},
 	"add_target_to_load_balancer":        {F: AddTargetToLoadBalancer, N: NextOKKO},
 	"remove_target_from_load_balancer":   {F: RemoveTargetFromLoadBalancer, N: NextOKKO},
+	"add_service_to_load_balancer":       {F: AddServiceToLoadBalancer, N: NextOKKO},
+	"delete_service_from_load_balancer":  {F: DeleteServiceFromLoadBalancer, N: NextOKKO},
 
 	"find_locations":   {F: FindLocations, N: NextOKKO},
 	"findone_location": {F: FindOneLocation, N: NextOKKO},
