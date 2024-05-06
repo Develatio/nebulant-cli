@@ -152,6 +152,7 @@ type hcServerCreateOptsWrap struct {
 	hcloud.ServerCreateOpts
 	Image     *hcImageWrap
 	PublicNet *hcServerCreatePublicNetWrap
+	Networks  []*hcNetworkWrap
 }
 
 func (v *hcServerCreateOptsWrap) unwrap() (*hcloud.ServerCreateOpts, error) {
@@ -166,7 +167,6 @@ func (v *hcServerCreateOptsWrap) unwrap() (*hcloud.ServerCreateOpts, error) {
 		Labels:           v.Labels,
 		Automount:        v.Automount,
 		Volumes:          v.Volumes,
-		Networks:         v.Networks,
 		Firewalls:        v.Firewalls,
 		PlacementGroup:   v.PlacementGroup,
 	}
@@ -183,6 +183,13 @@ func (v *hcServerCreateOptsWrap) unwrap() (*hcloud.ServerCreateOpts, error) {
 			return nil, err
 		}
 		out.PublicNet = hpn
+	}
+	for _, s := range v.Networks {
+		hnet, err := s.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Networks = append(out.Networks, hnet)
 	}
 	return out, nil
 }
