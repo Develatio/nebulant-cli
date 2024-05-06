@@ -78,6 +78,7 @@ type Action struct {
 	DebugNetwork   bool    `json:"debug_network"`
 	// Not documented
 	MaxRetries *int `json:"max_retries"`
+	RetryCount int
 }
 
 type ConditionalNextActions struct {
@@ -218,7 +219,11 @@ func NewFromBackend(path string) (*Blueprint, error) {
 		return nil, fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token")
 	}
 
-	url := url.URL{Scheme: config.BackendProto, Host: config.BackendURLDomain, Path: "/apiv1/cli/" + path}
+	url := url.URL{
+		Scheme: config.BASE_SCHEME,
+		Host:   config.BACKEND_API_HOST,
+		Path:   fmt.Sprintf(config.BACKEND_GET_BLUEPRINT_PATH, path),
+	}
 	rawBody, _ := json.Marshal(map[string]string{
 		"version": config.Version,
 	})

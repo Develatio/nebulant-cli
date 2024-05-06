@@ -28,6 +28,7 @@ import (
 	"runtime/debug"
 	"strconv"
 
+	"github.com/charmbracelet/huh"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
@@ -35,50 +36,38 @@ import (
 	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
-	"github.com/manifoldco/promptui"
 )
 
-var organizationUUID = ""
-
-type organizationSerializer struct {
-	Name string `json:"name"`
-	UUID string `json:"uuid"`
-}
-
-type meSerializer struct {
-	Organization *organizationSerializer `json:"organization"`
-}
-
-type collectionSerializer struct {
+type collectionSerializerv2 struct {
 	Name            string `json:"name"`
-	UUID            string `json:"uuid"`
 	Description     string `json:"description"`
 	BlueprintsCount int    `json:"n_blueprints"`
+	Slug            string `json:"slug"`
 }
 
-type resultsCollection struct {
-	Count   int                     `json:"count"`
-	Results []*collectionSerializer `json:"results"`
+type resultsCollectionv2 struct {
+	Count   int                       `json:"count"`
+	Results []*collectionSerializerv2 `json:"results"`
 }
 
-type blueprintSerializer struct {
+type blueprintSerializerv2 struct {
 	Name        string `json:"name"`
 	UUID        string `json:"uuid"`
 	Description string `json:"description"`
 }
 
-type resultsBlueprint struct {
-	Count   int                    `json:"count"`
-	Results []*blueprintSerializer `json:"results"`
+type resultsBlueprintv2 struct {
+	Count   int                      `json:"count"`
+	Results []*blueprintSerializerv2 `json:"results"`
 }
 
 // TODO: move to common, this code is duplicated in
 // runtime/debugger.go
-func httpReq(method string, path string, body interface{}) ([]byte, error) {
+func httpReqv2(method string, path string, body interface{}) ([]byte, error) {
 	url := url.URL{
 		Scheme: config.BASE_SCHEME,
 		Host:   config.BACKEND_API_HOST,
-		Path:   "/v1/" + path,
+		Path:   path,
 	}
 	rawBody, err := json.Marshal(body)
 	if err != nil {
@@ -113,84 +102,69 @@ func httpReq(method string, path string, body interface{}) ([]byte, error) {
 	return rawbody, nil
 }
 
-func Browser(nblc *subsystem.NBLcommand) error {
+func Browserv2(nblc *subsystem.NBLcommand) error {
 	if config.CREDENTIAL.AuthToken == nil {
 		return fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token")
 	}
 
 	term.PrintInfo("Looking for collections...\n")
-	data, err := httpReq("GET", "me/", nil)
+
+	data, err := httpReqv2("GET", config.BACKEND_COLLECTION_LIST_PATH, nil)
 	if err != nil {
 		return err
 	}
-	me := &meSerializer{}
-	if err := json.Unmarshal(data, me); err != nil {
-		return err
-	}
-
-	// store org uuid
-	organizationUUID = me.Organization.UUID
-
-	data, err = httpReq("GET", "organization/"+organizationUUID+"/collection/", nil)
-	if err != nil {
-		return err
-	}
-	rp := &resultsCollection{}
+	rp := &resultsCollectionv2{}
 	if err := json.Unmarshal(data, rp); err != nil {
 		return err
 	}
-	rp.Results = append(rp.Results, &collectionSerializer{Name: "Back"})
-	fmt.Printf("\r")
-	err = promptCollection(nblc, rp.Results)
+	err = promptCollectionv2(nblc, rp.Results)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func promptCollection(nblc *subsystem.NBLcommand, collections []*collectionSerializer) error {
-	templates := &promptui.SelectTemplates{
-		Label:    "{{ . }}:",
-		Active:   term.EmojiSet["BackhandIndexPointingRight"] + " {{ .Name | magenta }} {{if .UUID}} ({{ .BlueprintsCount | red }}) {{end}}",
-		Inactive: "   {{ .Name | cyan }} {{if .UUID}} ({{ .BlueprintsCount | red }}) {{end}}",
-		Selected: "{{if .UUID}} " + term.EmojiSet["ThumbsUpSign"] + " {{ .Name | magenta }} {{end}}",
-		Details: `{{if .UUID}}
--------------------- Collection --------------------
-{{ "Name:" | faint }}	{{ .Name }}
-{{ "Description:" | faint }}	{{ .Description }}
-{{ "Blueprint:" | faint }}	{{ .BlueprintsCount }}{{end}}`,
+func promptCollectionv2(nblc *subsystem.NBLcommand, collections []*collectionSerializerv2) error {
+	var options []huh.Option[string]
+	options = append(options, huh.NewOption("...", ""))
+	for _, coll := range collections {
+		fmt.Println(coll)
+		opt := huh.NewOption(coll.Name, coll.Slug)
+		options = append(options, opt)
 	}
+
 L:
 	for {
-		prompt := promptui.Select{
-			Label:     "Select collection",
-			Items:     collections,
-			Templates: templates,
-			Stdout:    nblc.Stdout,
-			Stdin:     nblc.Stdin,
-			HideHelp:  true,
-		}
-		i, _, err := prompt.Run()
-		item := collections[i]
-
+		var collSlug string
+		err := huh.NewForm(
+			huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Choose collection").
+					Options(
+						options...,
+					).
+					Value(&collSlug),
+			)).Run()
 		if err != nil {
 			return err
 		}
-		if item.UUID == "" {
+
+		if collSlug == "" {
 			break L
 		}
 
 		term.PrintInfo("Looking for blueprints...\n")
-		data, err := httpReq("GET", "collection/"+item.UUID+"/blueprint/", nil)
+		data, err := httpReqv2("GET", fmt.Sprintf(config.BACKEND_COLLECTION_BLUEPRINT_LIST_PATH, collSlug), nil)
 		if err != nil {
 			return err
 		}
-		rd := &resultsBlueprint{}
+		rd := &resultsBlueprintv2{}
 		if err := json.Unmarshal(data, rd); err != nil {
 			return err
 		}
-		rd.Results = append(rd.Results, &blueprintSerializer{Name: "Back"})
-		err = promptBlueprint(nblc, rd.Results)
+		fmt.Println(rd.Results)
+		// rd.Results = append(rd.Results, &blueprintSerializerv2{Name: "Back"})
+		err = promptBlueprintv2(nblc, rd.Results)
 		if err != nil {
 			return err
 		}
@@ -198,7 +172,7 @@ L:
 	return nil
 }
 
-func promptBlueprint(nblc *subsystem.NBLcommand, collections []*blueprintSerializer) error {
+func promptBlueprintv2(nblc *subsystem.NBLcommand, collections []*blueprintSerializerv2) error {
 	defer func() {
 		if r := recover(); r != nil {
 			cast.LogErr("Unrecoverable error found. Feel free to send us feedback", nil)
@@ -221,39 +195,35 @@ func promptBlueprint(nblc *subsystem.NBLcommand, collections []*blueprintSeriali
 		}
 	}()
 
-	templates := &promptui.SelectTemplates{
-		Label:    "{{ . }}:",
-		Active:   term.EmojiSet["BackhandIndexPointingRight"] + " {{ .Name | magenta }}",
-		Inactive: "   {{ .Name | cyan }}",
-		Selected: "{{if .UUID}} " + term.EmojiSet["Rocket"] + " {{ .Name | red }} {{end}}",
-		Details: `{{if .UUID}}
--------------------- Blueprint --------------------
-{{ "Name:" | faint }}	{{ .Name }}
-{{ "Description:" | faint }}	{{ .Description }}{{end}}`,
+	var options []huh.Option[string]
+	options = append(options, huh.NewOption("...", ""))
+	for _, coll := range collections {
+		opt := huh.NewOption(coll.Name, coll.UUID)
+		options = append(options, opt)
 	}
+
 L:
 	for {
-		prompt := promptui.Select{
-			Label:     "Select Blueprint",
-			Items:     collections,
-			Templates: templates,
-			Stdout:    nblc.Stdout,
-			Stdin:     nblc.Stdin,
-			HideHelp:  true,
-		}
-		i, _, err := prompt.Run()
+		var bpUUID string
+		err := huh.NewForm(
+			huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Choose bp").
+					Options(
+						options...,
+					).
+					Value(&bpUUID),
+			)).Run()
 		if err != nil {
 			return err
 		}
 
-		item := collections[i]
-
-		if item.UUID == "" {
+		if bpUUID == "" {
 			break L
 		}
 
-		cast.LogInfo("Obtaining blueprint "+item.UUID+"...", nil)
-		irb, err := blueprint.NewIRBFromAny("nebulant://"+item.UUID, &blueprint.IRBGenConfig{})
+		cast.LogInfo("Obtaining blueprint "+bpUUID+"...", nil)
+		irb, err := blueprint.NewIRBFromAny("nebulant://"+bpUUID, &blueprint.IRBGenConfig{})
 		if err != nil {
 			return err
 		}

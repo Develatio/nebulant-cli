@@ -24,6 +24,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -158,11 +159,14 @@ func Login(credential *Credential) (*cookiejar.Jar, error) {
 		Jar:       jar,
 	}
 	sso_login_url := url.URL{
-		Scheme: BackendProto,
-		Host:   BackendURLDomain,
-		Path:   "/v1/sso/login/",
+		Scheme: BASE_SCHEME,
+		Host:   BACKEND_API_HOST,
+		Path:   BACKEND_SSO_LOGIN_PATH,
 	}
 
+	if credential.AuthToken == nil {
+		return nil, fmt.Errorf("cannot login: empty auth token")
+	}
 	pwd := strings.Split(*credential.AuthToken, ":")[0]
 	esecret, err := encrypt(credential, []byte(pwd))
 	if err != nil {
@@ -196,12 +200,16 @@ func RequestToken() error {
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
 		DisableCompression: true,
+		TLSClientConfig: &tls.Config{
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: true,
+		},
 	}
 	c := http.Client{Transport: tr}
 	sso_url := url.URL{
-		Scheme: BackendProto,
-		Host:   BackendURLDomain,
-		Path:   "/apiv1/authx/sso/",
+		Scheme: BASE_SCHEME,
+		Host:   BACKEND_API_HOST,
+		Path:   BACKEND_REQUEST_NEW_SSO_TOKEN_PATH,
 	}
 	body := []byte(`{
 		"description": "Nebulant CLI"
@@ -213,16 +221,21 @@ func RequestToken() error {
 	defer resp.Body.Close()
 	// r := bufio.NewReader(resp.Body)
 
+	token := resp.Header.Get("url-token")
+	if token == "" {
+		return fmt.Errorf("empty token received")
+	}
+
 	panel_url := url.URL{
-		Scheme: BackendProto,
-		Host:   PanelURLDomain,
-		Path:   "organization/tokens/sso/" + resp.Header.Get("url-token"),
+		Scheme: BASE_SCHEME,
+		Host:   PANEL_HOST,
+		Path:   fmt.Sprintf(PANEL_SSO_TOKEN_VALIDATION_PATH, resp.Header.Get("url-token")),
 	}
 
 	account_url := url.URL{
-		Scheme:   BackendProto,
-		Host:     AccountURLDomain,
-		Path:     "/to/",
+		Scheme:   BASE_SCHEME,
+		Host:     BACKEND_ACCOUNT_HOST,
+		Path:     BACKEND_ENTRY_POINT_PATH,
 		RawQuery: "path=" + panel_url.String(),
 	}
 	err = browser.OpenURL(account_url.String())
@@ -230,7 +243,6 @@ func RequestToken() error {
 		return err
 	}
 
-	// WIP
 	rawbody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err

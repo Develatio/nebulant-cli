@@ -29,20 +29,20 @@ LDFLAGS = -X github.com/develatio/nebulant-cli/config.Version=$(CLIVERSION)\
 	-X 'github.com/develatio/nebulant-cli/config.VersionGo=$(GOVERSION)'
 
 LOCALLDFLAGS = -X github.com/develatio/nebulant-cli/config.WSScheme=ws\
-	-X github.com/develatio/nebulant-cli/config.BackendProto=https\
-	-X github.com/develatio/nebulant-cli/config.BackendURLDomain=api.nebulant.lc\
-	-X github.com/develatio/nebulant-cli/config.AccountURLDomain=account.nebulant.lc\
-	-X github.com/develatio/nebulant-cli/config.PanelURLDomain=panel.nebulant.lc\
+	-X github.com/develatio/nebulant-cli/config.BASE_SCHEME=https\
+	-X github.com/develatio/nebulant-cli/config.BACKEND_API_HOST=api.nebulant.lc\
+	-X github.com/develatio/nebulant-cli/config.BACKEND_ACCOUNT_HOST=account.nebulant.lc\
+	-X github.com/develatio/nebulant-cli/config.PANEL_HOST=panel.nebulant.lc\
 	-X github.com/develatio/nebulant-cli/config.FrontUrl=https://builder.nebulant.lc\
 	-X github.com/develatio/nebulant-cli/config.UpdateDescriptorURL=https://releases.nebulant.lc/version.json\
 	-X github.com/develatio/nebulant-cli/config.FrontOrigin=*\
 	-X github.com/develatio/nebulant-cli/config.AssetDescriptorURL=https://builder-assets.nebulant.dev/assets.json
 
 DEVLDFLAGS = -X github.com/develatio/nebulant-cli/config.WSScheme=wss\
-	-X github.com/develatio/nebulant-cli/config.BackendProto=https\
-	-X github.com/develatio/nebulant-cli/config.BackendURLDomain=api.nebulant.dev\
-	-X github.com/develatio/nebulant-cli/config.AccountURLDomain=account.nebulant.dev\
-	-X github.com/develatio/nebulant-cli/config.PanelURLDomain=panel.nebulant.dev\
+	-X github.com/develatio/nebulant-cli/config.BASE_SCHEME=https\
+	-X github.com/develatio/nebulant-cli/config.BACKEND_API_HOST=api.nebulant.dev\
+	-X github.com/develatio/nebulant-cli/config.BACKEND_ACCOUNT_HOST=account.nebulant.dev\
+	-X github.com/develatio/nebulant-cli/config.PANEL_HOST=panel.nebulant.dev\
 	-X github.com/develatio/nebulant-cli/config.FrontUrl=https://builder.nebulant.dev\
 	-X github.com/develatio/nebulant-cli/config.UpdateDescriptorURL=https://releases.nebulant.dev/version.json\
 	-X github.com/develatio/nebulant-cli/config.FrontOrigin=*\

@@ -337,8 +337,8 @@ func (d *debugger) _bridgeConnect(newp *newBridgePoolSerializer) error {
 
 func (d *debugger) reverseCloudServer() error {
 	url := &url.URL{
-		Scheme: config.BackendProto,
-		Host:   config.BackendURLDomain,
+		Scheme: config.BASE_SCHEME,
+		Host:   config.BACKEND_API_HOST,
 		Path:   "v1/bridge/new/",
 	}
 	req, err := http.NewRequest("GET", url.String(), nil)

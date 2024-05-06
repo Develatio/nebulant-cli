@@ -42,17 +42,17 @@ var VersionGo = ""
 // WSScheme var
 var WSScheme string = "wss"
 
-// BackendProto var
-var BackendProto string = "https"
+// BASE_SCHEME var
+var BASE_SCHEME string = "https"
 
-// BackendURLDomain var
-var BackendURLDomain string = "api.nebulant.io"
+// BACKEND_API_HOST var
+var BACKEND_API_HOST string = "api.nebulant.io"
 
-// AccountURLDomain var
-var AccountURLDomain string = "account.nebulant.io"
+// BACKEND_ACCOUNT_HOST var
+var BACKEND_ACCOUNT_HOST string = "account.nebulant.io"
 
-// PanelURLDomain var
-var PanelURLDomain string = "panel.nebulant.io"
+// PANEL_HOST var
+var PANEL_HOST string = "panel.nebulant.io"
 
 // FrontOrigin var
 var FrontOrigin string = "https://builder.nebulant.io"
@@ -110,6 +110,15 @@ var AssetDescriptorURL = "https://builder-assets.nebulant.io/assets.json"
 
 // UpdateDescriptorURL conf
 var UpdateDescriptorURL string = "https://releases.nebulant.io/version.json"
+
+var BACKEND_REQUEST_NEW_SSO_TOKEN_PATH = "/v1/sso/"
+var PANEL_SSO_TOKEN_VALIDATION_PATH = "/sso/%s"
+var BACKEND_ENTRY_POINT_PATH = "/to/"
+var BACKEND_ME_PATH = "/v1/me/"
+var BACKEND_SSO_LOGIN_PATH = "/v1/sso/login/"
+var BACKEND_GET_BLUEPRINT_PATH = "/v1/blueprint/%s/"
+var BACKEND_COLLECTION_LIST_PATH = "/v1/collection/"
+var BACKEND_COLLECTION_BLUEPRINT_LIST_PATH = "/v1/collection/%s/blueprint/" // %s coll-slug
 
 // arg argv conf
 
