@@ -31,7 +31,7 @@ import (
 )
 
 type hcFloatingIPWrap struct {
-	*hcloud.FloatingIP
+	hcloud.FloatingIP
 	ID *string `validate:"required"`
 }
 
@@ -61,7 +61,7 @@ type unassignFloatingIPParameters struct {
 }
 
 type FloatingIPListResultWithMeta struct {
-	*schema.FloatingIPListResponse
+	schema.FloatingIPListResponse
 	Meta schema.Meta `json:"meta"`
 }
 

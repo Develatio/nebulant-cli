@@ -27,7 +27,7 @@ import (
 )
 
 type ISOListResponseWithMeta struct {
-	*schema.ISOListResponse
+	schema.ISOListResponse
 	Meta schema.Meta `json:"meta"`
 }
 

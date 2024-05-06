@@ -31,7 +31,7 @@ import (
 )
 
 type hcPrimaryIPCreateOptsWrap struct {
-	*hcloud.PrimaryIPCreateOpts
+	hcloud.PrimaryIPCreateOpts
 	AssigneeID *string
 }
 
@@ -55,7 +55,7 @@ func (v *hcPrimaryIPCreateOptsWrap) unwrap() (*hcloud.PrimaryIPCreateOpts, error
 }
 
 type hcPrimaryIPAssignOptsWrap struct {
-	*hcloud.PrimaryIPAssignOpts
+	hcloud.PrimaryIPAssignOpts
 	ID         *string `validate:"required"`
 	AssigneeID *string `validate:"required"`
 }
@@ -73,7 +73,7 @@ func (v *hcPrimaryIPAssignOptsWrap) unwrap() (*hcloud.PrimaryIPAssignOpts, error
 }
 
 type hcPrimaryIPWrap struct {
-	*hcloud.PrimaryIP
+	hcloud.PrimaryIP
 	ID *string `validate:"required"`
 }
 
@@ -90,7 +90,7 @@ type unassignPrimaryIPParameters struct {
 }
 
 type PrimaryIPListResultWithMeta struct {
-	*schema.PrimaryIPListResult
+	schema.PrimaryIPListResult
 	Meta schema.Meta `json:"meta"`
 }
 

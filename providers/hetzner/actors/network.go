@@ -32,7 +32,7 @@ import (
 )
 
 type hcNetworkWrap struct {
-	*hcloud.Network
+	hcloud.Network
 	ID *string `validate:"required"`
 }
 
@@ -45,7 +45,7 @@ func (v *hcNetworkWrap) unwrap() (*hcloud.Network, error) {
 }
 
 type hcNetworkRouteWrap struct {
-	*hcloud.NetworkRoute
+	hcloud.NetworkRoute
 	Gateway     *string `json:"gateway"`
 	Destination *string `json:"destination"`
 }
@@ -70,7 +70,7 @@ func (v *hcNetworkRouteWrap) unwrap() (*hcloud.NetworkRoute, error) {
 }
 
 type hcNetworkSubnetWrap struct {
-	*hcloud.NetworkSubnet
+	hcloud.NetworkSubnet
 	IPRange     *string `json:"ip_range"`
 	Gateway     *string `json:"gateway"`
 	VSwitchID   *string `json:"vswitch_id"`
@@ -111,7 +111,7 @@ func (v *hcNetworkSubnetWrap) unwrap() (*hcloud.NetworkSubnet, error) {
 }
 
 type hcNetworkCreateOptsWrap struct {
-	*hcloud.NetworkCreateOpts
+	hcloud.NetworkCreateOpts
 	IPRange *string                `json:"ip_range"`
 	Subnets []*hcNetworkSubnetWrap `json:"subnets"`
 	Routes  []*hcNetworkRouteWrap  `json:"routes"`
@@ -153,12 +153,12 @@ func (v *hcNetworkCreateOptsWrap) unwrap() (*hcloud.NetworkCreateOpts, error) {
 }
 
 type NetworkListResponseWithMeta struct {
-	*schema.NetworkListResponse
+	schema.NetworkListResponse
 	Meta schema.Meta `json:"meta"`
 }
 
 type hcNetworkAddSubnetOptsWrap struct {
-	*hcloud.NetworkAddSubnetOpts
+	hcloud.NetworkAddSubnetOpts
 	Subnet  *hcNetworkSubnetWrap `json:"subnet" validate:"required"`
 	Network *hcNetworkWrap       `json:"network" validate:"required"`
 }
@@ -177,7 +177,7 @@ func (v *hcNetworkAddSubnetOptsWrap) unwrap() (*hcloud.NetworkAddSubnetOpts, err
 }
 
 type hcNetworkDeleteSubnetOptsWrap struct {
-	*hcloud.NetworkDeleteSubnetOpts
+	hcloud.NetworkDeleteSubnetOpts
 	Subnet  *hcNetworkSubnetWrap `json:"subnet" validate:"required"`
 	Network *hcNetworkWrap       `json:"network" validate:"required"`
 }

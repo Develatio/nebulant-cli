@@ -27,7 +27,7 @@ import (
 )
 
 type LocationListResponseWithMeta struct {
-	*schema.LocationListResponse
+	schema.LocationListResponse
 	Meta schema.Meta `json:"meta"`
 }
 

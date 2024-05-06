@@ -29,7 +29,7 @@ import (
 )
 
 type hcSSHKeyWrap struct {
-	*hcloud.SSHKey
+	hcloud.SSHKey
 	ID *string `validate:"required"`
 }
 
@@ -42,7 +42,7 @@ func (v *hcSSHKeyWrap) unwrap() (*hcloud.SSHKey, error) {
 }
 
 type SSHKeyListResponseWithMeta struct {
-	*schema.SSHKeyListResponse
+	schema.SSHKeyListResponse
 	Meta schema.Meta `json:"meta"`
 }
 

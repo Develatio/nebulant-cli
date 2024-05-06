@@ -34,7 +34,7 @@ import (
 )
 
 type hcLoadBalancerWrap struct {
-	*hcloud.LoadBalancer
+	hcloud.LoadBalancer
 	ID *string `validate:"required"`
 }
 
@@ -47,7 +47,7 @@ func (v *hcLoadBalancerWrap) unwrap() (*hcloud.LoadBalancer, error) {
 }
 
 type hcLoadBalancerAttachToNetworkOptsWrap struct {
-	*hcloud.LoadBalancerAttachToNetworkOpts
+	hcloud.LoadBalancerAttachToNetworkOpts
 	Network           *hcNetworkWrap `json:"network"`
 	IP                *string        `json:"ip"`
 	lookupAvailableIP *net.IPNet
@@ -77,7 +77,7 @@ func (v *hcLoadBalancerAttachToNetworkOptsWrap) unwrap() (*hcloud.LoadBalancerAt
 }
 
 type hcLoadBalancerDetachFromNetworkOptsWrap struct {
-	*hcloud.LoadBalancerDetachFromNetworkOpts
+	hcloud.LoadBalancerDetachFromNetworkOpts
 	Network *hcNetworkWrap `json:"network"`
 }
 
@@ -104,12 +104,12 @@ type loadbalancerDetachFromNetworkParameters struct {
 }
 
 type LoadBalancerListResponseWithMeta struct {
-	*schema.LoadBalancerListResponse
+	schema.LoadBalancerListResponse
 	Meta schema.Meta `json:"meta"`
 }
 
 type hcLoadBalancerAddIPTargetOptsWrap struct {
-	*hcloud.LoadBalancerAddIPTargetOpts
+	hcloud.LoadBalancerAddIPTargetOpts
 	IP string `json:"ip" validate:"required"`
 }
 
@@ -122,7 +122,7 @@ func (v *hcLoadBalancerAddIPTargetOptsWrap) unwrap() (*hcloud.LoadBalancerAddIPT
 }
 
 type hcLoadBalancerAddServerTargetOptsWrap struct {
-	*hcloud.LoadBalancerAddServerTargetOpts
+	hcloud.LoadBalancerAddServerTargetOpts
 	Server *hcServerWrap `validate:"required"`
 }
 
@@ -143,7 +143,7 @@ type loadbalancerRemoveTargetParameters struct {
 }
 
 type hcLoadBalancerCreateOptsServiceHealthCheckHTTPWrap struct {
-	*hcloud.LoadBalancerCreateOptsServiceHealthCheckHTTP
+	hcloud.LoadBalancerCreateOptsServiceHealthCheckHTTP
 	TLS *bool
 }
 
@@ -159,7 +159,7 @@ func (v *hcLoadBalancerCreateOptsServiceHealthCheckHTTPWrap) unwrap() (*hcloud.L
 }
 
 type hcLoadBalancerAddServiceOptsHealthCheckHTTPWrap struct {
-	*hcloud.LoadBalancerAddServiceOptsHealthCheckHTTP
+	hcloud.LoadBalancerAddServiceOptsHealthCheckHTTP
 }
 
 func (v *hcLoadBalancerAddServiceOptsHealthCheckHTTPWrap) unwrap() (*hcloud.LoadBalancerAddServiceOptsHealthCheckHTTP, error) {
@@ -174,7 +174,7 @@ func (v *hcLoadBalancerAddServiceOptsHealthCheckHTTPWrap) unwrap() (*hcloud.Load
 }
 
 type hcLoadBalancerAddServiceOptsHTTPWrap struct {
-	*hcloud.LoadBalancerAddServiceOptsHTTP
+	hcloud.LoadBalancerAddServiceOptsHTTP
 	CookieLifetime *string
 }
 
@@ -197,7 +197,7 @@ func (v *hcLoadBalancerAddServiceOptsHTTPWrap) unwrap() (*hcloud.LoadBalancerAdd
 }
 
 type hcLoadBalancerAddServiceOptsHealthCheckWrap struct {
-	*hcloud.LoadBalancerAddServiceOptsHealthCheck
+	hcloud.LoadBalancerAddServiceOptsHealthCheck
 	Protocol *string
 	Port     *string
 	Interval *string
@@ -254,7 +254,7 @@ func (v *hcLoadBalancerAddServiceOptsHealthCheckWrap) unwrap() (*hcloud.LoadBala
 }
 
 type hcLoadBalancerAddServiceOptsWrap struct {
-	*hcloud.LoadBalancerAddServiceOpts
+	hcloud.LoadBalancerAddServiceOpts
 	Protocol        *string
 	ListenPort      *string
 	DestinationPort *string
@@ -316,7 +316,7 @@ type loadbalancerDeleteServiceParameters struct {
 }
 
 type hcLoadBalancerCreateOptsServiceHealthCheckWrap struct {
-	*hcloud.LoadBalancerCreateOptsServiceHealthCheck
+	hcloud.LoadBalancerCreateOptsServiceHealthCheck
 	Protocol *string
 	Port     *string
 	Interval *string
@@ -373,7 +373,7 @@ func (v *hcLoadBalancerCreateOptsServiceHealthCheckWrap) unwrap() (*hcloud.LoadB
 }
 
 type hcLoadBalancerCreateOptsServiceHTTPWrap struct {
-	*hcloud.LoadBalancerCreateOptsServiceHTTP
+	hcloud.LoadBalancerCreateOptsServiceHTTP
 	CookieLifetime *string
 }
 
@@ -397,7 +397,7 @@ func (v *hcLoadBalancerCreateOptsServiceHTTPWrap) unwrap() (*hcloud.LoadBalancer
 }
 
 type hcLoadBalancerCreateOptsServiceWrap struct {
-	*hcloud.LoadBalancerCreateOptsService
+	hcloud.LoadBalancerCreateOptsService
 	Proxyprotocol   *bool
 	Protocol        *string
 	ListenPort      *string
@@ -452,7 +452,7 @@ func (v *hcLoadBalancerCreateOptsServiceWrap) unwrap() (*hcloud.LoadBalancerCrea
 }
 
 type hcLoadBalancerCreateOptsWrap struct {
-	*hcloud.LoadBalancerCreateOpts
+	hcloud.LoadBalancerCreateOpts
 	Network  *hcNetworkWrap `json:"network"`
 	Services []hcLoadBalancerCreateOptsServiceWrap
 }

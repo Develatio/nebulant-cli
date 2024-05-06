@@ -27,7 +27,7 @@ import (
 )
 
 type DatacenterListResponseWithMeta struct {
-	*schema.DatacenterListResponse
+	schema.DatacenterListResponse
 	Meta schema.Meta `json:"meta"`
 }
 

@@ -33,7 +33,7 @@ import (
 )
 
 type hcServerWrap struct {
-	*hcloud.Server
+	hcloud.Server
 	ID *string `validate:"required"`
 }
 
@@ -51,12 +51,12 @@ type findOneServerParameters struct {
 }
 
 type ServerListResponseWithMeta struct {
-	*schema.ServerListResponse
+	schema.ServerListResponse
 	Meta schema.Meta `json:"meta"`
 }
 
 type hcServerAttachToNetworkOptsWrap struct {
-	*hcloud.ServerAttachToNetworkOpts
+	hcloud.ServerAttachToNetworkOpts
 	Server   *hcServerWrap  `json:"server"`
 	Network  *hcNetworkWrap `json:"network"`
 	IP       *string        `json:"ip"`
@@ -90,7 +90,7 @@ func (v *hcServerAttachToNetworkOptsWrap) unwrap() (*hcloud.ServerAttachToNetwor
 }
 
 type hcServerDetachFromNetworkOptsWrap struct {
-	*hcloud.ServerDetachFromNetworkOpts
+	hcloud.ServerDetachFromNetworkOpts
 	Server  *hcServerWrap  `json:"server"`
 	Network *hcNetworkWrap `json:"network"`
 }
@@ -108,7 +108,7 @@ func (v *hcServerDetachFromNetworkOptsWrap) unwrap() (*hcloud.ServerDetachFromNe
 }
 
 type hcServerCreateImageOptsWrap struct {
-	*hcloud.ServerCreateImageOpts
+	hcloud.ServerCreateImageOpts
 	Server *hcServerWrap `json:"server"`
 }
 
@@ -121,7 +121,7 @@ func (v *hcServerCreateImageOptsWrap) unwrap() (*hcloud.ServerCreateImageOpts, e
 }
 
 type hcServerCreatePublicNetWrap struct {
-	*hcloud.ServerCreatePublicNet
+	hcloud.ServerCreatePublicNet
 	IPv4 *hcPrimaryIPWrap
 	IPv6 *hcPrimaryIPWrap
 }
@@ -149,7 +149,7 @@ func (v *hcServerCreatePublicNetWrap) unwrap() (*hcloud.ServerCreatePublicNet, e
 }
 
 type hcServerCreateOptsWrap struct {
-	*hcloud.ServerCreateOpts
+	hcloud.ServerCreateOpts
 	Image     *hcImageWrap
 	PublicNet *hcServerCreatePublicNetWrap
 }

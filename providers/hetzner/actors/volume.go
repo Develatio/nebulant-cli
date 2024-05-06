@@ -31,7 +31,7 @@ import (
 )
 
 type hcVolumeWrap struct {
-	*hcloud.Volume
+	hcloud.Volume
 	ID *string `validate:"required"`
 }
 
@@ -50,7 +50,7 @@ type volumeAttachParameters struct {
 }
 
 type VolumeListResponseWithMeta struct {
-	*schema.VolumeListResponse
+	schema.VolumeListResponse
 	Meta schema.Meta `json:"meta"`
 }
 

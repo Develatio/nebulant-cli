@@ -32,7 +32,7 @@ import (
 )
 
 type hcFirewallResourceServerWrap struct {
-	*hcloud.FirewallResourceServer
+	hcloud.FirewallResourceServer
 	ID *string `json:"id"`
 }
 
@@ -45,7 +45,7 @@ func (v *hcFirewallResourceServerWrap) unwrap() (*hcloud.FirewallResourceServer,
 }
 
 type hcFirewallResourceWrap struct {
-	*hcloud.FirewallResource
+	hcloud.FirewallResource
 	Server *hcFirewallResourceServerWrap
 }
 
@@ -62,7 +62,7 @@ func (v *hcFirewallResourceWrap) unwrap() (*hcloud.FirewallResource, error) {
 }
 
 type hcFirewallRuleWrap struct {
-	*hcloud.FirewallRule
+	hcloud.FirewallRule
 	SourceIPs      []*string `json:"source_ips"`
 	DestinationIPs []*string `json:"destination_ips"`
 }
@@ -92,7 +92,7 @@ func (v *hcFirewallRuleWrap) unwrap() (*hcloud.FirewallRule, error) {
 }
 
 type hcFirewallCreateOptsWrap struct {
-	*hcloud.FirewallCreateOpts
+	hcloud.FirewallCreateOpts
 	Rules   []*hcFirewallRuleWrap     `json:"rules"`
 	ApplyTo []*hcFirewallResourceWrap `json:"apply_to"`
 }
@@ -120,7 +120,7 @@ func (v *hcFirewallCreateOptsWrap) unwrap() (*hcloud.FirewallCreateOpts, error) 
 }
 
 type hcFirewallWrap struct {
-	*hcloud.Firewall
+	hcloud.Firewall
 	ID *string `validate:"required"`
 }
 
