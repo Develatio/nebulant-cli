@@ -18,6 +18,7 @@ package actors
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -30,7 +31,7 @@ import (
 )
 
 type hcImageWrap struct {
-	*hcloud.Image
+	hcloud.Image
 	ID *string `validate:"required"`
 }
 
@@ -43,13 +44,14 @@ func (v *hcImageWrap) unwrap() (*hcloud.Image, error) {
 }
 
 type ImageListResponseWithMeta struct {
-	*schema.ImageListResponse
+	schema.ImageListResponse
 	Meta   schema.Meta    `json:"meta"`
 	Images []schema.Image `json:"images"`
 }
 
 type hcImageListOptsWrap struct {
-	*hcloud.ImageListOpts
+	hcloud.ImageListOpts
+	ID          *int64  `json:"id"` // for GetByID
 	Description *string `json:"description"`
 }
 
@@ -104,7 +106,7 @@ func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcImageListOptsWrap{}
 
-	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+	if err := json.Unmarshal(ctx.Action.Parameters, input); err != nil {
 		return nil, err
 	}
 
@@ -122,6 +124,7 @@ func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
+	var response *hcloud.Response
 	if input.Description != nil {
 		var images []schema.Image
 		opts.Page = 1     // min allowed (0 means no page)
@@ -164,7 +167,32 @@ func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 		return base.NewActionOutput(ctx.Action, output, nil), nil
 	}
 
-	_, response, err := ctx.HClient.Image.List(context.Background(), *opts)
+	if input.ID != nil {
+		_, response, err = ctx.HClient.Image.GetByID(context.Background(), *input.ID)
+		if err != nil {
+			return nil, HCloudErrResponse(err, response)
+		}
+		imgsch := &schema.ImageGetResponse{}
+		err = UnmarshallHCloudToSchema(response, imgsch)
+		if err != nil {
+			return nil, err
+		}
+		output := &ImageListResponseWithMeta{
+			Images: []schema.Image{imgsch.Image},
+			Meta: schema.Meta{
+				Pagination: &schema.MetaPagination{
+					Page:         1,
+					LastPage:     1,
+					NextPage:     0,
+					TotalEntries: 1,
+				},
+			},
+		}
+		return base.NewActionOutput(ctx.Action, output, nil), nil
+	}
+
+	// normal list
+	_, response, err = ctx.HClient.Image.List(context.Background(), *opts)
 	if err != nil {
 		return nil, HCloudErrResponse(err, response)
 	}
