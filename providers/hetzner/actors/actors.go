@@ -206,6 +206,9 @@ func GenericHCloudOutput(ctx *ActionContext, response *hcloud.Response, v interf
 }
 
 func HCloudErrResponse(err error, response *hcloud.Response) error {
+	if response == nil {
+		return errors.Join(err, fmt.Errorf("no api response"))
+	}
 	eeb, err1 := io.ReadAll(response.Body)
 	if err1 != nil {
 		return errors.Join(err, err1)
