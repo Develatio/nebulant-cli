@@ -120,9 +120,76 @@ func (v *hcServerCreateImageOptsWrap) unwrap() (*hcloud.ServerCreateImageOpts, e
 	}, nil
 }
 
+type hcServerCreatePublicNetWrap struct {
+	*hcloud.ServerCreatePublicNet
+	IPv4 *hcPrimaryIPWrap
+	IPv6 *hcPrimaryIPWrap
+}
+
+func (v *hcServerCreatePublicNetWrap) unwrap() (*hcloud.ServerCreatePublicNet, error) {
+	out := &hcloud.ServerCreatePublicNet{
+		EnableIPv4: v.EnableIPv4,
+		EnableIPv6: v.EnableIPv6,
+	}
+	if v.IPv4 != nil {
+		hip4, err := v.IPv4.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.IPv4 = hip4
+	}
+	if v.IPv6 != nil {
+		hip6, err := v.IPv6.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.IPv6 = hip6
+	}
+	return out, nil
+}
+
+type hcServerCreateOptsWrap struct {
+	*hcloud.ServerCreateOpts
+	Image     *hcImageWrap
+	PublicNet *hcServerCreatePublicNetWrap
+}
+
+func (v *hcServerCreateOptsWrap) unwrap() (*hcloud.ServerCreateOpts, error) {
+	out := &hcloud.ServerCreateOpts{
+		Name:             v.Name,
+		ServerType:       v.ServerType,
+		SSHKeys:          v.SSHKeys,
+		Location:         v.Location,
+		Datacenter:       v.Datacenter,
+		UserData:         v.UserData,
+		StartAfterCreate: v.StartAfterCreate,
+		Labels:           v.Labels,
+		Automount:        v.Automount,
+		Volumes:          v.Volumes,
+		Networks:         v.Networks,
+		Firewalls:        v.Firewalls,
+		PlacementGroup:   v.PlacementGroup,
+	}
+	if v.Image != nil {
+		him, err := v.Image.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Image = him
+	}
+	if v.PublicNet != nil {
+		hpn, err := v.PublicNet.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.PublicNet = hpn
+	}
+	return out, nil
+}
+
 func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
-	input := &hcloud.ServerCreateOpts{}
+	input := &hcServerCreateOptsWrap{}
 	output := &schema.ServerCreateResponse{}
 
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
@@ -144,7 +211,12 @@ func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	_, response, err := ctx.HClient.Server.Create(context.Background(), *input)
+	hopts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Server.Create(context.Background(), *hopts)
 	if err != nil {
 		return nil, HCloudErrResponse(err, response)
 	}
