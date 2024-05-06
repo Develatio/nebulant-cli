@@ -192,7 +192,7 @@ func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	input := &hcServerCreateOptsWrap{}
 	output := &schema.ServerCreateResponse{}
 
-	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+	if err := json.Unmarshal(ctx.Action.Parameters, input); err != nil {
 		return nil, err
 	}
 
