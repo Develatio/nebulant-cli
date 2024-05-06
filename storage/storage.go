@@ -362,7 +362,9 @@ func (s *Store) Interpolate(sourcetext *string) error {
 		// refpath -> .foo.bar or [foo.bar] or empty if no path provided
 		refpath = strings.TrimPrefix(refpath, refname)
 		if len(refpath) <= 0 {
-			if reflect.ValueOf(record.Value).Kind() == reflect.String {
+			if len(record.ValueID) > 0 {
+				*sourcetext = strings.Replace(*sourcetext, match[0], record.ValueID, 1)
+			} else if reflect.ValueOf(record.Value).Kind() == reflect.String {
 				if record.Value.(string) == "" {
 					s.logger.LogWarn("Interpolation results in an empty string replacement for " + match[0])
 				}
