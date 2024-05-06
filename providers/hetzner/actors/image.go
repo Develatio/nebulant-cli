@@ -51,7 +51,7 @@ type ImageListResponseWithMeta struct {
 
 type hcImageListOptsWrap struct {
 	hcloud.ImageListOpts
-	ID          *int64  `json:"id"` // for GetByID
+	ID          *string `json:"id"` // for GetByID
 	Description *string `json:"description"`
 }
 
@@ -65,7 +65,6 @@ func (v *hcImageListOptsWrap) unwrap() (*hcloud.ImageListOpts, error) {
 		IncludeDeprecated: v.IncludeDeprecated,
 		Architecture:      v.Architecture,
 	}, nil
-
 }
 
 func DeleteImage(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -168,7 +167,11 @@ func FindImages(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	if input.ID != nil {
-		_, response, err = ctx.HClient.Image.GetByID(context.Background(), *input.ID)
+		int64id, err := strconv.ParseInt(*input.ID, 10, 64)
+		if err != nil {
+			return nil, errors.Join(fmt.Errorf("cannot use '%v' as int64 ID", *input.ID), err)
+		}
+		_, response, err = ctx.HClient.Image.GetByID(context.Background(), int64id)
 		if err != nil {
 			return nil, HCloudErrResponse(err, response)
 		}
