@@ -526,7 +526,7 @@ func CreateLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for load balancer %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for load balancer")
 				if err != nil {
 					return nil, err
 				}
@@ -712,7 +712,7 @@ func AttachLoadBalancerToNetwork(ctx *ActionContext) (*base.ActionOutput, error)
 			if internalparams.Waiters != nil {
 				for _, wnam := range internalparams.Waiters {
 					if wnam == "success" {
-						err = ctx.WaitForAndLog(output.Action, "Waiting for lb attach %v%...")
+						err = ctx.WaitForAndLog(output.Action, "Waiting for lb attach")
 						if err != nil {
 							return nil, err
 						}
@@ -735,7 +735,7 @@ func AttachLoadBalancerToNetwork(ctx *ActionContext) (*base.ActionOutput, error)
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for lb attach %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for lb attach")
 				if err != nil {
 					return nil, err
 				}
@@ -789,7 +789,7 @@ func DetachLoadBalancerFromNetwork(ctx *ActionContext) (*base.ActionOutput, erro
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for lb detach %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for lb detach")
 				if err != nil {
 					return nil, err
 				}
@@ -879,7 +879,7 @@ func AddTargetToLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for target addition %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for target addition")
 				if err != nil {
 					return nil, err
 				}
@@ -960,7 +960,7 @@ func RemoveTargetFromLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for target rm from lb %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for target rm from lb")
 				if err != nil {
 					return nil, err
 				}
@@ -1014,7 +1014,7 @@ func AddServiceToLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for service attach %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for service attach")
 				if err != nil {
 					return nil, err
 				}

@@ -90,7 +90,7 @@ func CreateVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(*output.Action, "Waiting for volume %v%...")
+				err = ctx.WaitForAndLog(*output.Action, "Waiting for volume")
 				if err != nil {
 					return nil, err
 				}
@@ -227,7 +227,7 @@ func AttachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for volume attach %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for volume attach")
 				if err != nil {
 					return nil, err
 				}
@@ -278,7 +278,7 @@ func DetachVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for volume detach %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for volume detach")
 				if err != nil {
 					return nil, err
 				}

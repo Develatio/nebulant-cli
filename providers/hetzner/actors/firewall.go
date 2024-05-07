@@ -197,7 +197,7 @@ func CreateFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForManyAndLog(output.Actions, "Waiting for firewall %v%...")
+				err = ctx.WaitForManyAndLog(output.Actions, "Waiting for firewall")
 				if err != nil {
 					return nil, err
 				}
@@ -369,7 +369,7 @@ func ApplyFirewallToResources(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForManyAndLog(output.Actions, "Waiting for fw resources %v%...")
+				err = ctx.WaitForManyAndLog(output.Actions, "Waiting for fw resources")
 				if err != nil {
 					return nil, err
 				}
@@ -428,7 +428,7 @@ func RemoveFirewallFromResources(ctx *ActionContext) (*base.ActionOutput, error)
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForManyAndLog(output.Actions, "Waiting firewall rm %v%...")
+				err = ctx.WaitForManyAndLog(output.Actions, "Waiting firewall rm")
 				if err != nil {
 					return nil, err
 				}
@@ -478,7 +478,7 @@ func SetRulesFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForManyAndLog(output.Actions, "Waiting for firewall rules set %v%...")
+				err = ctx.WaitForManyAndLog(output.Actions, "Waiting for firewall rules set")
 				if err != nil {
 					return nil, err
 				}

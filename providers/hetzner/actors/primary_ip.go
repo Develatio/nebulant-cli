@@ -135,7 +135,7 @@ func CreatePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(*output.Action, "Waiting for primary ip %v%...")
+				err = ctx.WaitForAndLog(*output.Action, "Waiting for primary ip")
 				if err != nil {
 					return nil, err
 				}
@@ -267,7 +267,7 @@ func AssignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for primary ip assignation %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for primary ip assignation")
 				if err != nil {
 					return nil, err
 				}
@@ -317,7 +317,7 @@ func UnassignPrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for primary ip unassignation %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for primary ip unassignation")
 				if err != nil {
 					return nil, err
 				}

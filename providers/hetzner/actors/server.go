@@ -153,13 +153,13 @@ type hcServerCreateOptsWrap struct {
 	Image     *hcImageWrap
 	PublicNet *hcServerCreatePublicNetWrap
 	Networks  []*hcNetworkWrap
+	SSHKeys   []*hcSSHKeyWrap
 }
 
 func (v *hcServerCreateOptsWrap) unwrap() (*hcloud.ServerCreateOpts, error) {
 	out := &hcloud.ServerCreateOpts{
 		Name:             v.Name,
 		ServerType:       v.ServerType,
-		SSHKeys:          v.SSHKeys,
 		Location:         v.Location,
 		Datacenter:       v.Datacenter,
 		UserData:         v.UserData,
@@ -190,6 +190,13 @@ func (v *hcServerCreateOptsWrap) unwrap() (*hcloud.ServerCreateOpts, error) {
 			return nil, err
 		}
 		out.Networks = append(out.Networks, hnet)
+	}
+	for _, s := range v.SSHKeys {
+		hssh, err := s.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.SSHKeys = append(out.SSHKeys, hssh)
 	}
 	return out, nil
 }
@@ -235,7 +242,11 @@ func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for server %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for server")
+				if err != nil {
+					return nil, err
+				}
+				err = ctx.WaitForManyAndLog(output.NextActions, "Waiting for actions post server creation")
 				if err != nil {
 					return nil, err
 				}
@@ -287,7 +298,7 @@ func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for server delete %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for server delete")
 				if err != nil {
 					return nil, err
 				}
@@ -424,7 +435,7 @@ func PowerOnServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for server power on %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for server power on")
 				if err != nil {
 					return nil, err
 				}
@@ -476,7 +487,7 @@ func PowerOffServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for server power off %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for server power off")
 				if err != nil {
 					return nil, err
 				}
@@ -532,7 +543,7 @@ func AttachServerToNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for server attach to net %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for server attach to net")
 				if err != nil {
 					return nil, err
 				}
@@ -588,7 +599,7 @@ func DetachServerFromNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for server detach from net %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for server detach from net")
 				if err != nil {
 					return nil, err
 				}
@@ -644,7 +655,7 @@ func CreateImageFromServer(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for image creation %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for image creation")
 				if err != nil {
 					return nil, err
 				}

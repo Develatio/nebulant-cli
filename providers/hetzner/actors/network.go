@@ -352,7 +352,7 @@ func AddSubnetToNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for subnet addition to net %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for subnet addition to net")
 				if err != nil {
 					return nil, err
 				}
@@ -407,7 +407,7 @@ func DeleteSubnetFromNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for subnet addition to net %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for subnet addition to net")
 				if err != nil {
 					return nil, err
 				}

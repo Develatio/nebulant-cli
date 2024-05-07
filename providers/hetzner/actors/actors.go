@@ -46,7 +46,13 @@ L:
 	for {
 		select {
 		case progress := <-okCh:
-			a.Logger.LogInfo(fmt.Sprintf(msg, progress))
+			if progress == 0 {
+				msg = msg + " ... "
+				a.Logger.LogInfo(fmt.Sprint(msg))
+			} else {
+				msg = msg + " (%v%%...) "
+				a.Logger.LogInfo(fmt.Sprintf(msg, progress))
+			}
 		case err = <-errCh:
 			// on sucess, err is nil
 			break L

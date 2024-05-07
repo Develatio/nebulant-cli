@@ -102,7 +102,7 @@ func CreateFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(*output.Action, "Waiting for floating ip %v%...")
+				err = ctx.WaitForAndLog(*output.Action, "Waiting for floating ip")
 				if err != nil {
 					return nil, err
 				}
@@ -265,7 +265,7 @@ func AssignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for floating ip assignation %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for floating ip assignation")
 				if err != nil {
 					return nil, err
 				}
@@ -316,7 +316,7 @@ func UnassignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for floating ip unassignation %v%...")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for floating ip unassignation")
 				if err != nil {
 					return nil, err
 				}
