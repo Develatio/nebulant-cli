@@ -42,16 +42,16 @@ func (a *ActionContext) WaitForAndLog(action schema.Action, msg string) error {
 	act := hcloud.ActionFromSchema(action)
 	okCh, errCh := a.HClient.Action.WatchProgress(context.Background(), act)
 	var err error
+	noprogress_msg := msg + " ... "
+	progress_msg := msg + " (%v%%...) "
 L:
 	for {
 		select {
 		case progress := <-okCh:
 			if progress == 0 {
-				msg = msg + " ... "
-				a.Logger.LogInfo(fmt.Sprint(msg))
+				a.Logger.LogInfo(fmt.Sprint(noprogress_msg))
 			} else {
-				msg = msg + " (%v%%...) "
-				a.Logger.LogInfo(fmt.Sprintf(msg, progress))
+				a.Logger.LogInfo(fmt.Sprintf(progress_msg, progress))
 			}
 		case err = <-errCh:
 			// on sucess, err is nil
@@ -65,15 +65,16 @@ func (a *ActionContext) WaitForManyAndLog(actions []schema.Action, msg string) e
 	act := hcloud.ActionsFromSchema(actions)
 	okCh, errCh := a.HClient.Action.WatchOverallProgress(context.Background(), act)
 	var err error
+	noprogress_msg := msg + " ... "
+	progress_msg := msg + " (%v%%...) "
 L:
 	for {
 		select {
 		case progress := <-okCh:
 			if progress == 0 {
-				a.Logger.LogInfo(fmt.Sprint(msg))
+				a.Logger.LogInfo(fmt.Sprint(noprogress_msg))
 			} else {
-				msg = msg + " (%v%%...) "
-				a.Logger.LogInfo(fmt.Sprintf(msg, progress))
+				a.Logger.LogInfo(fmt.Sprintf(progress_msg, progress))
 			}
 		case err = <-errCh:
 			// on sucess, err is nil
