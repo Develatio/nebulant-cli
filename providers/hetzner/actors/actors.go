@@ -212,7 +212,6 @@ func GenericHCloudOutput(ctx *ActionContext, response *hcloud.Response, v interf
 	if err != nil {
 		return nil, err
 	}
-
 	aout := base.NewActionOutput(ctx.Action, v, nil)
 	return aout, nil
 }

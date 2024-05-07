@@ -169,7 +169,13 @@ type StorageRecord struct {
 	IsString   bool                      `json:"-"`
 	Fail       bool                      `json:"fail"`
 	Error      error                     `json:"-"`
-	ErrorStr   string                    `json:"error"`
+	// allow access to Value using just .RefName like {{ refname }}
+	// if false, .ValueID is used on literal interpolation {{ refname }}
+	// To access values of non Literal vars, use {{ refname.attr.subattr }}.
+	// If .ValueID is empty and Literal is false, on {{ refname }} access
+	// an err should generated
+	Literal  bool   `json:"-"`
+	ErrorStr string `json:"error"`
 }
 
 func (sr *StorageRecord) BuildInternals() error {

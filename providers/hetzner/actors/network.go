@@ -223,7 +223,12 @@ func CreateNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	output := &schema.NetworkCreateResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	err = UnmarshallHCloudToSchema(response, output)
+	if err != nil {
+		return nil, err
+	}
+	id := fmt.Sprintf("%v", output.Network.ID)
+	return base.NewActionOutput(ctx.Action, output, &id), nil
 }
 
 func DeleteNetwork(ctx *ActionContext) (*base.ActionOutput, error) {

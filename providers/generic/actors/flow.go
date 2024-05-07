@@ -579,11 +579,13 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 
 		if v.Stack != nil && *v.Stack {
+			// this is an stack var wich can acumulate values
 			err := ctx.Store.Push(&base.StorageRecord{
 				RefName: varname,
 				Aout:    nil,
 				Value:   recordvalue,
-				Action:  ctx.Action,
+				// note that literal is not allowed
+				Action: ctx.Action,
 			}, ctx.Action.Provider)
 			if err != nil {
 				return nil, err
@@ -593,6 +595,7 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 				RefName: varname,
 				Aout:    nil,
 				Value:   recordvalue,
+				Literal: true,
 				Action:  ctx.Action,
 			}, ctx.Action.Provider)
 			if err != nil {
@@ -621,6 +624,7 @@ func DefineVars(ctx *ActionContext) (*base.ActionOutput, error) {
 			err = ctx.Store.Insert(&base.StorageRecord{
 				RefName: varname,
 				Aout:    nil,
+				Literal: true,
 				Value:   varvalue,
 				Action:  ctx.Action,
 			}, ctx.Action.Provider)
