@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
@@ -44,6 +45,8 @@ func (a *ActionContext) WaitForAndLog(action schema.Action, msg string) error {
 	var err error
 	noprogress_msg := msg + " ... "
 	progress_msg := msg + " (%v%%...) "
+
+	errCount := 0
 L:
 	for {
 		select {
@@ -54,6 +57,17 @@ L:
 				a.Logger.LogInfo(fmt.Sprintf(progress_msg, progress))
 			}
 		case err = <-errCh:
+			// sometimes hc api send even on no fail event
+			// try retry 5 times
+			if err != nil {
+				if errCount < 5 {
+					errCount++
+					time.Sleep(3 * time.Second)
+					okCh, errCh = a.HClient.Action.WatchProgress(context.Background(), act)
+					continue
+				}
+				// retry count end, launch err
+			}
 			// on sucess, err is nil
 			break L
 		}
@@ -67,6 +81,8 @@ func (a *ActionContext) WaitForManyAndLog(actions []schema.Action, msg string) e
 	var err error
 	noprogress_msg := msg + " ... "
 	progress_msg := msg + " (%v%%...) "
+
+	errCount := 0
 L:
 	for {
 		select {
@@ -77,6 +93,17 @@ L:
 				a.Logger.LogInfo(fmt.Sprintf(progress_msg, progress))
 			}
 		case err = <-errCh:
+			// sometimes hc api send even on no fail event
+			// try retry 5 times
+			if err != nil {
+				if errCount < 5 {
+					errCount++
+					time.Sleep(3 * time.Second)
+					okCh, errCh = a.HClient.Action.WatchOverallProgress(context.Background(), act)
+					continue
+				}
+				// retry count end, launch err
+			}
 			// on sucess, err is nil
 			break L
 		}
