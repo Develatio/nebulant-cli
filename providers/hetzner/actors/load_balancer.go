@@ -519,7 +519,7 @@ func CreateLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, HCloudErrResponse(err, response)
 	}
 
-	aout, err := GenericHCloudOutput(ctx, response, output)
+	err = UnmarshallHCloudToSchema(response, output)
 	if err != nil {
 		return nil, err
 	}
@@ -533,7 +533,8 @@ func CreateLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 			}
 		}
 	}
-	return aout, err
+	id := fmt.Sprintf("%v", output.LoadBalancer.ID)
+	return base.NewActionOutput(ctx.Action, output, &id), nil
 }
 
 func DeleteLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -612,8 +613,10 @@ func FindOneLoadBalancer(ctx *ActionContext) (*base.ActionOutput, error) {
 	if found <= 0 {
 		return nil, fmt.Errorf("no load balancer found")
 	}
+	output := &schema.LoadBalancerGetResponse{}
+	output.LoadBalancer = raw.LoadBalancers[0]
 	id := fmt.Sprintf("%v", raw.LoadBalancers[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.LoadBalancers[0], &id)
+	aout = base.NewActionOutput(ctx.Action, output, &id)
 	return aout, nil
 }
 

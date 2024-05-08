@@ -307,8 +307,10 @@ func FindOneNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	if found <= 0 {
 		return nil, fmt.Errorf("no network found")
 	}
+	output := &schema.NetworkGetResponse{}
+	output.Network = raw.Networks[0]
 	id := fmt.Sprintf("%v", raw.Networks[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.Networks[0], &id)
+	aout = base.NewActionOutput(ctx.Action, output, &id)
 	return aout, nil
 }
 

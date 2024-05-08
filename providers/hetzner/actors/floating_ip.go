@@ -95,7 +95,7 @@ func CreateFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	aout, err := GenericHCloudOutput(ctx, response, output)
+	err = UnmarshallHCloudToSchema(response, output)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,8 @@ func CreateFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 			}
 		}
 	}
-	return aout, err
+	id := fmt.Sprintf("%v", output.FloatingIP.ID)
+	return base.NewActionOutput(ctx.Action, output, &id), nil
 }
 
 func DeleteFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -216,7 +217,7 @@ func FindOneFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	sid := fmt.Sprintf("%v", output.FloatingIP.ID)
-	return base.NewActionOutput(ctx.Action, output.FloatingIP, &sid), nil
+	return base.NewActionOutput(ctx.Action, output, &sid), nil
 }
 
 func AssignFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {

@@ -83,7 +83,7 @@ func CreateVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, HCloudErrResponse(err, response)
 	}
 
-	aout, err := GenericHCloudOutput(ctx, response, output)
+	err = UnmarshallHCloudToSchema(response, output)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,8 @@ func CreateVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 			}
 		}
 	}
-	return aout, err
+	id := fmt.Sprintf("%v", output.Volume.ID)
+	return base.NewActionOutput(ctx.Action, output, &id), nil
 }
 
 func DeleteVolume(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -176,8 +177,10 @@ func FindOneVolume(ctx *ActionContext) (*base.ActionOutput, error) {
 	if found <= 0 {
 		return nil, fmt.Errorf("no volume found")
 	}
+	output := &schema.VolumeGetResponse{}
+	output.Volume = raw.Volumes[0]
 	id := fmt.Sprintf("%v", raw.Volumes[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.Volumes[0], &id)
+	aout = base.NewActionOutput(ctx.Action, output, &id)
 	return aout, nil
 }
 

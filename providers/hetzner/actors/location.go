@@ -70,7 +70,9 @@ func FindOneLocation(ctx *ActionContext) (*base.ActionOutput, error) {
 	if found <= 0 {
 		return nil, fmt.Errorf("no location found")
 	}
+	output := &schema.LocationGetResponse{}
+	output.Location = raw.Locations[0]
 	id := fmt.Sprintf("%v", raw.Locations[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.Locations[0], &id)
+	aout = base.NewActionOutput(ctx.Action, output, &id)
 	return aout, nil
 }

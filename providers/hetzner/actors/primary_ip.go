@@ -128,7 +128,7 @@ func CreatePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, HCloudErrResponse(err, response)
 	}
 
-	aout, err := GenericHCloudOutput(ctx, response, output)
+	err = UnmarshallHCloudToSchema(response, output)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,8 @@ func CreatePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 			}
 		}
 	}
-	return aout, err
+	id := fmt.Sprintf("%v", output.PrimaryIP.ID)
+	return base.NewActionOutput(ctx.Action, output, &id), nil
 }
 
 func DeletePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -221,8 +222,10 @@ func FindOnePrimaryIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	if found <= 0 {
 		return nil, fmt.Errorf("no primary ip found")
 	}
+	output := &schema.PrimaryIPGetResult{}
+	output.PrimaryIP = raw.PrimaryIPs[0]
 	id := fmt.Sprintf("%v", raw.PrimaryIPs[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.PrimaryIPs[0], &id)
+	aout = base.NewActionOutput(ctx.Action, output, &id)
 	return aout, nil
 }
 

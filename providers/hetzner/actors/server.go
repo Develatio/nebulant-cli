@@ -383,7 +383,7 @@ func FindOneServer(ctx *ActionContext) (*base.ActionOutput, error) {
 			return nil, err
 		}
 		sid := fmt.Sprintf("%v", output.Server.ID)
-		return base.NewActionOutput(ctx.Action, output.Server, &sid), nil
+		return base.NewActionOutput(ctx.Action, output, &sid), nil
 	} else {
 		aout, err := FindServers(ctx)
 		if err != nil {
@@ -671,7 +671,7 @@ func CreateImageFromServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, HCloudErrResponse(err, response)
 	}
 
-	aout, err := GenericHCloudOutput(ctx, response, output)
+	err = UnmarshallHCloudToSchema(response, output)
 	if err != nil {
 		return nil, err
 	}
@@ -685,5 +685,6 @@ func CreateImageFromServer(ctx *ActionContext) (*base.ActionOutput, error) {
 			}
 		}
 	}
-	return aout, err
+	id := fmt.Sprintf("%v", output.Image.ID)
+	return base.NewActionOutput(ctx.Action, output, &id), nil
 }

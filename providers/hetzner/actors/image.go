@@ -221,7 +221,9 @@ func FindOneImage(ctx *ActionContext) (*base.ActionOutput, error) {
 	if found <= 0 {
 		return nil, fmt.Errorf("no image found (E2)")
 	}
+	output := &schema.ImageGetResponse{}
+	output.Image = raw.Images[0]
 	id := fmt.Sprintf("%v", raw.Images[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.Images[0], &id)
+	aout = base.NewActionOutput(ctx.Action, output, &id)
 	return aout, nil
 }

@@ -75,7 +75,9 @@ func FindOneISO(ctx *ActionContext) (*base.ActionOutput, error) {
 	if found <= 0 {
 		return nil, fmt.Errorf("no iso found")
 	}
+	output := &schema.ISOGetResponse{}
+	output.ISO = raw.ISOs[0]
 	id := fmt.Sprintf("%v", raw.ISOs[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.ISOs[0], &id)
+	aout = base.NewActionOutput(ctx.Action, output, &id)
 	return aout, nil
 }

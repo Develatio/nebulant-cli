@@ -69,7 +69,12 @@ func CreateSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	output := &schema.SSHKeyCreateResponse{}
-	return GenericHCloudOutput(ctx, response, output)
+	err = UnmarshallHCloudToSchema(response, output)
+	if err != nil {
+		return nil, err
+	}
+	id := fmt.Sprintf("%v", output.SSHKey.ID)
+	return base.NewActionOutput(ctx.Action, output, &id), nil
 }
 
 func DeleteSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
@@ -148,7 +153,9 @@ func FindOneSSHKey(ctx *ActionContext) (*base.ActionOutput, error) {
 	if found <= 0 {
 		return nil, fmt.Errorf("no ssh key found")
 	}
+	output := &schema.SSHKeyGetResponse{}
+	output.SSHKey = raw.SSHKeys[0]
 	id := fmt.Sprintf("%v", raw.SSHKeys[0].ID)
-	aout = base.NewActionOutput(ctx.Action, raw.SSHKeys[0], &id)
+	aout = base.NewActionOutput(ctx.Action, output, &id)
 	return aout, nil
 }

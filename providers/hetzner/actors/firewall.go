@@ -190,7 +190,7 @@ func CreateFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, HCloudErrResponse(err, response)
 	}
 
-	aout, err := GenericHCloudOutput(ctx, response, output)
+	err = UnmarshallHCloudToSchema(response, output)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +204,8 @@ func CreateFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
 			}
 		}
 	}
-	return aout, err
+	id := fmt.Sprintf("%v", output.Firewall.ID)
+	return base.NewActionOutput(ctx.Action, output, &id), nil
 }
 
 func DeleteFirewall(ctx *ActionContext) (*base.ActionOutput, error) {
