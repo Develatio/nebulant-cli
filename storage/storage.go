@@ -390,7 +390,10 @@ func (s *Store) Interpolate(sourcetext *string) error {
 			continue
 		}
 
-		var jpathTargetValue []byte = record.JSONValue
+		var jpathTargetValue []byte
+		if record.Literal {
+			jpathTargetValue = record.JSONValue
+		}
 		for _, jpathm := range jpaths {
 			jpath := jpathm[0]
 			if strings.ToLower(jpath) == "$.__haserror" {
@@ -437,7 +440,7 @@ func (s *Store) Interpolate(sourcetext *string) error {
 					}
 					jpathTargetValue = []byte(str)
 				} else if len(enc) <= 0 {
-					// err?
+					s.logger.LogWarn(fmt.Sprintf("JSON Path result in empty value. Maybe you want to fix it, here is the raw json value: %s", record.JSONValue))
 				} else {
 					var prettyJSON bytes.Buffer
 					err = json.Indent(&prettyJSON, enc, "", "    ")
