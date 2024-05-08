@@ -235,7 +235,7 @@ func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, HCloudErrResponse(err, response)
 	}
 
-	aout, err := GenericHCloudOutput(ctx, response, output)
+	err = UnmarshallHCloudToSchema(response, output)
 	if err != nil {
 		return nil, err
 	}
@@ -250,10 +250,30 @@ func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 				if err != nil {
 					return nil, err
 				}
+
+				out := &schema.ActionGetResponse{}
+				_, rsp, err := ctx.HClient.Action.GetByID(context.Background(), output.Action.ID)
+				if err != nil {
+					return nil, err
+				}
+				err = UnmarshallHCloudToSchema(rsp, out)
+				if err != nil {
+					return nil, err
+				}
+				for _, rr := range out.Action.Resources {
+					if rr.Type == "server" {
+						output.Server.ID = rr.ID
+					}
+				}
 			}
 		}
 	}
-	return aout, err
+
+	if output.Server.ID == 0 {
+		ctx.Logger.LogWarn("cannot dettermite server ID")
+	}
+	id := fmt.Sprintf("%v", output.Server.ID)
+	return base.NewActionOutput(ctx.Action, output, &id), nil
 }
 
 func DeleteServer(ctx *ActionContext) (*base.ActionOutput, error) {
