@@ -18,6 +18,7 @@ package executive
 
 import (
 	"fmt"
+	"math/rand"
 	"runtime/debug"
 	"strconv"
 	"sync"
@@ -67,6 +68,7 @@ func (m *Manager) reset() {
 	m.ExecutionUUID = nil
 	m.Stats = &stats{}
 	m.Logger = &cast.Logger{}
+	m.Logger.SetThreadID(fmt.Sprintf("%d", rand.Int()))
 }
 
 // GetLogger func

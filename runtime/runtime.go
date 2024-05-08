@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -1159,6 +1160,7 @@ func (r *Runtime) NewAContextThread(parent base.IActionContext, actions []*bluep
 			parent:   threadctx,
 			store:    parent.GetStore().Duplicate(),
 		}
+		newchild.store.GetLogger().SetThreadID(fmt.Sprintf("%d", rand.Int()))
 		threadctx.Child(newchild)
 		r.pushActionContext(newchild)
 		newcontexts[i] = newchild
