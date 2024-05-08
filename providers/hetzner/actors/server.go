@@ -250,19 +250,20 @@ func CreateServer(ctx *ActionContext) (*base.ActionOutput, error) {
 				if err != nil {
 					return nil, err
 				}
-
-				out := &schema.ActionGetResponse{}
-				_, rsp, err := ctx.HClient.Action.GetByID(context.Background(), output.Action.ID)
-				if err != nil {
-					return nil, err
-				}
-				err = UnmarshallHCloudToSchema(rsp, out)
-				if err != nil {
-					return nil, err
-				}
-				for _, rr := range out.Action.Resources {
-					if rr.Type == "server" {
-						output.Server.ID = rr.ID
+				if output.Server.ID == 0 {
+					out := &schema.ActionGetResponse{}
+					_, rsp, err := ctx.HClient.Action.GetByID(context.Background(), output.Action.ID)
+					if err != nil {
+						return nil, err
+					}
+					err = UnmarshallHCloudToSchema(rsp, out)
+					if err != nil {
+						return nil, err
+					}
+					for _, rr := range out.Action.Resources {
+						if rr.Type == "server" {
+							output.Server.ID = rr.ID
+						}
 					}
 				}
 			}
