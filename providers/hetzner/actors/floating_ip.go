@@ -101,7 +101,7 @@ func CreateFloatingIP(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
-			if wnam == "success" {
+			if wnam == "success" && output.Action != nil {
 				err = ctx.WaitForAndLog(*output.Action, "Waiting for floating ip")
 				if err != nil {
 					return nil, err
