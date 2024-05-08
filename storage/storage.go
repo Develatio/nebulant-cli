@@ -427,7 +427,7 @@ func (s *Store) Interpolate(sourcetext *string) error {
 					jpathTargetValue = []byte(fmt.Sprintf("%v", attr.Value))
 				}
 			} else {
-				enc, err := jsonslice.Get(jpathTargetValue, strings.TrimSpace(jpath))
+				enc, err := jsonslice.Get(record.JSONValue, strings.TrimSpace(jpath))
 				if err != nil {
 					return fmt.Errorf("Invalid path " + jpath + " " + err.Error())
 				}
