@@ -59,16 +59,16 @@ L:
 				a.Logger.LogInfo(fmt.Sprintf(progress_msg, progress))
 			}
 		case err = <-errCh:
-			// if api did not return any action, maybe the action has finished
-			if strings.HasSuffix(err.Error(), "action not returned from API") {
-				a.Logger.LogDebug(err.Error())
-				err = nil
-				break L
-			}
 			// sometimes hc api ret err even on non
 			// failing event try to retry 5 times
 			// and exit after all if err persist
 			if err != nil {
+				// if api did not return any action, maybe the action has finished
+				if strings.HasSuffix(err.Error(), "action not returned from API") {
+					a.Logger.LogDebug(err.Error())
+					err = nil
+					break L
+				}
 				if errCount < 5 {
 					errCount++
 					time.Sleep(3 * time.Second)
@@ -105,16 +105,16 @@ L:
 				a.Logger.LogInfo(fmt.Sprintf(progress_msg, progress))
 			}
 		case err = <-errCh:
-			// if api did not return any action, maybe the action has finished
-			if strings.HasSuffix(err.Error(), "action not returned from API") {
-				a.Logger.LogDebug(err.Error())
-				err = nil
-				break L
-			}
 			// sometimes hc api ret err even on non
 			// failing event try to retry 5 times
 			// and exit after all if err persist
 			if err != nil {
+				// if api did not return any action, maybe the action has finished
+				if strings.HasSuffix(err.Error(), "action not returned from API") {
+					a.Logger.LogDebug(err.Error())
+					err = nil
+					break L
+				}
 				if errCount < 5 {
 					errCount++
 					time.Sleep(3 * time.Second)
