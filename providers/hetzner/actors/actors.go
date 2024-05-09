@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/develatio/nebulant-cli/base"
@@ -41,6 +42,7 @@ type ActionContext struct {
 
 func (a *ActionContext) WaitForAndLog(action schema.Action, msg string) error {
 	act := hcloud.ActionFromSchema(action)
+	a.Logger.LogDebug(fmt.Sprintf("waiting for action %v", act.ID))
 	okCh, errCh := a.HClient.Action.WatchProgress(context.Background(), act)
 	var err error
 	noprogress_msg := msg + " ... "
@@ -57,8 +59,15 @@ L:
 				a.Logger.LogInfo(fmt.Sprintf(progress_msg, progress))
 			}
 		case err = <-errCh:
-			// sometimes hc api send even on no fail event
-			// try retry 5 times
+			// if api did not return any action, maybe the action has finished
+			if strings.HasSuffix(err.Error(), "action not returned from API") {
+				a.Logger.LogDebug(err.Error())
+				err = nil
+				break L
+			}
+			// sometimes hc api ret err even on non
+			// failing event try to retry 5 times
+			// and exit after all if err persist
 			if err != nil {
 				if errCount < 5 {
 					errCount++
@@ -66,7 +75,7 @@ L:
 					okCh, errCh = a.HClient.Action.WatchProgress(context.Background(), act)
 					continue
 				}
-				// retry count end, launch err
+				// retry count end, let err fly as free bird
 			}
 			// on sucess, err is nil
 			break L
@@ -77,6 +86,9 @@ L:
 
 func (a *ActionContext) WaitForManyAndLog(actions []schema.Action, msg string) error {
 	act := hcloud.ActionsFromSchema(actions)
+	for _, aa := range act {
+		a.Logger.LogDebug(fmt.Sprintf("waiting for action %v", aa.ID))
+	}
 	okCh, errCh := a.HClient.Action.WatchOverallProgress(context.Background(), act)
 	var err error
 	noprogress_msg := msg + " ... "
@@ -93,8 +105,15 @@ L:
 				a.Logger.LogInfo(fmt.Sprintf(progress_msg, progress))
 			}
 		case err = <-errCh:
-			// sometimes hc api send even on no fail event
-			// try retry 5 times
+			// if api did not return any action, maybe the action has finished
+			if strings.HasSuffix(err.Error(), "action not returned from API") {
+				a.Logger.LogDebug(err.Error())
+				err = nil
+				break L
+			}
+			// sometimes hc api ret err even on non
+			// failing event try to retry 5 times
+			// and exit after all if err persist
 			if err != nil {
 				if errCount < 5 {
 					errCount++
@@ -102,7 +121,7 @@ L:
 					okCh, errCh = a.HClient.Action.WatchOverallProgress(context.Background(), act)
 					continue
 				}
-				// retry count end, launch err
+				// retry count end, let err fly as free bird
 			}
 			// on sucess, err is nil
 			break L
