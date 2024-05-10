@@ -202,6 +202,8 @@ var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
 	"findone_network":            {F: FindOneNetwork, N: NextOKKO},
 	"add_subnet_to_network":      {F: AddSubnetToNetwork, N: NextOKKO},
 	"delete_subnet_from_network": {F: DeleteSubnetFromNetwork, N: NextOKKO},
+	"add_route_to_network":       {F: AddRouteToNetwork, N: NextOKKO},
+	"delete_route_from_network":  {F: DeleteRouteFromNetwork, N: NextOKKO},
 
 	"create_volume":  {F: CreateVolume, N: NextOKKO},
 	"delete_volume":  {F: DeleteVolume, N: NextOKKO},

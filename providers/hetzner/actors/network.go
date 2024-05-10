@@ -195,6 +195,43 @@ func (v *hcNetworkDeleteSubnetOptsWrap) unwrap() (*hcloud.NetworkDeleteSubnetOpt
 	}, nil
 }
 
+type hcNetworkAddRouteOptsWrap struct {
+	hcloud.NetworkAddRouteOpts
+	Route   *hcNetworkRouteWrap
+	Network *hcNetworkWrap
+}
+
+func (v *hcNetworkAddRouteOptsWrap) unwrap() (*hcloud.NetworkAddRouteOpts, error) {
+	out := &hcloud.NetworkAddRouteOpts{}
+	if v.Route != nil {
+		hroutes, err := v.Route.unwrap()
+		if err != nil {
+			return nil, err
+		}
+		out.Route = *hroutes
+	}
+	return out, nil
+}
+
+type hcNetworkDeleteRouteOptsWrap struct {
+	hcloud.NetworkDeleteRouteOpts
+	Route   *hcNetworkRouteWrap
+	Network *hcNetworkWrap
+}
+
+func (v *hcNetworkDeleteRouteOptsWrap) unwrap() (*hcloud.NetworkDeleteRouteOpts, error) {
+	if v.Route == nil {
+		return nil, fmt.Errorf("no route data")
+	}
+	hroute, err := v.Route.unwrap()
+	if err != nil {
+		return nil, err
+	}
+	return &hcloud.NetworkDeleteRouteOpts{
+		Route: *hroute,
+	}, nil
+}
+
 func CreateNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
 	input := &hcNetworkCreateOptsWrap{}
@@ -414,7 +451,117 @@ func DeleteSubnetFromNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
 	if internalparams.Waiters != nil {
 		for _, wnam := range internalparams.Waiters {
 			if wnam == "success" {
-				err = ctx.WaitForAndLog(output.Action, "Waiting for subnet addition to net")
+				err = ctx.WaitForAndLog(output.Action, "Waiting for subnet deletion from net")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
+}
+
+func AddRouteToNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
+	input := &hcNetworkAddRouteOptsWrap{}
+	output := &schema.NetworkActionAddRouteResponse{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	opts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+	hnet, err := input.Network.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Network.AddRoute(context.Background(), hnet, *opts)
+	if err != nil {
+		return nil, HCloudErrResponse(err, response)
+	}
+
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for route addition to net")
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return aout, err
+}
+
+func DeleteRouteFromNetwork(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
+	input := &hcNetworkDeleteRouteOptsWrap{}
+	output := &schema.NetworkActionDeleteRouteResponse{}
+
+	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, input); err != nil {
+		return nil, err
+	}
+
+	internalparams := &blueprint.InternalParameters{}
+	err = json.Unmarshal(ctx.Action.Parameters, internalparams)
+	if err != nil {
+		return nil, err
+	}
+
+	if ctx.Rehearsal {
+		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(input)
+	if err != nil {
+		return nil, err
+	}
+
+	opts, err := input.unwrap()
+	if err != nil {
+		return nil, err
+	}
+	hnet, err := input.Network.unwrap()
+	if err != nil {
+		return nil, err
+	}
+
+	_, response, err := ctx.HClient.Network.DeleteRoute(context.Background(), hnet, *opts)
+	if err != nil {
+		return nil, HCloudErrResponse(err, response)
+	}
+
+	aout, err := GenericHCloudOutput(ctx, response, output)
+	if err != nil {
+		return nil, err
+	}
+	if internalparams.Waiters != nil {
+		for _, wnam := range internalparams.Waiters {
+			if wnam == "success" {
+				err = ctx.WaitForAndLog(output.Action, "Waiting for route deletion from net")
 				if err != nil {
 					return nil, err
 				}
