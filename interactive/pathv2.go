@@ -1,7 +1,7 @@
 //go:build !js
 
 // Nebulant
-// Copyright (C) 2022  Develatio Technologies S.L.
+// Copyright (C) 2024  Develatio Technologies S.L.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -51,7 +51,7 @@ func PathV2(nblc *subsystem.NBLcommand) error {
 	err := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
-				Title("Type the path of the file or nebulant://...").
+				Title("Type the path. Optionally you can use file://...").
 				Value(&path).
 				// Validating fields is easy. The form will mark erroneous fields
 				// and display error messages accordingly.
@@ -66,7 +66,11 @@ func PathV2(nblc *subsystem.NBLcommand) error {
 		return nil
 	}
 	term.PrintInfo("Processing blueprint...\n")
-	irb, err := blueprint.NewIRBFromAny(path, &blueprint.IRBGenConfig{})
+	bpUrl, err := blueprint.ParseURL(path)
+	if err != nil {
+		return err
+	}
+	irb, err := blueprint.NewIRBFromAny(bpUrl, &blueprint.IRBGenConfig{})
 	if err != nil {
 		return err
 	}

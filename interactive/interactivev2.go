@@ -1,7 +1,7 @@
 //go:build !js
 
 // Nebulant
-// Copyright (C) 2022  Develatio Technologies S.L.
+// Copyright (C) 2024  Develatio Technologies S.L.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -30,22 +30,6 @@ import (
 )
 
 func LoopV2(nblc *subsystem.NBLcommand) error {
-
-	// menuItems := []*menuItem{
-	// 	{Name: "Serve ", Description: "Start server mode at " + net.JoinHostPort(config.SERVER_ADDR, config.SERVER_PORT), Cmd: "serve"},
-	// 	{Name: "Build ", Description: "Open builder app and start server mode", Cmd: "build"},
-	// 	{Name: "Browse", Description: "Brwose and run the blueprints stored in your account", Cmd: "browse"},
-	// 	{Name: "Path", Description: "Manually indicates the path to a blueprint", Cmd: "path"},
-	// 	// {Name: "Config", Description: "Configuration stuff", Cmd: "noim"},
-	// 	// {Name: "Args  ", Description: "Print available commandline args", Cmd: "args"},
-	// 	{Name: "Exit  ", Description: "Exit Nebulant CLI", Cmd: "exit"},
-	// }
-	// templates := &promptui.SelectTemplates{
-	// 	Label:    " ",
-	// 	Active:   term.EmojiSet["BackhandIndexPointingRight"] + " {{ .Name | magenta }} \t\t {{ .Description }}",
-	// 	Inactive: "   {{ .Name | cyan }} \t\t {{ .Description | faint }}",
-	// 	Selected: "> {{ .Name | magenta }}",
-	// }
 L:
 	for {
 		var Cmd string

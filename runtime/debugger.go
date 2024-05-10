@@ -18,6 +18,7 @@ package runtime
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"flag"
@@ -27,12 +28,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/creack/pty"
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
@@ -222,12 +222,6 @@ func (d *debugger) startLocalTermMode() {
 	d.running = true
 	oSstdin := nebulant_term.GenuineOsStdin
 
-	oldState, err := term.MakeRaw(int(oSstdin.Fd()))
-	if err != nil {
-		panic(err)
-	}
-	defer term.Restore(int(oSstdin.Fd()), oldState)
-
 	if !term.IsTerminal(int(os.Stdout.Fd())) {
 		d.lw("No terminal detected. Remote debugger system will start. You can still press any key to start local shell")
 		started := make(chan struct{})
@@ -249,6 +243,8 @@ func (d *debugger) startLocalTermMode() {
 		},
 	}
 	d.lclient = clnt
+	d.lclient.MakeRealOSTermRaw()
+	defer d.lclient.RestorerealOSTerm()
 	clnt.start(len(d.detach) > 0)
 }
 
@@ -362,7 +358,6 @@ func (d *debugger) reverseCloudServer() error {
 		return err
 	}
 	if resp.StatusCode > 399 {
-		fmt.Println()
 		return fmt.Errorf(strconv.Itoa(resp.StatusCode) + " server error: " + string(rawbody))
 	}
 
@@ -1037,37 +1032,72 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 		// cc.stoppipe = make(chan struct{})
 		// defer close(cc.stoppipe)
 
-		shell, err := nebulant_term.DetermineOsShell()
-		if err != nil {
-			cast.LogErr(err.Error(), nil)
-			fmt.Fprintln(clientFD, err.Error())
-			return
-		}
-		cmd := exec.Command(shell)
-		f, err := pty.Start(cmd)
-		if err != nil {
-			cast.LogErr(err.Error(), nil)
-			fmt.Fprintln(clientFD, err.Error())
-			return
+		var shell string
+		switch fs.Arg(1) {
+		case "wsl":
+			if runtime.GOOS != "windows" {
+				fmt.Fprintln(clientFD, fmt.Errorf("wsl support just in windows"))
+				return
+			}
+			shell = "cmd.exe /c wsl.exe"
+		case "powershell", "ps":
+			if runtime.GOOS != "windows" {
+				fmt.Fprintln(clientFD, fmt.Errorf("powershell support just in windows"))
+				return
+			}
+			shell = "powershell.exe"
+		case "":
+			shell, err = nebulant_term.DetermineOsShell()
+			if err != nil {
+				cast.LogErr(err.Error(), nil)
+				fmt.Fprintln(clientFD, err.Error())
+				return
+			}
+			if strings.HasSuffix(shell, "cmd.exe") {
+				shell = shell + " /T:0D /U /E:ON"
+			}
+		default:
+			shell = fs.Arg(1)
 		}
 
-		fmt.Fprintln(clientFD, "initializing local shell...")
+		cc.RestorerealOSTerm()
+
+		f, err := nebulant_term.GetOSPTY(shell)
+		if err != nil {
+			cast.LogErr(err.Error(), d.runtime.irb.ExecutionUUID)
+			fmt.Fprintln(clientFD, err.Error())
+			return
+		}
+		defer f.Close()
 
 		cc.Raw(true)
 		defer cc.Raw(false)
+		cc.MakeRealOSTermRaw()
 
-		cast.LogDebug(fmt.Sprintf("Running shell %v", shell), nil)
+		fmt.Fprintf(clientFD, "Running shell %v...", shell)
 
 		// copy sluva to os pty
-		go func() { _, _ = io.Copy(f, clientFD) }()
+		go func() {
+			_, _ = io.Copy(f, clientFD)
+		}()
 		// copy os pty to sluva
-		_, err = io.Copy(clientFD, f)
+		go func() {
+			fmt.Fprintf(clientFD, "%s\n", nebulant_term.Reset)
+			fmt.Fprintf(clientFD, "%s\n", nebulant_term.EraseDisplay)
+			fmt.Fprintf(clientFD, "%s\n", nebulant_term.RestoreCursor)
+			_, _ = io.Copy(clientFD, f)
+		}()
+
+		exitCode, err := f.Wait(context.Background())
+		fmt.Fprintf(clientFD, "%s\n", nebulant_term.Reset)
+		fmt.Fprintf(clientFD, "%s\n", nebulant_term.EraseDisplay)
+		fmt.Fprintf(clientFD, "%s\n", nebulant_term.RestoreCursor)
 		if err != nil {
-			cast.LogErr(err.Error(), nil)
 			fmt.Fprintln(clientFD, err.Error())
-			return
+			cast.LogErr(err.Error(), d.runtime.irb.ExecutionUUID)
 		}
-		cast.LogDebug(fmt.Sprintf("Stop of shell %v", shell), nil)
+
+		fmt.Fprintf(clientFD, "local shell stopped with exit code %v\n", exitCode)
 
 	default:
 		cast.LogDebug("Unknown command "+string(cmd), nil)
@@ -1084,6 +1114,9 @@ type client struct {
 	ldisc   nsterm.Ldisc
 	sluvaFD *nsterm.PortFD
 	space   *clientSpace
+	// state of term on init. Used to
+	// restore to original state
+	termInitState *term.State
 }
 
 // func (c *client) Write(p []byte) (n int, err error) {
@@ -1100,6 +1133,36 @@ func (c *client) Raw(activate bool) {
 
 func (c *client) GetFD() io.ReadWriteCloser {
 	return c.sluvaFD
+}
+
+func (c *client) IsLocalTerm() bool {
+	r := c.vpty.MustarFD().GetRawR()
+	_, ok := r.(*os.File)
+	fmt.Printf("is local term? %v\n", ok)
+	return ok
+}
+
+func (c *client) MakeRealOSTermRaw() {
+	fmt.Println("setting os real RAW state")
+	stdin := nebulant_term.GenuineOsStdin
+	// in localterm the local term should set as raw
+	// to leave VPTY handle raw data
+	oldState, err := term.MakeRaw(int(stdin.Fd()))
+	if err != nil {
+		panic(err)
+	}
+	if c.termInitState == nil {
+		c.termInitState = oldState
+	}
+}
+
+func (c *client) RestorerealOSTerm() {
+	fmt.Println("restoring os term state")
+	if c.termInitState == nil {
+		return
+	}
+	stdin := nebulant_term.GenuineOsStdin
+	term.Restore(int(stdin.Fd()), c.termInitState)
 }
 
 func (c *client) close() {
@@ -1166,6 +1229,16 @@ func (c *client) start(attach bool) {
 		}
 		if s == nil {
 			// no command
+			continue
+		}
+
+		if *s == "term restore" {
+			c.RestorerealOSTerm()
+			continue
+		}
+
+		if *s == "term raw" {
+			c.MakeRealOSTermRaw()
 			continue
 		}
 

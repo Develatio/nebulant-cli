@@ -74,6 +74,18 @@ type Credential struct {
 	Denied bool `json:"denied"`
 }
 
+// ProfileOrganization struct
+type ProfileOrganization struct {
+	Name *string `json:"name"`
+	Slug string  `json:"slug" validate:"required"`
+}
+
+// Profile struct
+type Profile struct {
+	Name         string              `json:"name"`
+	Organization ProfileOrganization `json:"organization" validate:"required"`
+}
+
 func createEmptyCredentialsFile() (int, error) {
 	credentialsPath := filepath.Join(AppHomePath(), "credentials")
 	_, err := os.Stat(credentialsPath)
@@ -137,6 +149,10 @@ func ReadCredential(credentialName string) (*Credential, error) {
 	return nil, fmt.Errorf("Credential not found")
 }
 
+func GetJar() *cookiejar.Jar {
+	return cachedjar
+}
+
 func Login(credential *Credential) (*cookiejar.Jar, error) {
 	// TODO: test expiration and re-login
 	if cachedjar != nil {
@@ -192,7 +208,51 @@ func Login(credential *Credential) (*cookiejar.Jar, error) {
 
 	cachedjar = jar
 
+	err = _fillProfile()
+	if err != nil {
+		return nil, err
+	}
+
 	return jar, nil
+}
+
+func _fillProfile() error {
+	url := url.URL{
+		Scheme: BASE_SCHEME,
+		Host:   BACKEND_API_HOST,
+		Path:   BACKEND_ME_PATH,
+	}
+	req, err := http.NewRequest("GET", url.String(), nil)
+	if err != nil {
+		return err
+	}
+	// assume that this func is called just after login and
+	// cachedjar is always valid
+	client := &http.Client{Jar: cachedjar}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	rawbody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode > 399 {
+		fmt.Println()
+		return fmt.Errorf("server error (%v): %s", resp.StatusCode, rawbody)
+	}
+
+	prf := &Profile{}
+	if err := util.UnmarshalValidJSON(rawbody, prf); err != nil {
+		return err
+	}
+	if prf.Organization.Slug == "" {
+		return fmt.Errorf("bad company in your profile")
+	}
+	PROFILE = prf
+
+	return nil
 }
 
 func RequestToken() error {

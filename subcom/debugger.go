@@ -29,6 +29,7 @@ import (
 
 	ws "github.com/develatio/nebulant-cli/netproto/websocket"
 	"github.com/develatio/nebulant-cli/subsystem"
+	nebulant_term "github.com/develatio/nebulant-cli/term"
 	"github.com/gorilla/websocket"
 	"golang.org/x/term"
 )
@@ -173,8 +174,8 @@ func DebuggerCmd(nblc *subsystem.NBLcommand) (int, error) {
 	// se cierra desde el server
 	wsrw := ws.NewWebSocketReadWriteCloser(c)
 
-	go io.Copy(nblc.Stdout, wsrw)
-	io.Copy(wsrw, nblc.Stdin)
+	go io.Copy(nebulant_term.GenuineOsStdout, wsrw)
+	io.Copy(wsrw, nebulant_term.GenuineOsStdin)
 	return 0, nil
 
 	// go func() {

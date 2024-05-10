@@ -32,6 +32,7 @@ LOCALLDFLAGS = -X github.com/develatio/nebulant-cli/config.WSScheme=ws\
 	-X github.com/develatio/nebulant-cli/config.BASE_SCHEME=https\
 	-X github.com/develatio/nebulant-cli/config.BACKEND_API_HOST=api.nebulant.lc\
 	-X github.com/develatio/nebulant-cli/config.BACKEND_ACCOUNT_HOST=account.nebulant.lc\
+	-X github.com/develatio/nebulant-cli/config.MARKET_API_HOST=market.nebulant.lc\
 	-X github.com/develatio/nebulant-cli/config.PANEL_HOST=panel.nebulant.lc\
 	-X github.com/develatio/nebulant-cli/config.FrontUrl=https://builder.nebulant.lc\
 	-X github.com/develatio/nebulant-cli/config.UpdateDescriptorURL=https://releases.nebulant.lc/version.json\
@@ -42,6 +43,7 @@ DEVLDFLAGS = -X github.com/develatio/nebulant-cli/config.WSScheme=wss\
 	-X github.com/develatio/nebulant-cli/config.BASE_SCHEME=https\
 	-X github.com/develatio/nebulant-cli/config.BACKEND_API_HOST=api.nebulant.dev\
 	-X github.com/develatio/nebulant-cli/config.BACKEND_ACCOUNT_HOST=account.nebulant.dev\
+	-X github.com/develatio/nebulant-cli/config.MARKET_API_HOST=market.nebulant.dev\
 	-X github.com/develatio/nebulant-cli/config.PANEL_HOST=panel.nebulant.dev\
 	-X github.com/develatio/nebulant-cli/config.FrontUrl=https://builder.nebulant.dev\
 	-X github.com/develatio/nebulant-cli/config.UpdateDescriptorURL=https://releases.nebulant.dev/version.json\

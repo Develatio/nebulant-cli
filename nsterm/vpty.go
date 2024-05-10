@@ -168,6 +168,14 @@ func (fd *PortFD) Close() error {
 	return errors.Join(err, err2)
 }
 
+func (fd *PortFD) GetRawR() io.ReadCloser {
+	return fd.r
+}
+
+func (fd *PortFD) GetRawW() io.WriteCloser {
+	return fd.w
+}
+
 // Port a pair of pipes
 type Port struct {
 	// commonly used internally

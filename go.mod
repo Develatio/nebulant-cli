@@ -7,6 +7,7 @@ replace github.com/develatio/nebulant-cli => ./
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161
 	github.com/Microsoft/go-winio v0.6.1
+	github.com/UserExistsError/conpty v0.1.2
 	github.com/andybalholm/brotli v1.1.0
 	github.com/aws/aws-sdk-go v1.50.30
 	github.com/aws/aws-sdk-go-v2 v1.25.2
@@ -16,7 +17,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.51.1
 	github.com/aws/smithy-go v1.20.1
 	github.com/bhmj/jsonslice v1.1.2
-	github.com/chzyer/readline v1.5.1
+	github.com/charmbracelet/huh v0.3.0
 	github.com/creack/pty v1.1.21
 	github.com/go-playground/validator/v10 v10.19.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
@@ -32,7 +33,6 @@ require (
 )
 
 require (
-	github.com/UserExistsError/conpty v0.1.2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.1 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.15.2 // indirect
@@ -53,17 +53,14 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/charmbracelet/bubbles v0.17.2-0.20240108170749-ec883029c8e6 // indirect
 	github.com/charmbracelet/bubbletea v0.25.0 // indirect
-	github.com/charmbracelet/huh v0.3.0 // indirect
 	github.com/charmbracelet/lipgloss v0.9.1 // indirect
+	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/hetznercloud/hcloud-go v1.50.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect

@@ -58,7 +58,7 @@ func RegisterSubcommands() {
 			Sec:           subsystem.SecMain,
 			Call: func(nblc *subsystem.NBLcommand) (int, error) {
 				// Interactive mode
-				err := interactive.Loop(nblc)
+				err := interactive.LoopV2(nblc)
 				if err != nil {
 					if err == term.ErrInterrupt {
 						fmt.Println("^C")

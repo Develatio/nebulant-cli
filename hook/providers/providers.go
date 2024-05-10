@@ -23,7 +23,6 @@ import (
 	"math/rand"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
@@ -82,8 +81,9 @@ func DefaultOnActionErrorHook(ctx *ProviderHookContext, aout *base.ActionOutput)
 		// NOTE to my future self: hahaha you know this is going to
 		// stay here forever hahahaha, laugh with me..., I mean with
 		// you..., I mean with both..., sh*t I'm going crazy.
-		rand.Seed(time.Now().UnixNano())
+		// rand.Seed(time.Now().UnixNano())
 		randIntString := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
+		aout.Action.RetryCount = retries_count
 		actions := []*blueprint.Action{
 			{
 				ActionID: sleepIdPrefix + randIntString,

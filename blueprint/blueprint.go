@@ -129,8 +129,8 @@ func TestMinCliVersion(bp *Blueprint) error {
 }
 
 // NewFromFile func
-func NewFromFile(path string) (*Blueprint, error) {
-	jsonFile, err := os.Open(path) // #nosec G304 -- Not a file inclusion, just a json read
+func NewFromFile(bpUrl *BlueprintURL) (*Blueprint, error) {
+	jsonFile, err := os.Open(bpUrl.Path) // #nosec G304 -- Not a file inclusion, just a json read
 	if err != nil {
 		return nil, err
 	}
@@ -192,20 +192,25 @@ func NewFromBuilder(data []byte) (*Blueprint, error) {
 	return &bp, nil
 }
 
-func NewIRBFromAny(any string, irbConf *IRBGenConfig) (*IRBlueprint, error) {
+func NewIRBFromAny(bpurl *BlueprintURL, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	var bp *Blueprint
 	var err error
-	if len(any) > 11 && any[:11] == "nebulant://" {
-		bp, err = NewFromBackend(any[11:])
+
+	switch bpurl.Scheme {
+	case "nebulant":
+		bp, err = NewFromBackend(bpurl)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		bp, err = NewFromFile(any)
+	case "file":
+		bp, err = NewFromFile(bpurl)
 		if err != nil {
 			return nil, err
 		}
+	default:
+		return nil, fmt.Errorf("unknown bp url")
 	}
+
 	irb, err := GenerateIRB(bp, irbConf)
 	if err != nil {
 		return nil, err
@@ -213,17 +218,78 @@ func NewIRBFromAny(any string, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	return irb, nil
 }
 
+func NewFromMarket(bpUrl *BlueprintURL) (*Blueprint, error) {
+	orgslug := bpUrl.OrganizationSlug
+	if orgslug == "" {
+		orgslug = bpUrl.CollectionSlug
+	}
+	path := ""
+	if bpUrl.Version == "" {
+		path = fmt.Sprintf(
+			config.MARKETPLACE_GET_BLUEPRINT_PATH,
+			orgslug,
+			bpUrl.CollectionSlug,
+			bpUrl.BlueprintSlug)
+	} else {
+		path = fmt.Sprintf(
+			config.MARKETPLACE_GET_BLUEPRINT_VERSION_PATH,
+			orgslug,
+			bpUrl.CollectionSlug,
+			bpUrl.BlueprintSlug,
+			bpUrl.Version)
+	}
+	url := &url.URL{
+		Scheme: config.BASE_SCHEME,
+		Host:   config.MARKET_API_HOST,
+		Path:   path,
+	}
+	return getRemoteBP(url)
+}
+
 // NewFromBackend func
-func NewFromBackend(path string) (*Blueprint, error) {
+func NewFromBackend(bpUrl *BlueprintURL) (*Blueprint, error) {
 	if config.CREDENTIAL.AuthToken == nil {
-		return nil, fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token")
+		return NewFromMarket(bpUrl)
+		// return nil, fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token")
 	}
 
-	url := url.URL{
+	_, err := config.Login(nil)
+	if err != nil {
+		return NewFromMarket(bpUrl)
+	}
+
+	if config.PROFILE == nil {
+		return NewFromMarket(bpUrl)
+	}
+
+	if config.PROFILE.Organization.Slug != bpUrl.OrganizationSlug {
+		return NewFromMarket(bpUrl)
+	}
+
+	path := ""
+	if bpUrl.Version == "" {
+		path = fmt.Sprintf(
+			config.BACKEND_GET_BLUEPRINT_PATH,
+			bpUrl.CollectionSlug,
+			bpUrl.BlueprintSlug)
+	} else {
+		path = fmt.Sprintf(
+			config.BACKEND_GET_BLUEPRINT_VERSION_PATH,
+			bpUrl.CollectionSlug,
+			bpUrl.BlueprintSlug,
+			bpUrl.Version)
+	}
+
+	url := &url.URL{
 		Scheme: config.BASE_SCHEME,
 		Host:   config.BACKEND_API_HOST,
-		Path:   fmt.Sprintf(config.BACKEND_GET_BLUEPRINT_PATH, path),
+		Path:   path,
 	}
+
+	return getRemoteBP(url)
+}
+
+func getRemoteBP(url *url.URL) (*Blueprint, error) {
 	rawBody, _ := json.Marshal(map[string]string{
 		"version": config.Version,
 	})
@@ -232,13 +298,9 @@ func NewFromBackend(path string) (*Blueprint, error) {
 	if err != nil {
 		return nil, err
 	}
-	jar, err := config.Login(nil)
-	if err != nil {
-		return nil, err
-	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Jar: jar}
+	client := &http.Client{Jar: config.GetJar()}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err

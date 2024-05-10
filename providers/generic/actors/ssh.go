@@ -55,6 +55,9 @@ import (
 // 	Port                 uint16  `json:"port"`
 // }
 
+// type generateKeypairParameters struct {
+// }
+
 type runRemoteParameters struct {
 	nebulantssh.ClientConfigParameters
 	// Proxies     []*nebulantssh.ClientConfigParameters `json:"proxies"`
@@ -72,7 +75,7 @@ type runRemoteParameters struct {
 type runRemoteScriptOutput struct {
 	Stdout   *bytes.Buffer `json:"stdout"`
 	Stderr   *bytes.Buffer `json:"stderr"`
-	Error    error         `json"error"`
+	Error    error         `json:"error"`
 	ExitCode string        `json:"exit_code"`
 }
 
@@ -427,6 +430,25 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		err = sshRunErr.(error)
 	}
 
+	ctx.Logger.ByteLogInfo([]byte("\nout of remotescript actionn"))
 	aout := base.NewActionOutput(ctx.Action, result, nil)
 	return aout, err
 }
+
+// TODO:
+// func GenerateKeyPair(ctx *ActionContext) (*base.ActionOutput, error) {
+// 	var err error
+// 	input := &generateKeypairParameters{}
+// 	if err = json.Unmarshal(ctx.Action.Parameters, input); err != nil {
+// 		return nil, err
+// 	}
+
+// 	if ctx.Rehearsal {
+// 		return nil, nil
+// 	}
+
+// 	err = ctx.Store.DeepInterpolation(input)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// }

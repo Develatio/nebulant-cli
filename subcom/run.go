@@ -57,7 +57,11 @@ func RunCmd(nblc *subsystem.NBLcommand) (int, error) {
 	if len(args) > 1 {
 		irbConf.Args = args[1:]
 	}
-	irb, err := blueprint.NewIRBFromAny(bluePrintFilePath, irbConf)
+	bpUrl, err := blueprint.ParseURL(bluePrintFilePath)
+	if err != nil {
+		return 1, err
+	}
+	irb, err := blueprint.NewIRBFromAny(bpUrl, irbConf)
 	if err != nil {
 		return 1, err
 	}

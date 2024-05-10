@@ -17,6 +17,7 @@
 package term
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -69,10 +70,18 @@ var EraseLine string = "\033[K"
 
 var EraseLineFromCursor string = "\033[0K"
 var EraseEntireLine string = "\033[2K"
+var EraseDisplay string = "\033[2J"
 
 var IdentifyDevice string = "\033Z"
 
 var mls *MultilineStdout = nil
+
+type OSPTY interface {
+	Close() error
+	Read(p []byte) (n int, err error)
+	Write(p []byte) (n int, err error)
+	Wait(ctx context.Context) (int64, error)
+}
 
 // https://github.com/manifoldco/promptui/issues/49
 type noBellStdout struct{}

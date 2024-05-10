@@ -22,22 +22,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/chzyer/readline"
 	"github.com/manifoldco/promptui"
 )
-
-// from readline.std_windows.go
-// Stdin = NewRawReader()
-// Stdout = NewANSIWriter(Stdout)
-// Stderr = NewANSIWriter(Stderr)
 
 var GenuineOsStdout *os.File = os.Stdout
 var GenuineOsStderr *os.File = os.Stderr
 var GenuineOsStdin *os.File = os.Stdin
 
-var Stdout = readline.Stdout
-var Stderr = readline.Stderr
-var Stdin = readline.Stdin
-var CharBell = []byte(fmt.Sprintf("%c", readline.CharBell))[0]
+var Stdout = os.Stdout
+var Stderr = os.Stderr
+var Stdin = os.Stdin
+var CharBell = []byte(fmt.Sprintf("%c", 7))[0]
 var ErrInterrupt = promptui.ErrInterrupt
 var ErrEOF = promptui.ErrEOF

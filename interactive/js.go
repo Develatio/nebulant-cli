@@ -24,11 +24,7 @@ import (
 	"github.com/develatio/nebulant-cli/subsystem"
 )
 
-func Loop(nblc *subsystem.NBLcommand) error {
+func LoopV2(nblc *subsystem.NBLcommand) error {
 	fmt.Println("Not supported")
-	return nil
-}
-
-func Path() error {
 	return nil
 }

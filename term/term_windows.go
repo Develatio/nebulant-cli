@@ -19,9 +19,11 @@
 package term
 
 import (
+	"context"
 	"os"
 
 	"github.com/Azure/go-ansiterm/winterm"
+	"github.com/UserExistsError/conpty"
 	"golang.org/x/sys/windows"
 )
 
@@ -78,4 +80,26 @@ func SetShowCursor() error {
 		return err
 	}
 	return nil
+}
+
+type winPTY struct {
+	wrap *conpty.ConPty
+}
+
+func (n *winPTY) Close() error                { return n.wrap.Close() }
+func (n *winPTY) Read(p []byte) (int, error)  { return n.wrap.Read(p) }
+func (n *winPTY) Write(p []byte) (int, error) { return n.wrap.Write(p) }
+func (n *winPTY) Wait(ctx context.Context) (int64, error) {
+	exitCode, err := n.wrap.Wait(ctx)
+	return int64(exitCode), err
+}
+
+func GetOSPTY(shell string) (OSPTY, error) {
+	cpty, err := conpty.Start(shell)
+	if err != nil {
+		return nil, err
+	}
+	return &winPTY{
+		wrap: cpty,
+	}, nil
 }

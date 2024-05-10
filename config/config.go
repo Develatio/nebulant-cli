@@ -54,6 +54,9 @@ var BACKEND_ACCOUNT_HOST string = "account.nebulant.io"
 // PANEL_HOST var
 var PANEL_HOST string = "panel.nebulant.io"
 
+// MARKET_API_HOST var
+var MARKET_API_HOST string = "marketplace.nebulant.io"
+
 // FrontOrigin var
 var FrontOrigin string = "https://builder.nebulant.io"
 
@@ -83,6 +86,9 @@ var ACTIVE_CONF_PROFILE = "default"
 
 // CREDENTIAL
 var CREDENTIAL *Credential = &Credential{}
+
+// PROFILE
+var PROFILE *Profile = nil
 
 // Server addr
 var SERVER_ADDR = "localhost"
@@ -116,9 +122,13 @@ var PANEL_SSO_TOKEN_VALIDATION_PATH = "/sso/%s"
 var BACKEND_ENTRY_POINT_PATH = "/to/"
 var BACKEND_ME_PATH = "/v1/me/"
 var BACKEND_SSO_LOGIN_PATH = "/v1/sso/login/"
-var BACKEND_GET_BLUEPRINT_PATH = "/v1/blueprint/%s/"
+var BACKEND_GET_BLUEPRINT_PATH = "/v1/blueprint/%s/%s/content/"           // coll-slug/bp-slug
+var BACKEND_GET_BLUEPRINT_VERSION_PATH = "/v1/snapshot/%s/%s/%s/content/" // coll-slug/bp-slug/version
+var BACKEND_SNAPSHOTS_LIST_PATH = "/v1/snapshot/%s/%s/"                   // coll-slug/bp-slug
 var BACKEND_COLLECTION_LIST_PATH = "/v1/collection/"
 var BACKEND_COLLECTION_BLUEPRINT_LIST_PATH = "/v1/collection/%s/blueprint/" // %s coll-slug
+var MARKETPLACE_GET_BLUEPRINT_VERSION_PATH = "/snapshot/%s/%s/%s/%s/"       // org-slug/coll-slug/bp-slug/version
+var MARKETPLACE_GET_BLUEPRINT_PATH = "/blueprint/%s/%s/%s/content/"         // org-slug/coll-slug/bp-slug
 
 // arg argv conf
 

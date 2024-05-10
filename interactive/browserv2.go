@@ -1,7 +1,7 @@
 //go:build !js
 
 // Nebulant
-// Copyright (C) 2022  Develatio Technologies S.L.
+// Copyright (C) 2024  Develatio Technologies S.L.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -25,7 +25,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"runtime/debug"
 	"strconv"
 
 	"github.com/charmbracelet/huh"
@@ -35,7 +34,6 @@ import (
 	"github.com/develatio/nebulant-cli/executive"
 	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/term"
-	"github.com/develatio/nebulant-cli/util"
 )
 
 type collectionSerializerv2 struct {
@@ -51,14 +49,30 @@ type resultsCollectionv2 struct {
 }
 
 type blueprintSerializerv2 struct {
-	Name        string `json:"name"`
-	UUID        string `json:"uuid"`
-	Description string `json:"description"`
+	Name             string `json:"name"`
+	Slug             string `json:"slug"`
+	Description      string `json:"description"`
+	CollectionSlug   string `json:"collection_slug"`
+	OrganizationSlug string `json:"organization_slug"`
 }
 
 type resultsBlueprintv2 struct {
 	Count   int                      `json:"count"`
 	Results []*blueprintSerializerv2 `json:"results"`
+}
+
+type snapshotSerializer struct {
+	Changelog      string `json:"changelog"`
+	Version        string `json:"version"`
+	Public         bool   `json:"public"`
+	IsLatestStable bool   `json:"is_latest_stable"`
+	IsLatestBeta   bool   `json:"is_latest_beta"`
+	// CreatedDate    `json:"created_date"`
+}
+
+type resultsSnapshots struct {
+	Count   int                   `json:"count"`
+	Results []*snapshotSerializer `json:"results"`
 }
 
 // TODO: move to common, this code is duplicated in
@@ -126,9 +140,8 @@ func Browserv2(nblc *subsystem.NBLcommand) error {
 
 func promptCollectionv2(nblc *subsystem.NBLcommand, collections []*collectionSerializerv2) error {
 	var options []huh.Option[string]
-	options = append(options, huh.NewOption("...", ""))
+	options = append(options, huh.NewOption("...Back", ""))
 	for _, coll := range collections {
-		fmt.Println(coll)
 		opt := huh.NewOption(coll.Name, coll.Slug)
 		options = append(options, opt)
 	}
@@ -162,8 +175,6 @@ L:
 		if err := json.Unmarshal(data, rd); err != nil {
 			return err
 		}
-		fmt.Println(rd.Results)
-		// rd.Results = append(rd.Results, &blueprintSerializerv2{Name: "Back"})
 		err = promptBlueprintv2(nblc, rd.Results)
 		if err != nil {
 			return err
@@ -172,39 +183,19 @@ L:
 	return nil
 }
 
-func promptBlueprintv2(nblc *subsystem.NBLcommand, collections []*blueprintSerializerv2) error {
-	defer func() {
-		if r := recover(); r != nil {
-			cast.LogErr("Unrecoverable error found. Feel free to send us feedback", nil)
-			switch r := r.(type) {
-			case *util.PanicData:
-				v := fmt.Sprintf("%v", r.PanicValue)
-				cast.LogErr(v, nil)
-				cast.LogErr(string(r.PanicTrace), nil)
-			default:
-				cast.LogErr("Panic", nil)
-				cast.LogErr("If you think this is a bug,", nil)
-				cast.LogErr("please consider posting stack trace as a GitHub", nil)
-				cast.LogErr("issue (https://github.com/develatio/nebulant-cli/issues)", nil)
-				cast.LogErr("Stack Trace:", nil)
-				cast.LogErr("Panic", nil)
-				v := fmt.Sprintf("%v", r)
-				cast.LogErr(v, nil)
-				cast.LogErr(string(debug.Stack()), nil)
-			}
-		}
-	}()
-
+func promptBlueprintv2(nblc *subsystem.NBLcommand, blueprints []*blueprintSerializerv2) error {
 	var options []huh.Option[string]
-	options = append(options, huh.NewOption("...", ""))
-	for _, coll := range collections {
-		opt := huh.NewOption(coll.Name, coll.UUID)
+	mopts := make(map[string]*blueprintSerializerv2)
+	options = append(options, huh.NewOption("...Back", ""))
+	for _, bp := range blueprints {
+		mopts[bp.Slug] = bp
+		opt := huh.NewOption(bp.Name, bp.Slug)
 		options = append(options, opt)
 	}
 
 L:
 	for {
-		var bpUUID string
+		var bpSlug string
 		err := huh.NewForm(
 			huh.NewGroup(
 				huh.NewSelect[string]().
@@ -212,18 +203,66 @@ L:
 					Options(
 						options...,
 					).
-					Value(&bpUUID),
+					Value(&bpSlug),
 			)).Run()
 		if err != nil {
 			return err
 		}
 
-		if bpUUID == "" {
+		if bpSlug == "" {
 			break L
 		}
 
-		cast.LogInfo("Obtaining blueprint "+bpUUID+"...", nil)
-		irb, err := blueprint.NewIRBFromAny("nebulant://"+bpUUID, &blueprint.IRBGenConfig{})
+		bp := mopts[bpSlug]
+		term.PrintInfo("Looking for blueprints...\n")
+		data, err := httpReqv2("GET", fmt.Sprintf(config.BACKEND_SNAPSHOTS_LIST_PATH, bp.CollectionSlug, bpSlug), nil)
+		if err != nil {
+			return err
+		}
+		rd := &resultsSnapshots{}
+		if err := json.Unmarshal(data, rd); err != nil {
+			return err
+		}
+
+		var vopts []huh.Option[string]
+		vopts = append(vopts, huh.NewOption("...Back", ""))
+		vopts = append(vopts, huh.NewOption("Current (no version)", "no version"))
+		for _, bp := range rd.Results {
+			opt := huh.NewOption(bp.Version, bp.Version)
+			vopts = append(vopts, opt)
+		}
+
+		var bpVersion string
+		for {
+			err := huh.NewForm(
+				huh.NewGroup(
+					huh.NewSelect[string]().
+						Title("Choose version").
+						Options(
+							vopts...,
+						).
+						Value(&bpVersion),
+				)).Run()
+			if err != nil {
+				return err
+			}
+
+			if bpVersion == "" {
+				continue
+			}
+			break
+		}
+		if bpVersion == "no version" {
+			bpVersion = ""
+		}
+
+		cast.LogInfo("Obtaining blueprint "+bpSlug+"...", nil)
+		nbPath := fmt.Sprintf("%s/%s/%s:%s", bp.OrganizationSlug, bp.CollectionSlug, bpSlug, bpVersion)
+		bpUrl, err := blueprint.ParseURL(nbPath)
+		if err != nil {
+			return err
+		}
+		irb, err := blueprint.NewIRBFromAny(bpUrl, &blueprint.IRBGenConfig{})
 		if err != nil {
 			return err
 		}

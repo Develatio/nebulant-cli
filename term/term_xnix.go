@@ -19,9 +19,12 @@
 package term
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/exec"
 
+	"github.com/creack/pty"
 	"golang.org/x/term"
 )
 
@@ -45,3 +48,34 @@ func EnableColorSupport() error { return nil }
 func SetHideCursor() error { return nil }
 
 func SetShowCursor() error { return nil }
+
+type nixPTY struct {
+	wrap *os.File
+	cmd  *exec.Cmd
+}
+
+func (n *nixPTY) Close() error                { return n.wrap.Close() }
+func (n *nixPTY) Read(p []byte) (int, error)  { return n.wrap.Read(p) }
+func (n *nixPTY) Write(p []byte) (int, error) { return n.wrap.Write(p) }
+func (n *nixPTY) Wait(ctx context.Context) (int64, error) {
+	exitErr := n.cmd.Wait()
+	if eerr, ok := exitErr.(*exec.ExitError); ok {
+		return int64(eerr.ExitCode()), eerr
+	}
+	if exitErr != nil {
+		return 1, exitErr
+	}
+	return 0, nil
+}
+
+func GetOSPTY(shell string) (OSPTY, error) {
+	cmd := exec.Command(shell)
+	f, err := pty.Start(cmd)
+	if err != nil {
+		return nil, err
+	}
+	return &nixPTY{
+		wrap: f,
+		cmd:  cmd,
+	}, nil
+}

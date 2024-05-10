@@ -219,7 +219,16 @@ func Run(sc string) (int, error) {
 		// finally run command
 		return cmd.Run(flag.CommandLine)
 	} else {
-		flag.Usage()
-		return 1, fmt.Errorf("unknown command")
+		// try to run a bp by default
+		cmd := NBLCommands["run"]
+		err := PrepareCmd(cmd)
+		if err != nil {
+			return 1, err
+		}
+		cmdline := flag.NewFlagSet("run", flag.ContinueOnError)
+		args := []string{"run"}
+		args = append(args, flag.CommandLine.Args()...)
+		cmdline.Parse(args)
+		return cmd.Run(cmdline)
 	}
 }

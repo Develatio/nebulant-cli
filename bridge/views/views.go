@@ -25,6 +25,7 @@ import (
 	"io/fs"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -243,6 +244,7 @@ func (p *Puente) newView(w http.ResponseWriter, r *http.Request, matches [][]str
 	}
 	token := base64.StdEncoding.EncodeToString([]byte(b))
 	token, _ = strings.CutSuffix(token, "==")
+	token = url.QueryEscape(token)
 
 	newpool := &pool{
 		token:        token,

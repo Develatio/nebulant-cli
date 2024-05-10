@@ -18,6 +18,8 @@ package subcom
 
 import (
 	"flag"
+	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -47,6 +49,15 @@ func newBar() {
 func parseTestsFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("debugterm", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "\nUsage: nebulant debugterm [command]\n")
+		fmt.Fprintf(fs.Output(), "\nCommands:\n")
+		fmt.Fprintf(fs.Output(), "  scanln\t\tTest scanln while log\n")
+		fmt.Fprintf(fs.Output(), "  ansi\t\tTest ansi codes\n")
+		fmt.Fprintf(fs.Output(), "  raw\t\tSet raw term mode\n")
+		fmt.Fprintf(fs.Output(), "  unraw\t\tdisable raw term mode\n")
+		fmt.Fprintf(fs.Output(), "\n\n")
+	}
 	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
@@ -55,11 +66,63 @@ func parseTestsFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 }
 
 func DebugtermCmd(nblc *subsystem.NBLcommand) (int, error) {
-	_, err := parseTestsFs(nblc.CommandLine())
+	cmdline := nblc.CommandLine()
+	fs, err := parseTestsFs(cmdline)
 	if err != nil {
 		return 1, err
 	}
 
+	// subsubcmd := fs.Arg(0)
+	subsubcmd := cmdline.Arg(1)
+	switch subsubcmd {
+	case "scanln":
+		return testScanln()
+	case "ansi":
+		return testAnsiCodes()
+	case "raw":
+		cast.LogInfo("Not implemented yet", nil)
+		return 0, nil
+	case "unraw":
+		cast.LogInfo("Not implemented yet", nil)
+		return 0, nil
+	default:
+		fs.Usage()
+		return 1, fmt.Errorf("please provide some subcommand to auth")
+	}
+
+}
+
+func wrtAnsiCodes(w io.Writer) {
+	fmt.Fprintf(w, "%s\n", term.CursorToColZero)
+	fmt.Fprintf(w, "%s\n", term.EraseDisplay)
+	fmt.Fprintf(w, "%sRED RED RED RED RED RED RED RED%s\n", term.Red, term.Reset)
+	fmt.Fprintf(w, "%sBGRED BGRED BGRED BGRED BGRED BGRED BGRED BGRED%s\n", term.BGRed, term.Reset)
+	fmt.Fprintf(w, "%sBGRED BGRED BGRED BGRED BGRED BGRED BGRED BGRED%s\n", term.BGRed, term.Reset)
+}
+
+func testAnsiCodes() (int, error) {
+	fmt.Fprint(term.GenuineOsStdout, "Genuine STDOUT:\n")
+	wrtAnsiCodes(term.GenuineOsStdout)
+
+	fmt.Fprint(term.Stdout, "\nANSI STDOUT:\n")
+	wrtAnsiCodes(term.Stdout)
+
+	fmt.Fprint(term.Stdout, "\nEnabling ansi support:\n")
+	err := term.EnableColorSupport()
+	if err != nil {
+		fmt.Fprint(term.Stdout, err.Error())
+	}
+
+	fmt.Fprint(term.GenuineOsStdout, "Genuine STDOUT:\n")
+	wrtAnsiCodes(term.GenuineOsStdout)
+
+	fmt.Fprint(term.Stdout, "\nANSI STDOUT:\n")
+	wrtAnsiCodes(term.Stdout)
+
+	return 0, nil
+}
+
+func testScanln() (int, error) {
 	go func() {
 		counter1 := 0
 		for {
@@ -80,7 +143,7 @@ L:
 		counter2++
 
 		var vv string
-		_, err = lin.Scanln("Nebulant "+strconv.Itoa(counter2)+"> ", nil, &vv)
+		_, err := lin.Scanln("Nebulant "+strconv.Itoa(counter2)+"> ", nil, &vv)
 		if err != nil {
 			return 1, err
 		}
