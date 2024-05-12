@@ -327,6 +327,11 @@ func ReadFile(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
+	err := ctx.Store.Interpolate(params.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
 	finfo, err := os.Stat(*params.FilePath)
 	if err != nil {
 		return nil, err
@@ -371,7 +376,12 @@ func WriteFile(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
-	err := os.WriteFile(*params.FilePath, []byte(scontent), 0600)
+	err := ctx.Store.Interpolate(params.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.WriteFile(*params.FilePath, []byte(scontent), 0600)
 	if err != nil {
 		return nil, err
 	}
