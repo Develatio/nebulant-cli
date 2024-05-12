@@ -355,6 +355,7 @@ func ReadFile(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	aout := base.NewActionOutput(ctx.Action, scontent, nil)
+	aout.Records[0].Literal = true
 	return aout, nil
 }
 
@@ -387,6 +388,5 @@ func WriteFile(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	aout := base.NewActionOutput(ctx.Action, nil, nil)
-	aout.Records[0].Literal = true
 	return aout, nil
 }
