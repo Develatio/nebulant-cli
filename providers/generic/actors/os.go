@@ -377,5 +377,6 @@ func WriteFile(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	aout := base.NewActionOutput(ctx.Action, nil, nil)
+	aout.Records[0].Literal = true
 	return aout, nil
 }
