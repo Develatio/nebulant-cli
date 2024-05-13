@@ -83,10 +83,11 @@ func newSSHDebugShell(ctx *ActionContext, sshClient *nebulantssh.SSHClient) erro
 	mst := ctx.GetMustarFD()
 	svu := ctx.GetSluvaFD()
 	// ctx.Logger.LogErr(errors.Join(fmt.Errorf("remote exec fail"), sshRunErr.(error)).Error())
-	dbgsession, err := sshClient.NewSessionPthShellWithOpts(&nebulantssh.SessOpts{
-		Stdin:  svu,
-		Stdout: svu,
-		Stderr: svu,
+	dbgsession, err := sshClient.NewSessionShellWithOpts(&nebulantssh.SessOpts{
+		Stdin:   svu,
+		Stdout:  svu,
+		Stderr:  svu,
+		WithPTY: true,
 	})
 	if err != nil {
 		return err
@@ -258,7 +259,7 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		LogPrefix: []byte(*p.Target + ":ssh> "),
 	})
 
-	session, err := sshClient.NewSessionPthShellWithOpts(&nebulantssh.SessOpts{
+	session, err := sshClient.NewSessionShellWithOpts(&nebulantssh.SessOpts{
 		Stdout: sshOut,
 		Stderr: sshErr,
 		Stdin:  sshStdin,
@@ -372,31 +373,6 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		ctx.Logger.LogInfo("waiting for debug session to finish")
 		sshRunErr = newSSHDebugShell(ctx, sshClient)
 		ctx.Logger.LogInfo("debugger finished")
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// ctx.DebugInit()
-		// ctx.Logger.LogInfo("waiting for debug session to finish")
-		// sshRunErr = dbgsession.Wait()
-		// ctx.Logger.LogInfo("debug session finished")
-
-		// sshRunErr =
-
-		// mst := ctx.GetMustarFD()
-		// svu := ctx.GetSluvaFD()
-
-		// dbgsession, err := sshClient.NewSessionPthShellWithOpts(&nebulantssh.SessOpts{
-		// 	Stdin:  svu,
-		// 	Stdout: svu,
-		// 	Stderr: svu,
-		// })
-		// if err != nil {
-		// 	return nil, err
-		// }
-
-		// svu.Close()
-		//mst.Close() // force close of mustar
-
 	}
 
 	// after

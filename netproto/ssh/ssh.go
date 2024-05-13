@@ -489,12 +489,13 @@ func (s *SSHClient) Disconnect() error {
 // }
 
 type SessOpts struct {
-	Stdin  io.Reader
-	Stdout io.Writer
-	Stderr io.Writer
+	Stdin   io.Reader
+	Stdout  io.Writer
+	Stderr  io.Writer
+	WithPTY bool
 }
 
-func (s *SSHClient) NewSessionPthShellWithOpts(opts *SessOpts) (*ssh.Session, error) {
+func (s *SSHClient) NewSessionShellWithOpts(opts *SessOpts) (*ssh.Session, error) {
 	sess, err := s.NewSession()
 	if err != nil {
 		return nil, err
@@ -509,14 +510,15 @@ func (s *SSHClient) NewSessionPthShellWithOpts(opts *SessOpts) (*ssh.Session, er
 		sess.Stderr = opts.Stderr
 	}
 
-	modes := ssh.TerminalModes{
-		ssh.ECHO:          1,     // disable echoing
-		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
-		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
-	}
-
-	if err := sess.RequestPty("xterm", 40, 80, modes); err != nil {
-		return nil, err
+	if opts.WithPTY {
+		modes := ssh.TerminalModes{
+			ssh.ECHO:          1,     // disable echoing
+			ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+			ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+		}
+		if err := sess.RequestPty("xterm", 40, 80, modes); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := sess.Shell(); err != nil {
