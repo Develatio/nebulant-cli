@@ -113,7 +113,8 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	if err = ctx.Store.Interpolate(p.Target); err != nil {
+	err = ctx.Store.DeepInterpolation(p)
+	if err != nil {
 		return nil, err
 	}
 
@@ -121,10 +122,6 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	combineOut := true
 
 	remoteAddress := p.Target
-	err = ctx.Store.Interpolate(remoteAddress)
-	if err != nil {
-		return nil, err
-	}
 	if strings.Trim(*remoteAddress, " ") == "" {
 		return nil, fmt.Errorf("the target addr is empty. Please provide one")
 	}
