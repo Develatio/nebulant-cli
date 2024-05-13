@@ -367,7 +367,6 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	ctx.Logger.LogInfo("Waiting shell to finish...")
 	sshRunErr = session.Wait()
 	ctx.Logger.LogInfo("Finished")
-	fmt.Println(p)
 	if sshRunErr != nil && p.OpenDbgShellOnerror {
 		ctx.Logger.LogErr(errors.Join(fmt.Errorf("remote exec fail"), sshRunErr.(error)).Error())
 		ctx.Logger.LogInfo("waiting for debug session to finish")

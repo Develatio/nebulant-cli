@@ -17,8 +17,10 @@
 package subcom
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
@@ -26,11 +28,23 @@ import (
 	"github.com/develatio/nebulant-cli/subsystem"
 )
 
+var forceFile *bool
+
 func parseRunFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
+	forceFile = fs.Bool("f", false, "Run local file")
 	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "\nUsage: nebulant run [path or nebulant:// protocol] [--varname=varvalue --varname=varvalue]\n")
+		fmt.Fprintf(fs.Output(), "\nUsage: nebulant [file://, nebulant://][org/coll/bp][filepath] [--varname=varvalue --varname=varvalue]\n\n")
+		fmt.Fprintf(fs.Output(), "Examples:\n")
+		fmt.Fprintf(fs.Output(), "\tnebulant develatio/utils/debug\n")
+		fmt.Fprintf(fs.Output(), "\tnebulant nebulant://develatio/utils/debug\n")
+		fmt.Fprintf(fs.Output(), "\tnebulant -f ./local/file/project.nbp\n")
+		fmt.Fprintf(fs.Output(), "\tnebulant file://local/file/project.nbp\n")
+		fmt.Fprintf(fs.Output(), "\tnebulant run develatio/utils/debug\n")
+		fmt.Fprintf(fs.Output(), "\tnebulant run nebulant://develatio/utils/debug\n")
+		fmt.Fprintf(fs.Output(), "\tnebulant run -f ./local/file/project.nbp\n")
+		fmt.Fprintf(fs.Output(), "\tnebulant run file://local/file/project.nbp\n")
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
 	err := fs.Parse(cmdline.Args()[1:])
@@ -48,7 +62,7 @@ func RunCmd(nblc *subsystem.NBLcommand) (int, error) {
 	bluePrintFilePath := fs.Arg(0)
 	if bluePrintFilePath == "" {
 		fs.Usage()
-		return 1, fmt.Errorf("please provide file path or nebulant:// protocol")
+		return 1, fmt.Errorf("please provide addr to the blueprint you want to execute")
 	}
 
 	cast.LogInfo("Processing blueprint...", nil)
@@ -61,8 +75,24 @@ func RunCmd(nblc *subsystem.NBLcommand) (int, error) {
 	if err != nil {
 		return 1, err
 	}
+
+	if forceFile != nil && *forceFile && bpUrl.Scheme == "" {
+		bpUrl.Scheme = "file"
+	}
+	if forceFile != nil && *forceFile && bpUrl.Scheme != "" {
+		return 1, fmt.Errorf("bad scheme for -f (%s). Use file:// or rm scheme from path", bpUrl.Scheme)
+	}
+
 	irb, err := blueprint.NewIRBFromAny(bpUrl, irbConf)
 	if err != nil {
+		fmt.Println("c", bpUrl.Scheme, bpUrl.UrlPath)
+		if bpUrl.Scheme != "file" && bpUrl.UrlPath != "" {
+			if fi, err2 := os.Stat(bpUrl.UrlPath); err2 == nil && !fi.IsDir() {
+				fmt.Println("a")
+				return 1, errors.Join(err, fmt.Errorf("did you want to run file %s?, try adding the -f attribute: `nebulant -f %s`. You can also use file:// scheme: `nebulant file://%s", bpUrl.UrlPath, bpUrl.UrlPath, bpUrl.UrlPath))
+			}
+			fmt.Println("b")
+		}
 		return 1, err
 	}
 	// Director in one run mode

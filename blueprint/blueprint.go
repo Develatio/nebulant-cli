@@ -130,7 +130,7 @@ func TestMinCliVersion(bp *Blueprint) error {
 
 // NewFromFile func
 func NewFromFile(bpUrl *BlueprintURL) (*Blueprint, error) {
-	jsonFile, err := os.Open(bpUrl.Path) // #nosec G304 -- Not a file inclusion, just a json read
+	jsonFile, err := os.Open(bpUrl.FilePath) // #nosec G304 -- Not a file inclusion, just a json read
 	if err != nil {
 		return nil, err
 	}

@@ -29,7 +29,8 @@ type BlueprintURL struct {
 	CollectionSlug   string
 	BlueprintSlug    string
 	Version          string
-	Path             string
+	FilePath         string
+	UrlPath          string
 }
 
 func ParseURL(path string) (*BlueprintURL, error) {
@@ -37,13 +38,13 @@ func ParseURL(path string) (*BlueprintURL, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := &BlueprintURL{}
+	out := &BlueprintURL{UrlPath: u.Path}
 	switch u.Scheme {
 	case "nebulant":
 		out.Scheme = u.Scheme
 	case "file":
-		out.Path = u.Path
-		fi, err := os.Stat(out.Path)
+		out.FilePath = u.Path
+		fi, err := os.Stat(out.FilePath)
 		if err != nil {
 			return nil, err
 		}
