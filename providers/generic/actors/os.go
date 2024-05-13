@@ -127,6 +127,11 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
+	err = ctx.Store.DeepInterpolation(p)
+	if err != nil {
+		return nil, err
+	}
+
 	if p.ScriptText != nil {
 		// If dir is the empty string, CreateTemp uses
 		// the default directory for temporary files,
