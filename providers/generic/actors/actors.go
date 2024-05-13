@@ -92,7 +92,7 @@ type ActionLayout struct {
 
 // ActionFuncMap map
 var ActionFuncMap map[string]*ActionLayout = map[string]*ActionLayout{
-	"run_script":       {F: RunScript, N: NextOKKO, R: false},
+	"run_script":       {F: RunScript, N: NextOKKO, R: true},
 	"define_envs":      {F: DefineEnvs, N: NextOKKO, R: false},
 	"define_variables": {F: DefineVars, N: NextOKKO, R: false},
 	"upload_files":     {F: RemoteCopy, N: NextOKKO, R: true},

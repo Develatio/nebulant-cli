@@ -18,14 +18,18 @@ package util
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"reflect"
 	"runtime"
+	"syscall"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -113,4 +117,52 @@ func ReadChecksumFile(filepath string) ([]byte, error) {
 type PanicData struct {
 	PanicValue interface{}
 	PanicTrace []byte
+}
+
+// https://go.dev/src/syscall/zerrors_linux_amd64.go
+// https://go.dev/src/syscall/zerrors_****.go
+func IsNetError(err error) bool {
+	if _, yes := err.(*net.OpError); yes {
+		return true
+	}
+	if _, yes := err.(*net.DNSError); yes {
+		return true
+	}
+	if _, yes := err.(net.Error); yes {
+		return true
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	if errors.Is(err, syscall.ECONNREFUSED) {
+		return true
+	}
+	if errors.Is(err, syscall.ECONNABORTED) {
+		return true
+	}
+	if errors.Is(err, syscall.ECONNRESET) {
+		return true
+	}
+	if errors.Is(err, syscall.ENOTCONN) {
+		return true
+	}
+	if errors.Is(err, syscall.ENETDOWN) {
+		return true
+	}
+	if errors.Is(err, syscall.ENETRESET) {
+		return true
+	}
+	if errors.Is(err, syscall.ENETUNREACH) {
+		return true
+	}
+	if errors.Is(err, syscall.EHOSTDOWN) {
+		return true
+	}
+	if errors.Is(err, syscall.EHOSTUNREACH) {
+		return true
+	}
+	if errors.Is(err, syscall.EREMOTE) {
+		return true
+	}
+	return false
 }

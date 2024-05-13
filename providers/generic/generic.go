@@ -18,13 +18,13 @@ package generic
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
 	hook_providers "github.com/develatio/nebulant-cli/hook/providers"
 	"github.com/develatio/nebulant-cli/providers/generic/actors"
+	"github.com/develatio/nebulant-cli/util"
 )
 
 func ActionValidator(action *blueprint.Action) error {
@@ -102,7 +102,7 @@ func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Acti
 	}
 
 	// retry on net err, skip others
-	if _, ok := aout.Records[0].Error.(net.Error); ok {
+	if util.IsNetError(aout.Records[0].Error) {
 		phcontext := &hook_providers.ProviderHookContext{
 			Logger: p.Logger,
 			Store:  p.store,
