@@ -81,6 +81,11 @@ func ScpCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
+	err = ctx.Store.DeepInterpolation(params)
+	if err != nil {
+		return nil, err
+	}
+
 	upload := true
 	// Remote to local (upload)
 	remoteAddress := params.Target
@@ -88,11 +93,6 @@ func ScpCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 	if params.Source != nil {
 		upload = false
 		remoteAddress = params.Source
-	}
-
-	err = ctx.Store.Interpolate(remoteAddress)
-	if err != nil {
-		return nil, err
 	}
 
 	if strings.Trim(*remoteAddress, " ") == "" {
