@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
 	"regexp"
@@ -319,6 +320,10 @@ func (s *Store) Interpolate(sourcetext *string) error {
 			refpath = strings.TrimPrefix(refpath, ".")
 			if len(refpath) <= 0 {
 				return fmt.Errorf("environment var access with empty var name " + refname)
+			}
+			if strings.ToLower(strings.TrimSpace(refpath)) == "random" {
+				*sourcetext = strings.Replace(*sourcetext, match[0], fmt.Sprintf("%d", rand.Int()), 1)
+				continue
 			}
 			varval, exists := os.LookupEnv(strings.TrimSpace(refpath))
 			if !exists {
