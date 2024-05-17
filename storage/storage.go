@@ -528,6 +528,25 @@ func (s *Store) recursiveInterpolation(v reflect.Value, il map[interface{}]bool)
 				return err
 			}
 		}
+	case reflect.Map:
+		for _, e := range v.MapKeys() {
+			vv := v.MapIndex(e)
+			switch vv.Interface().(type) {
+			case string:
+				ifce := vv.Interface()
+				strv := fmt.Sprintf("%s", ifce)
+				strva := fmt.Sprintf("%s", ifce)
+				err := s.Interpolate(&strv)
+				if err != nil {
+					return err
+				}
+				if strv == strva {
+					// prevent not needed interpolation
+					return nil
+				}
+				v.SetMapIndex(e, reflect.ValueOf(strv))
+			}
+		}
 	case reflect.String:
 		ifce := v.Interface()
 		strv := fmt.Sprintf("%s", ifce)
