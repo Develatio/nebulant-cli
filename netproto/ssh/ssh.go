@@ -124,7 +124,7 @@ func GetSSHClientConfig(cc *ClientConfigParameters) (*ssh.ClientConfig, error) {
 		}
 		// Create the Signer for this private key.
 		var signer ssh.Signer
-		if cc.PrivateKeyPassphrase != nil && len(*cc.PrivateKeyPassphrase) > 0 {
+		if cc.PrivateKeyPassphrase != nil {
 			signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(*cc.PrivateKeyPassphrase))
 		} else {
 			signer, err = ssh.ParsePrivateKey(key)
@@ -138,7 +138,7 @@ func GetSSHClientConfig(cc *ClientConfigParameters) (*ssh.ClientConfig, error) {
 	} else if cc.PrivateKey != nil {
 		// Create the Signer for this private key.
 		var signer ssh.Signer
-		if cc.PrivateKeyPassphrase != nil && len(*cc.PrivateKeyPassphrase) > 0 {
+		if cc.PrivateKeyPassphrase != nil {
 			signer, err = ssh.ParsePrivateKeyWithPassphrase([]byte(*cc.PrivateKey), []byte(*cc.PrivateKeyPassphrase))
 		} else {
 			signer, err = ssh.ParsePrivateKey([]byte(*cc.PrivateKey))
