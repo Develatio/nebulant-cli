@@ -24,16 +24,15 @@ import (
 
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
+	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/executive"
 	"github.com/develatio/nebulant-cli/subsystem"
 )
 
-var forceFile *bool
-
 func parseRunFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
-	forceFile = fs.Bool("f", false, "Run local file")
+	config.ForceFile = fs.Bool("f", false, "Run local file")
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant [file://, nebulant://][org/coll/bp][filepath] [--varname=varvalue --varname=varvalue]\n\n")
 		fmt.Fprintf(fs.Output(), "Examples:\n")
@@ -71,24 +70,27 @@ func RunCmd(nblc *subsystem.NBLcommand) (int, error) {
 	if len(args) > 1 {
 		irbConf.Args = args[1:]
 	}
-	bpUrl, err := blueprint.ParseURL(bluePrintFilePath)
+	var bpUrl *blueprint.BlueprintURL
+	if config.ForceFile != nil && *config.ForceFile {
+		bpUrl, err = blueprint.ParsePath(bluePrintFilePath)
+	} else {
+		bpUrl, err = blueprint.ParseURL(bluePrintFilePath)
+	}
 	if err != nil {
 		return 1, err
 	}
 
-	if forceFile != nil && *forceFile && bpUrl.Scheme == "" {
+	if config.ForceFile != nil && *config.ForceFile && bpUrl.Scheme == "" {
 		bpUrl.Scheme = "file"
 	}
-	if forceFile != nil && *forceFile && bpUrl.Scheme != "" {
+	if config.ForceFile != nil && *config.ForceFile && bpUrl.Scheme != "file" {
 		return 1, fmt.Errorf("bad scheme for -f (%s). Use file:// or rm scheme from path", bpUrl.Scheme)
 	}
 
 	irb, err := blueprint.NewIRBFromAny(bpUrl, irbConf)
 	if err != nil {
-		fmt.Println("c", bpUrl.Scheme, bpUrl.UrlPath)
 		if bpUrl.Scheme != "file" && bpUrl.UrlPath != "" {
-			if fi, err2 := os.Stat(bpUrl.UrlPath); err2 == nil && !fi.IsDir() {
-				fmt.Println("a")
+			if fi, err2 := os.Stat(bpUrl.FilePath); err2 == nil && !fi.IsDir() {
 				return 1, errors.Join(err, fmt.Errorf("did you want to run file %s?, try adding the -f attribute: `nebulant -f %s`. You can also use file:// scheme: `nebulant file://%s", bpUrl.UrlPath, bpUrl.UrlPath, bpUrl.UrlPath))
 			}
 			fmt.Println("b")

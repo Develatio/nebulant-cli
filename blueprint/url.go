@@ -33,17 +33,30 @@ type BlueprintURL struct {
 	UrlPath          string
 }
 
+func ParsePath(path string) (*BlueprintURL, error) {
+	u, err := url.Parse(path)
+	if err != nil {
+		return nil, err
+	}
+	if u.Scheme != "file" {
+		return ParseURL(fmt.Sprintf("file://%s", path))
+	}
+	return ParseURL(path)
+}
+
 func ParseURL(path string) (*BlueprintURL, error) {
 	u, err := url.Parse(path)
 	if err != nil {
 		return nil, err
 	}
-	out := &BlueprintURL{UrlPath: u.Path}
+	out := &BlueprintURL{
+		UrlPath:  u.Path,
+		FilePath: fmt.Sprintf("%s%s", u.Host, u.Path),
+	}
 	switch u.Scheme {
 	case "nebulant":
 		out.Scheme = u.Scheme
 	case "file":
-		out.FilePath = u.Path
 		fi, err := os.Stat(out.FilePath)
 		if err != nil {
 			return nil, err
@@ -61,7 +74,7 @@ func ParseURL(path string) (*BlueprintURL, error) {
 	r := regexp.MustCompile(`(?:([-a-zA-Z0-9_]+)\/+)?([-a-zA-Z0-9_]+)\/+([-a-zA-Z0-9_]+)(?::([-a-zA-Z0-9_.]+))?`)
 	matches := r.FindAllStringSubmatch(path, -1)
 	if matches == nil {
-		return nil, fmt.Errorf("bad bp path: %s", path)
+		return nil, fmt.Errorf("bad remote bp path: %s", path)
 	}
 
 	out.OrganizationSlug = matches[0][1]
@@ -70,7 +83,7 @@ func ParseURL(path string) (*BlueprintURL, error) {
 	out.Version = matches[0][4]
 
 	if out.CollectionSlug == "" {
-		return nil, fmt.Errorf("bad bp path: %s", path)
+		return nil, fmt.Errorf("bad remote collection bp path: %s", path)
 	}
 
 	return out, nil

@@ -167,6 +167,7 @@ func ConfArgs(fflag *flag.FlagSet, arguments []string) error {
 	config.ForceTerm = fflag.Bool("ft", false, "Force terminal. Bypass no-term detection.")
 	config.BridgeAddrFlag = fflag.String("b", "", "self-hosted bridge addr:port (ipv4) or [::1]:port (ipv6).")
 	config.BridgeSecretFlag = fflag.String("bs", config.BRIDGE_SECRET, "self-hosted bridge auth secret string (overrides env NEBULANT_BRIDGE_SECRET).")
+	config.ForceFile = fflag.Bool("f", false, "Run local file")
 
 	fflag.Usage = func() {
 		var runtimecmds []string
@@ -227,6 +228,9 @@ func Run(sc string) (int, error) {
 		}
 		cmdline := flag.NewFlagSet("run", flag.ContinueOnError)
 		args := []string{"run"}
+		if config.ForceFile != nil && *config.ForceFile {
+			args = append(args, "-f")
+		}
 		args = append(args, flag.CommandLine.Args()...)
 		cmdline.Parse(args)
 		return cmd.Run(cmdline)

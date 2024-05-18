@@ -155,6 +155,8 @@ var BridgeXtermRootPath *string
 
 var ForceNoTerm = false
 
+var ForceFile *bool
+
 func AppHomePath() string {
 	var userHomePath string
 	if runtime.GOOS == "windows" {
