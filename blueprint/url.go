@@ -38,10 +38,17 @@ func ParsePath(path string) (*BlueprintURL, error) {
 	if err != nil {
 		return nil, err
 	}
-	if u.Scheme != "file" {
+	switch u.Scheme {
+	case "":
+		fmt.Println("a")
 		return ParseURL(fmt.Sprintf("file://%s", path))
+	case "file":
+		fmt.Println("b")
+		return ParseURL(path)
+	default:
+		fmt.Println("c")
+		return nil, fmt.Errorf("bad scheme for file: %s. Use file://... scheme or rm scheme from path", u.Scheme)
 	}
-	return ParseURL(path)
 }
 
 func ParseURL(path string) (*BlueprintURL, error) {
@@ -64,6 +71,7 @@ func ParseURL(path string) (*BlueprintURL, error) {
 		if fi.IsDir() {
 			return nil, fmt.Errorf("directory not allowed")
 		}
+		out.Scheme = u.Scheme
 		return out, nil
 	case "":
 		out.Scheme = "nebulant"

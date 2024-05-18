@@ -80,18 +80,11 @@ func RunCmd(nblc *subsystem.NBLcommand) (int, error) {
 		return 1, err
 	}
 
-	if config.ForceFile != nil && *config.ForceFile && bpUrl.Scheme == "" {
-		bpUrl.Scheme = "file"
-	}
-	if config.ForceFile != nil && *config.ForceFile && bpUrl.Scheme != "file" {
-		return 1, fmt.Errorf("bad scheme for -f (%s). Use file:// or rm scheme from path", bpUrl.Scheme)
-	}
-
 	irb, err := blueprint.NewIRBFromAny(bpUrl, irbConf)
 	if err != nil {
 		if bpUrl.Scheme != "file" && bpUrl.UrlPath != "" {
 			if fi, err2 := os.Stat(bpUrl.FilePath); err2 == nil && !fi.IsDir() {
-				return 1, errors.Join(err, fmt.Errorf("did you want to run file %s?, try adding the -f attribute: `nebulant -f %s`. You can also use file:// scheme: `nebulant file://%s", bpUrl.UrlPath, bpUrl.UrlPath, bpUrl.UrlPath))
+				return 1, errors.Join(err, fmt.Errorf("did you want to run file %s?, try adding the -f attribute: `nebulant -f %s`. You can also use file:// scheme: `nebulant file://%s", bpUrl.FilePath, bpUrl.FilePath, bpUrl.FilePath))
 			}
 			fmt.Println("b")
 		}
