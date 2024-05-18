@@ -40,13 +40,10 @@ func ParsePath(path string) (*BlueprintURL, error) {
 	}
 	switch u.Scheme {
 	case "":
-		fmt.Println("a")
 		return ParseURL(fmt.Sprintf("file://%s", path))
 	case "file":
-		fmt.Println("b")
 		return ParseURL(path)
 	default:
-		fmt.Println("c")
 		return nil, fmt.Errorf("bad scheme for file: %s. Use file://... scheme or rm scheme from path", u.Scheme)
 	}
 }
