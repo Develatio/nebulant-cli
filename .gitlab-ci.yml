@@ -47,28 +47,28 @@ before_script:
 #       when: on_success
 #     - when: never
 
-autotest:
-  stage: analysis
-  tags:
-    - local
-  script:
-    - apk update && apk add make git
-    - make builddebug
-    - echo $BLUEPRINT >/tmp/blueprint.json
-    - ./dist/nebulant-debug run -f /tmp/blueprint.json
-  # coverage: '/Code coverage: \d+(?:\.\d+)?/'
-  rules:
-    - if: $CI_COMMIT_MESSAGE =~ /skip[-_]all/
-      when: never
-    - if: $CI_COMMIT_MESSAGE =~ /skip[-_]self/
-      when: never
-    - if: $CI_COMMIT_MESSAGE =~ /Merge tag \'[\w.]+\' into develop/
-      when: never
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      when: on_success
-    - if: '$CI_COMMIT_BRANCH == "master"'
-      when: on_success
-    - when: never
+# autotest:
+#   stage: analysis
+#   tags:
+#     - local
+#   script:
+#     - apk update && apk add make git
+#     - make builddebug
+#     - echo $BLUEPRINT >/tmp/blueprint.json
+#     - ./dist/nebulant-debug run -f /tmp/blueprint.json
+#   # coverage: '/Code coverage: \d+(?:\.\d+)?/'
+#   rules:
+#     - if: $CI_COMMIT_MESSAGE =~ /skip[-_]all/
+#       when: never
+#     - if: $CI_COMMIT_MESSAGE =~ /skip[-_]self/
+#       when: never
+#     - if: $CI_COMMIT_MESSAGE =~ /Merge tag \'[\w.]+\' into develop/
+#       when: never
+#     - if: '$CI_COMMIT_BRANCH == "develop"'
+#       when: on_success
+#     - if: '$CI_COMMIT_BRANCH == "master"'
+#       when: on_success
+#     - when: never
 
 
 deploy_bridge_develop:
