@@ -85,6 +85,10 @@ deploy_bridge_develop:
 
     - export HETZNER_CLIENT_AUTH_TOKEN=$(vault kv get -field=HETZNER_CLIENT_AUTH_TOKEN "secret/Nebulant/Sysadmin/Hetzner/NebulantPRE")
 
+    - export SSH_KEY=$(vault kv get -field=nebulant.pem "secret/Nebulant/Sysadmin/certificates/SSH")
+    - echo "$SSH_KEY" | sed 's/\r/\n/g' > nebulant.pem
+    - chmod 400 nebulant.pem
+
     - mkdir -p deploy_conf/nginx/certs
     - export CF_PEM=$(vault kv get -field=PEM "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.dev")
     - echo "$CF_PEM" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.dev-cloudflare.pem
@@ -93,7 +97,7 @@ deploy_bridge_develop:
 
     - chmod +x ./dist/nebulant-linux-amd64
     - mv ./dist/nebulant-linux-amd64 nebulant-linux-amd64
-    - ./nebulant-linux-amd64 -x run -f ./deploy_nebulant_bridge.nbp
+    - ./nebulant-linux-amd64 run -f ./deploy_nebulant_bridge.nbp
 
 dev_gobuild_and_r2upload:
   stage: deploy
