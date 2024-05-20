@@ -95,6 +95,9 @@ deploy_bridge_develop:
     - export CF_KEY=$(vault kv get -field=KEY "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.dev")
     - echo "$CF_KEY" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.dev-cloudflare.key
 
+    - export ENV=$(vault kv get -field=.env "secret/Nebulant/Dev/PRE")
+    - echo "$ENV" | sed 's/\r/\n/g' > dist/.env
+
     - chmod +x ./dist/nebulant-linux-amd64
     - mv ./dist/nebulant-linux-amd64 nebulant-linux-amd64
     - ./nebulant-linux-amd64 run -f ./deploy_nebulant_bridge.nbp
