@@ -103,6 +103,8 @@ deploy_bridge_develop:
     - chmod +x ./dist/nebulant-linux-amd64
     - mv ./dist/nebulant-linux-amd64 nebulant-linux-amd64
     - ./nebulant-linux-amd64 run -f ./deploy_nebulant_bridge.nbp
+  only:
+    - develop
 
 deploy_bridge_master:
   stage: deploy
@@ -136,6 +138,8 @@ deploy_bridge_master:
     - chmod +x ./dist/nebulant-linux-amd64
     - mv ./dist/nebulant-linux-amd64 nebulant-linux-amd64
     - ./nebulant-linux-amd64 run -f ./deploy_nebulant_bridge.nbp
+  only:
+    - master
 
 dev_gobuild_and_r2upload:
   stage: deploy
