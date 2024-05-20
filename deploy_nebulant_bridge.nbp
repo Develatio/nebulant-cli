@@ -1607,112 +1607,6 @@
           "z": 167
         },
         {
-          "position": {
-            "x": 2517,
-            "y": 3967
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.DeleteServer",
-          "data": {
-            "id": "delete-server",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "waiters": [
-                    "success"
-                  ],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "hetznerCloud:action",
-                  "value": "HC_ACTION_1"
-                }
-              },
-              "info": "... lo borramos",
-              "parameters": {
-                "ServerIds": [
-                  "{{old_bridge}}"
-                ],
-                "_maxRetries": 5
-              }
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "3c812f64-920b-4ef9-99c5-458f7eb11d67"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "c8f0ecc9-d336-4fc2-89f1-5fa71493bbfc"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "7459e9cf-56de-4942-aef4-858e39aa2f81"
-              }
-            ]
-          },
-          "id": "45023830-eaa9-470c-a71e-efa995bf4f3b",
-          "z": 169
-        },
-        {
-          "position": {
-            "x": 2277,
-            "y": 3772
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.DeleteServer",
-          "data": {
-            "id": "delete-server",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "waiters": [
-                    "success"
-                  ],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "hetznerCloud:action",
-                  "value": "HC_ACTION_2"
-                }
-              },
-              "info": "Algo no ha ido bien, borramos el server que acabamos de crear",
-              "parameters": {
-                "ServerIds": [
-                  "{{new_bridge}}"
-                ],
-                "_maxRetries": 5
-              }
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "d75e88e2-7a3e-4cd7-9b7a-79859e0a84fd"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "4ce7d86b-4a4e-479b-b14e-3cacb84172b0"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "fea2fee7-789c-4994-919d-16e4c1d5590f"
-              }
-            ]
-          },
-          "id": "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8",
-          "z": 172
-        },
-        {
           "type": "nebulant.link.Smart",
           "source": {
             "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
@@ -2493,42 +2387,6 @@
           "z": 203
         },
         {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "7692cf16-12de-4e3c-b96b-e2cbda1b132b",
-            "magnet": "circle",
-            "port": "e08b48d6-95dd-40c2-8b6d-83e4554835f2"
-          },
-          "target": {
-            "id": "41f353bb-f11e-466a-a024-86dc6d705f21",
-            "magnet": "circle",
-            "port": "cb9c251e-6ade-4014-b163-af5eb500b80d"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "3fedc274-1cdd-466a-a4a8-54bf256f7041",
-          "z": 205
-        },
-        {
           "position": {
             "x": 2755,
             "y": 3769
@@ -2691,12 +2549,118 @@
             ]
           },
           "id": "7692cf16-12de-4e3c-b96b-e2cbda1b132b",
-          "z": 211
+          "z": 213
         },
         {
           "position": {
-            "x": 2811,
-            "y": 4335
+            "x": 2517,
+            "y": 3967
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.DeleteServer",
+          "data": {
+            "id": "delete-server",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [
+                    "success"
+                  ],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "hetznerCloud:action",
+                  "value": "HC_ACTION_1"
+                }
+              },
+              "info": "... lo borramos",
+              "parameters": {
+                "ServerIds": [
+                  "{{old_bridge}}"
+                ],
+                "_maxRetries": 5
+              }
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "3c812f64-920b-4ef9-99c5-458f7eb11d67"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "c8f0ecc9-d336-4fc2-89f1-5fa71493bbfc"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "7459e9cf-56de-4942-aef4-858e39aa2f81"
+              }
+            ]
+          },
+          "id": "45023830-eaa9-470c-a71e-efa995bf4f3b",
+          "z": 215
+        },
+        {
+          "position": {
+            "x": 2277,
+            "y": 3772
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.DeleteServer",
+          "data": {
+            "id": "delete-server",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [
+                    "success"
+                  ],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "hetznerCloud:action",
+                  "value": "HC_ACTION_2"
+                }
+              },
+              "info": "Algo no ha ido bien, borramos el server que acabamos de crear",
+              "parameters": {
+                "ServerIds": [
+                  "{{new_bridge}}"
+                ],
+                "_maxRetries": 5
+              }
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "d75e88e2-7a3e-4cd7-9b7a-79859e0a84fd"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "4ce7d86b-4a4e-479b-b14e-3cacb84172b0"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "fea2fee7-789c-4994-919d-16e4c1d5590f"
+              }
+            ]
+          },
+          "id": "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8",
+          "z": 216
+        },
+        {
+          "position": {
+            "x": 2815,
+            "y": 4510
           },
           "type": "nebulant.rectangle.vertical.hetznerCloud.StartServer",
           "data": {
@@ -2744,12 +2708,118 @@
             ]
           },
           "id": "41f353bb-f11e-466a-a024-86dc6d705f21",
-          "z": 212
+          "z": 219
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
+            "magnet": "circle",
+            "port": "df602dc9-21f0-43cf-bfdc-48d17efe6c40"
+          },
+          "target": {
+            "id": "41f353bb-f11e-466a-a024-86dc6d705f21",
+            "magnet": "circle",
+            "port": "cb9c251e-6ade-4014-b163-af5eb500b80d"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "d3710b5f-02a4-4231-9801-6dee258ff25b",
+          "z": 220
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "7692cf16-12de-4e3c-b96b-e2cbda1b132b",
+            "magnet": "circle",
+            "port": "e08b48d6-95dd-40c2-8b6d-83e4554835f2"
+          },
+          "target": {
+            "id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
+            "magnet": "circle",
+            "port": "2399a66b-208c-4249-8cf3-1320169f16dd"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "84ff011f-98f6-4028-8926-a75f4eb2c485",
+          "z": 221
+        },
+        {
+          "position": {
+            "x": 2812,
+            "y": 4331
+          },
+          "type": "nebulant.rectangle.vertical.executionControl.Sleep",
+          "data": {
+            "id": "sleep",
+            "version": "1.0.0",
+            "provider": "executionControl",
+            "settings": {
+              "parameters": {
+                "seconds": 15
+              },
+              "info": "Hetzner keep the server in \"locked\" state a few seconds after assigning a primary IP to it"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "2399a66b-208c-4249-8cf3-1320169f16dd"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "df602dc9-21f0-43cf-bfdc-48d17efe6c40"
+              }
+            ]
+          },
+          "id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
+          "z": 222
         }
       ],
       "zoom": 0.4475902155459582,
-      "x": 2483.2981872558594,
-      "y": 2962.5311279296875
+      "x": 2427.443603515625,
+      "y": 2996.0441284179688
     },
     "diagram_version": "1.0.7",
     "n_warnings": 3,
@@ -2975,38 +3045,6 @@
       },
       {
         "action_id": "2de5320e-d3c9-40e7-9a96-80fb9c0b2390",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "delete_server",
-        "parameters": {
-          "ID": "{{new_bridge}}",
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "HC_ACTION_2",
-        "next_action": {},
-        "debug_network": true
-      },
-      {
-        "action_id": "45023830-eaa9-470c-a71e-efa995bf4f3b",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "delete_server",
-        "parameters": {
-          "ID": "{{old_bridge}}",
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "HC_ACTION_1",
-        "next_action": {},
-        "debug_network": true
-      },
-      {
-        "action_id": "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8",
         "provider": "hetznerCloud",
         "version": "1.0.0",
         "action": "delete_server",
@@ -3345,9 +3383,41 @@
         "output": "HC_ACTION",
         "next_action": {
           "ok": [
-            "41f353bb-f11e-466a-a024-86dc6d705f21"
+            "a9e1062d-d774-4fad-8ddf-eca6b44740da"
           ]
         },
+        "debug_network": true
+      },
+      {
+        "action_id": "45023830-eaa9-470c-a71e-efa995bf4f3b",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "delete_server",
+        "parameters": {
+          "ID": "{{old_bridge}}",
+          "_waiters": [
+            "success"
+          ],
+          "max_retries": 5
+        },
+        "output": "HC_ACTION_1",
+        "next_action": {},
+        "debug_network": true
+      },
+      {
+        "action_id": "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "delete_server",
+        "parameters": {
+          "ID": "{{new_bridge}}",
+          "_waiters": [
+            "success"
+          ],
+          "max_retries": 5
+        },
+        "output": "HC_ACTION_2",
+        "next_action": {},
         "debug_network": true
       },
       {
@@ -3364,6 +3434,21 @@
         },
         "output": "HC_ACTION",
         "next_action": {},
+        "debug_network": true
+      },
+      {
+        "action_id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
+        "provider": "generic",
+        "version": "1.0.0",
+        "action": "sleep",
+        "parameters": {
+          "seconds": 15
+        },
+        "next_action": {
+          "ok": [
+            "41f353bb-f11e-466a-a024-86dc6d705f21"
+          ]
+        },
         "debug_network": true
       }
     ],
