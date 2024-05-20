@@ -95,7 +95,42 @@ deploy_bridge_develop:
     - export CF_KEY=$(vault kv get -field=KEY "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.dev")
     - echo "$CF_KEY" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.dev-cloudflare.key
 
+    - rm deploy_conf/nginx/sites/nebulant.app.conf
+
     - export ENV=$(vault kv get -field=.env "secret/Nebulant/Dev/PRE")
+    - echo "$ENV" | sed 's/\r/\n/g' > dist/.env
+
+    - chmod +x ./dist/nebulant-linux-amd64
+    - mv ./dist/nebulant-linux-amd64 nebulant-linux-amd64
+    - ./nebulant-linux-amd64 run -f ./deploy_nebulant_bridge.nbp
+
+deploy_bridge_master:
+  stage: deploy
+  tags:
+    - local
+  script:
+    - apk update && apk add vault make git libcap
+    - setcap -r /usr/sbin/vault
+    - make buildlinuxamd64
+    - make buildbridge
+
+    - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
+
+    - export HETZNER_CLIENT_AUTH_TOKEN=$(vault kv get -field=HETZNER_CLIENT_AUTH_TOKEN "secret/Nebulant/Sysadmin/Hetzner/NebulantPROD")
+
+    - export SSH_KEY=$(vault kv get -field=nebulant.pem "secret/Nebulant/Sysadmin/certificates/SSH")
+    - echo "$SSH_KEY" | sed 's/\r/\n/g' > nebulant.pem
+    - chmod 400 nebulant.pem
+
+    - mkdir -p deploy_conf/nginx/certs
+    - export CF_PEM=$(vault kv get -field=PEM "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.app")
+    - echo "$CF_PEM" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.app-cloudflare.pem
+    - export CF_KEY=$(vault kv get -field=KEY "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.app")
+    - echo "$CF_KEY" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.app-cloudflare.key
+
+    - rm deploy_conf/nginx/sites/nebulant.app.conf
+
+    - export ENV=$(vault kv get -field=.env "secret/Nebulant/Dev/PRO")
     - echo "$ENV" | sed 's/\r/\n/g' > dist/.env
 
     - chmod +x ./dist/nebulant-linux-amd64

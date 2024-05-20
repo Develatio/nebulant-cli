@@ -2531,6 +2531,42 @@
           },
           "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
           "z": 197
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
+            "magnet": "circle",
+            "port": "0d5e165d-3bd2-4422-9701-01aea0ba4d3d"
+          },
+          "target": {
+            "id": "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8",
+            "magnet": "circle",
+            "port": "d75e88e2-7a3e-4cd7-9b7a-79859e0a84fd"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "23c6c75f-4c1b-4170-b834-7bc33aa43aae",
+          "z": 198
         }
       ],
       "zoom": 0.5300892329168587,
@@ -2788,6 +2824,22 @@
           "max_retries": 5
         },
         "output": "HC_ACTION_1",
+        "next_action": {},
+        "debug_network": true
+      },
+      {
+        "action_id": "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "delete_server",
+        "parameters": {
+          "ID": "{{new_bridge}}",
+          "_waiters": [
+            "success"
+          ],
+          "max_retries": 5
+        },
+        "output": "HC_ACTION_2",
         "next_action": {},
         "debug_network": true
       },
@@ -3089,6 +3141,9 @@
           "ok": [
             "3eaa02dc-49ec-4977-be75-5298595c1ee1",
             "536d8ec4-bb78-478d-9d5f-64ac2dc09809"
+          ],
+          "ko": [
+            "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8"
           ]
         },
         "debug_network": true
