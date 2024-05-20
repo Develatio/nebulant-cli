@@ -55,7 +55,7 @@ autotest:
     - apk update && apk add make git
     - make builddebug
     - echo $BLUEPRINT >/tmp/blueprint.json
-    - ./dist/nebulant-debug run /tmp/blueprint.json
+    - ./dist/nebulant-debug run -f /tmp/blueprint.json
   # coverage: '/Code coverage: \d+(?:\.\d+)?/'
   rules:
     - if: $CI_COMMIT_MESSAGE =~ /skip[-_]all/
