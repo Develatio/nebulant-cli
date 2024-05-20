@@ -157,6 +157,8 @@ var ForceNoTerm = false
 
 var ForceFile *bool
 
+var LOAD_CONF_FILES = "true"
+
 func AppHomePath() string {
 	var userHomePath string
 	if runtime.GOOS == "windows" {
@@ -171,19 +173,6 @@ func AppHomePath() string {
 // * Environment Variables
 // * Shared Credentials file
 func init() {
-	// ensure config dir
-	assetsdir := filepath.Join(AppHomePath(), "assets")
-	err := os.MkdirAll(assetsdir, os.ModePerm)
-	if err != nil {
-		log.Panic(err.Error())
-	}
-
-	// ensure credentials file
-	_, err = createEmptyCredentialsFile()
-	if err != nil {
-		log.Panic(err.Error())
-	}
-
 	if os.Getenv("NEBULANT_DEBUG") != "" {
 		var err error
 		DEBUG, err = strconv.ParseBool(os.Getenv("NEBULANT_DEBUG"))
@@ -200,6 +189,23 @@ func init() {
 	}
 	if os.Getenv("NEBULANT_CONF_PROFILE") != "" {
 		ACTIVE_CONF_PROFILE = os.Getenv("NEBULANT_CONF_PROFILE")
+	}
+
+	if LOAD_CONF_FILES == "false" {
+		return
+	}
+
+	// ensure config dir
+	assetsdir := filepath.Join(AppHomePath(), "assets")
+	err := os.MkdirAll(assetsdir, os.ModePerm)
+	if err != nil {
+		log.Panic(err.Error())
+	}
+
+	// ensure credentials file
+	_, err = createEmptyCredentialsFile()
+	if err != nil {
+		log.Panic(err.Error())
 	}
 
 	// Load credentials from file

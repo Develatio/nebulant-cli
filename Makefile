@@ -73,15 +73,15 @@ GOEXE=$(shell go env GOEXE)
 
 .PHONY: runrace
 runrace:
-	CGO_ENABLED=1 go run -race -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" nebulant.go $(ARGS)
+	CGO_ENABLED=1 go run -race -ldflags "-X github.com/develatio/nebulant-cli/config.LOAD_CONF_FILES=false $(LDFLAGS) $(LOCALLDFLAGS)" nebulant.go $(ARGS)
 
 .PHONY: runracebridge
 runracebridge:
-	CGO_ENABLED=1 go run -race -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" ./bridge $(ARGS)
+	CGO_ENABLED=1 go run -race -ldflags "-X github.com/develatio/nebulant-cli/config.LOAD_CONF_FILES=false $(LDFLAGS) $(LOCALLDFLAGS)" ./bridge $(ARGS)
 
 .PHONY: runbridge
 runbridge:
-	CGO_ENABLED=1 go run -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" ./bridge $(ARGS)
+	CGO_ENABLED=1 go run -ldflags "-X github.com/develatio/nebulant-cli/config.LOAD_CONF_FILES=false $(LDFLAGS) $(LOCALLDFLAGS)" ./bridge $(ARGS)
 
 .PHONY: run
 run:
@@ -102,8 +102,7 @@ build:
 	shasum dist/nebulant$(GOEXE) > dist/nebulant.checksum
 
 buildbridge:
-	GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -a -trimpath -ldflags "-w -s $(LDFLAGS)" -o dist/nebulant-bridge$(GOEXE) ./bridge
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/nebulant-bridge-linux-arm64 ./bridge
+	GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -a -trimpath -ldflags "-w -s -X github.com/develatio/nebulant-cli/config.LOAD_CONF_FILES=false $(LDFLAGS)" -o dist/nebulant-bridge$(GOEXE) ./bridge
 
 builddebug:
 	GO111MODULE=on CGO_ENABLED=0 go build -a -trimpath -ldflags "$(LDFLAGS)" -o dist/nebulant-debug nebulant.go
