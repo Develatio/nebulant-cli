@@ -76,7 +76,7 @@ deploy_bridge_develop:
   tags:
     - local
   script:
-    - apk update && apk add vault make libcap
+    - apk update && apk add vault make git libcap
     - setcap -r /usr/sbin/vault
     - make buildlinuxamd64
     - make builbridge
