@@ -1,12 +1,6 @@
-# To contribute improvements to CI/CD templates, please follow the Development guide at:
-# https://docs.gitlab.com/ee/development/cicd/templates.html
-# This specific template is located at:
-# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Go.gitlab-ci.yml
-
 image: golang:1.21.1-alpine3.18
 
 variables:
-  # Please edit to your GitLab project
   REPO_NAME: github.com/develatio/nebulant-cli
   BUILD_BRANCH: "nightly"
   DEPLOY_BUCKET: "nightly"
@@ -76,12 +70,37 @@ autotest:
       when: on_success
     - when: never
 
+
+deploy_bridge_develop:
+  stage: deploy
+  tags:
+    - local
+  script:
+    - apk update && apk add vault make libcap
+    - setcap -r /usr/sbin/vault
+    - make buildlinuxamd64
+    - make builbridge
+
+    - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
+
+    - export HETZNER_CLIENT_AUTH_TOKEN=$(vault kv get -field=HETZNER_CLIENT_AUTH_TOKEN "secret/Nebulant/Sysadmin/Hetzner/NebulantPRE")
+
+    - mkdir -p deploy_conf/nginx/certs
+    - export CF_PEM=$(vault kv get -field=PEM "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.dev")
+    - echo "$CF_PEM" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.dev-cloudflare.pem
+    - export CF_KEY=$(vault kv get -field=KEY "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.dev")
+    - echo "$CF_KEY" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.dev-cloudflare.key
+
+    - chmod +x ./dist/nebulant-linux-amd64
+    - mv ./dist/nebulant-linux-amd64 nebulant-linux-amd64
+    - ./nebulant-linux-amd64 -x run -f ./deploy_nebulant.bridge.npb
+
 dev_gobuild_and_r2upload:
   stage: deploy
   tags:
     - local
   script:
-    - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"  
+    - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"
     - apk update && apk add vault make git perl-utils libcap
     - make buildalldev
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
@@ -109,7 +128,7 @@ prod_gobuild_and_r2upload:
   tags:
     - local
   script:
-    - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"  
+    - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"
     - apk update && apk add vault make git perl-utils libcap
     - make buildall
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant

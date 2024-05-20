@@ -1,0 +1,23 @@
+[Unit]
+Description=Bridge daemon
+After=syslog.target network.target nginx.service
+# How many times this services can be re-started...
+StartLimitBurst=3
+# ... in the amount of seconds
+StartLimitIntervalSec=30
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+User=www-data
+Group=www-data
+Type=simple
+Restart=always
+RestartSec=30
+WorkingDirectory=/var/www/webapp/
+StandardError=syslog
+ExecStart=/var/www/webapp/nebulant-bridge -x -b 127.0.0.1:16789
+# Seconds to sleep before trying to restart the service
+KillSignal=SIGQUIT
+NotifyAccess=all
