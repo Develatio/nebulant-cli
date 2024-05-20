@@ -1497,94 +1497,6 @@
         },
         {
           "position": {
-            "x": 2204,
-            "y": 2701
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.CreateServer",
-          "data": {
-            "id": "create-server",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "async": false,
-                  "waiters": [
-                    "success"
-                  ],
-                  "capabilities": [
-                    "ip"
-                  ],
-                  "type": "hetznerCloud:server",
-                  "value": "new_bridge"
-                }
-              },
-              "parameters": {
-                "Labels": [
-                  {
-                    "__uniq": 1715874220735,
-                    "name": "label",
-                    "value": [
-                      "bridge",
-                      "true"
-                    ]
-                  }
-                ],
-                "PublicNet": {
-                  "_autoAssignIPv6": true,
-                  "EnableIPv6": false,
-                  "IPv6": [],
-                  "_autoAssignIPv4": true,
-                  "EnableIPv4": false,
-                  "IPv4": []
-                },
-                "NetworkIds": [
-                  "{{network}}"
-                ],
-                "UserData": "#cloud-config\n",
-                "Locations": [
-                  "fsn1"
-                ],
-                "SshKeys": [
-                  "20340981"
-                ],
-                "ImageIds": [
-                  "{{debian}}"
-                ],
-                "ServerTypes": [
-                  "cax11"
-                ],
-                "Name": "{{ bridge-name }}",
-                "_activeTab": "general",
-                "_maxRetries": 5
-              },
-              "info": "Creamos el Backend"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "8b46c13f-8835-4d21-8afe-c9faabcbf125"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "ee940f85-3d7c-48ed-ab30-05044cdf7a0b"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "5b7c9915-136d-4a74-8eb0-cf2b689264d4"
-              }
-            ]
-          },
-          "id": "e4f5a441-6329-4fbf-a128-ed35215726db",
-          "z": 163
-        },
-        {
-          "position": {
             "x": 2212,
             "y": 2892
           },
@@ -1999,180 +1911,6 @@
           "z": 176
         },
         {
-          "position": {
-            "x": 2213,
-            "y": 3113
-          },
-          "type": "nebulant.rectangle.vertical.generic.UploadFiles",
-          "data": {
-            "id": "upload-files",
-            "version": "1.0.2",
-            "provider": "generic",
-            "settings": {
-              "info": "Subimos el código del proyecto",
-              "parameters": {
-                "proxies": [
-                  {
-                    "__uniq": 1715858809965,
-                    "name": "new-ssh-config",
-                    "value": {
-                      "_credentials": "privkey",
-                      "target": [
-                        "{{ bastion.server.public_net.ipv4.ip }}"
-                      ],
-                      "username": "admin",
-                      "privkeyPath": "",
-                      "privkey": "{{ sshkey }}",
-                      "passphrase": "",
-                      "password": "",
-                      "port": 22
-                    }
-                  }
-                ],
-                "port": 22,
-                "password": "",
-                "passphrase": "",
-                "privkey": "{{ sshkey }}",
-                "privkeyPath": "",
-                "username": "root",
-                "target": [
-                  "{{ new_bridge.server.private_net[0].ip }}"
-                ],
-                "_credentials": "privkey",
-                "paths": [
-                  {
-                    "_src_type": "file",
-                    "src": "{{ bridge-path }}",
-                    "dest": "/tmp/",
-                    "overwrite": false,
-                    "recursive": true
-                  },
-                  {
-                    "_src_type": "folder",
-                    "src": "{{ config-path }}",
-                    "dest": "/tmp/deploy_conf",
-                    "overwrite": false,
-                    "recursive": true
-                  }
-                ],
-                "_maxRetries": 5
-              }
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "485a46af-dc95-43f7-8fa9-4a3fe225672f"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "528aa4da-ed33-4514-b8c8-fe75e3b1979f"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "1bd983de-0b41-4cc7-8172-a20e734f4d27"
-              }
-            ]
-          },
-          "id": "0705c312-d9b2-4530-bae2-b6d12d1d21dc",
-          "z": 177
-        },
-        {
-          "position": {
-            "x": 2444,
-            "y": 3551
-          },
-          "type": "nebulant.rectangle.vertical.generic.RunCommand",
-          "data": {
-            "id": "run-command",
-            "version": "1.0.13",
-            "provider": "generic",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "generic:script_execution",
-                  "value": "RUN_COMMAND_RESULT_1"
-                }
-              },
-              "info": "Configuración común tanto para el Backend como para los Workers",
-              "parameters": {
-                "upload_to_remote_target": true,
-                "dump_json": false,
-                "vars": [],
-                "open_dbg_shell_onerror": false,
-                "open_dbg_shell_after": false,
-                "open_dbg_shell_before": false,
-                "proxies": [
-                  {
-                    "__uniq": 1715961984332,
-                    "name": "new-ssh-config",
-                    "value": {
-                      "_credentials": "privkey",
-                      "target": [
-                        "{{ bastion.server.public_net.ipv4.ip }}"
-                      ],
-                      "username": "admin",
-                      "privkeyPath": "",
-                      "privkey": "{{ sshkey }}",
-                      "passphrase": "",
-                      "password": "",
-                      "port": 22
-                    }
-                  }
-                ],
-                "port": 22,
-                "password": "",
-                "passphrase": "",
-                "privkey": "{{ sshkey }}",
-                "privkeyPath": "",
-                "username": "admin",
-                "target": [
-                  "{{ new_bridge.server.private_net[0].ip }}"
-                ],
-                "_credentials": "privkey",
-                "_run_on_remote": true,
-                "scriptParameters": "",
-                "scriptName": "",
-                "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/nebulant-bridge-linux-arm64 /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx",
-                "command": "",
-                "pass_to_entrypoint_as_single_param": false,
-                "entrypoint": "",
-                "_custom_entrypoint": false,
-                "_type": "script",
-                "_maxRetries": 5
-              }
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "0d90f030-fab0-4413-aa41-3346ff704faf"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "0d5e165d-3bd2-4422-9701-01aea0ba4d3d"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "f9d85c2c-f1d2-4000-85a7-add8089a52b8"
-              }
-            ]
-          },
-          "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
-          "z": 179
-        },
-        {
           "type": "nebulant.link.Smart",
           "source": {
             "id": "536d8ec4-bb78-478d-9d5f-64ac2dc09809",
@@ -2358,6 +2096,94 @@
         },
         {
           "position": {
+            "x": 2204,
+            "y": 2701
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.CreateServer",
+          "data": {
+            "id": "create-server",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "async": false,
+                  "waiters": [
+                    "success"
+                  ],
+                  "capabilities": [
+                    "ip"
+                  ],
+                  "type": "hetznerCloud:server",
+                  "value": "new_bridge"
+                }
+              },
+              "parameters": {
+                "Labels": [
+                  {
+                    "__uniq": 1715874220735,
+                    "name": "label",
+                    "value": [
+                      "bridge",
+                      "true"
+                    ]
+                  }
+                ],
+                "PublicNet": {
+                  "_autoAssignIPv6": true,
+                  "EnableIPv6": false,
+                  "IPv6": [],
+                  "_autoAssignIPv4": true,
+                  "EnableIPv4": false,
+                  "IPv4": []
+                },
+                "NetworkIds": [
+                  "{{network}}"
+                ],
+                "UserData": "#cloud-config\n",
+                "Locations": [
+                  "fsn1"
+                ],
+                "SshKeys": [
+                  "20340981"
+                ],
+                "ImageIds": [
+                  "{{debian}}"
+                ],
+                "ServerTypes": [
+                  "cax11"
+                ],
+                "Name": "{{ bridge-name }}",
+                "_activeTab": "general",
+                "_maxRetries": 5
+              },
+              "info": "Creamos el Backend"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "8b46c13f-8835-4d21-8afe-c9faabcbf125"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "ee940f85-3d7c-48ed-ab30-05044cdf7a0b"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "5b7c9915-136d-4a74-8eb0-cf2b689264d4"
+              }
+            ]
+          },
+          "id": "e4f5a441-6329-4fbf-a128-ed35215726db",
+          "z": 191
+        },
+        {
+          "position": {
             "x": 2124,
             "y": 1462
           },
@@ -2412,7 +2238,7 @@
                     "value": {
                       "name": "bridge-path",
                       "type": "text",
-                      "value": "./dist/nebulant-bridge-linux-arm64",
+                      "value": "./dist",
                       "required": false,
                       "ask_at_runtime": false,
                       "stack": false
@@ -2530,12 +2356,186 @@
             ]
           },
           "id": "9eaf5d61-ea7b-40b0-b270-195f742c671b",
-          "z": 189
+          "z": 192
+        },
+        {
+          "position": {
+            "x": 2213,
+            "y": 3113
+          },
+          "type": "nebulant.rectangle.vertical.generic.UploadFiles",
+          "data": {
+            "id": "upload-files",
+            "version": "1.0.2",
+            "provider": "generic",
+            "settings": {
+              "info": "Subimos el código del proyecto",
+              "parameters": {
+                "proxies": [
+                  {
+                    "__uniq": 1715858809965,
+                    "name": "new-ssh-config",
+                    "value": {
+                      "_credentials": "privkey",
+                      "target": [
+                        "{{ bastion.server.public_net.ipv4.ip }}"
+                      ],
+                      "username": "admin",
+                      "privkeyPath": "",
+                      "privkey": "{{ sshkey }}",
+                      "passphrase": "",
+                      "password": "",
+                      "port": 22
+                    }
+                  }
+                ],
+                "port": 22,
+                "password": "",
+                "passphrase": "",
+                "privkey": "{{ sshkey }}",
+                "privkeyPath": "",
+                "username": "root",
+                "target": [
+                  "{{ new_bridge.server.private_net[0].ip }}"
+                ],
+                "_credentials": "privkey",
+                "paths": [
+                  {
+                    "_src_type": "folder",
+                    "src": "{{ bridge-path }}",
+                    "dest": "/tmp/src",
+                    "overwrite": false,
+                    "recursive": true
+                  },
+                  {
+                    "_src_type": "folder",
+                    "src": "{{ config-path }}",
+                    "dest": "/tmp/deploy_conf",
+                    "overwrite": false,
+                    "recursive": true
+                  }
+                ],
+                "_maxRetries": 5
+              }
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "485a46af-dc95-43f7-8fa9-4a3fe225672f"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "528aa4da-ed33-4514-b8c8-fe75e3b1979f"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "1bd983de-0b41-4cc7-8172-a20e734f4d27"
+              }
+            ]
+          },
+          "id": "0705c312-d9b2-4530-bae2-b6d12d1d21dc",
+          "z": 193
+        },
+        {
+          "position": {
+            "x": 2444,
+            "y": 3551
+          },
+          "type": "nebulant.rectangle.vertical.generic.RunCommand",
+          "data": {
+            "id": "run-command",
+            "version": "1.0.13",
+            "provider": "generic",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "generic:script_execution",
+                  "value": "RUN_COMMAND_RESULT_1"
+                }
+              },
+              "info": "Configuración común tanto para el Backend como para los Workers",
+              "parameters": {
+                "upload_to_remote_target": true,
+                "dump_json": false,
+                "vars": [],
+                "open_dbg_shell_onerror": false,
+                "open_dbg_shell_after": false,
+                "open_dbg_shell_before": false,
+                "proxies": [
+                  {
+                    "__uniq": 1715961984332,
+                    "name": "new-ssh-config",
+                    "value": {
+                      "_credentials": "privkey",
+                      "target": [
+                        "{{ bastion.server.public_net.ipv4.ip }}"
+                      ],
+                      "username": "admin",
+                      "privkeyPath": "",
+                      "privkey": "{{ sshkey }}",
+                      "passphrase": "",
+                      "password": "",
+                      "port": 22
+                    }
+                  }
+                ],
+                "port": 22,
+                "password": "",
+                "passphrase": "",
+                "privkey": "{{ sshkey }}",
+                "privkeyPath": "",
+                "username": "admin",
+                "target": [
+                  "{{ new_bridge.server.private_net[0].ip }}"
+                ],
+                "_credentials": "privkey",
+                "_run_on_remote": true,
+                "scriptParameters": "",
+                "scriptName": "",
+                "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge-linux-arm64 /var/www/webapp/nebulant-bridge\nsudo cp /tmp/sc/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx",
+                "command": "",
+                "pass_to_entrypoint_as_single_param": false,
+                "entrypoint": "",
+                "_custom_entrypoint": false,
+                "_type": "script",
+                "_maxRetries": 5
+              }
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "0d90f030-fab0-4413-aa41-3346ff704faf"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "0d5e165d-3bd2-4422-9701-01aea0ba4d3d"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "f9d85c2c-f1d2-4000-85a7-add8089a52b8"
+              }
+            ]
+          },
+          "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
+          "z": 194
         }
       ],
       "zoom": 0.5300892329168587,
-      "x": 2368.4691772460938,
-      "y": 2727.8427124023438
+      "x": 2383.5609741210938,
+      "y": 2699.5454711914062
     },
     "diagram_version": "1.0.7",
     "n_warnings": 1,
@@ -2742,53 +2742,6 @@
         "debug_network": true
       },
       {
-        "action_id": "e4f5a441-6329-4fbf-a128-ed35215726db",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "create_server",
-        "parameters": {
-          "Name": "{{ bridge-name }}",
-          "ServerType": {
-            "Name": "cax11"
-          },
-          "Image": {
-            "ID": "{{debian}}"
-          },
-          "SSHKeys": [
-            {
-              "ID": "20340981"
-            }
-          ],
-          "Location": {
-            "Name": "fsn1"
-          },
-          "UserData": "#cloud-config\n",
-          "PublicNet": {
-            "EnableIPv4": false,
-            "EnableIPv6": false
-          },
-          "Networks": [
-            {
-              "ID": "{{network}}"
-            }
-          ],
-          "Labels": {
-            "bridge": "true"
-          },
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "new_bridge",
-        "next_action": {
-          "ok": [
-            "7f1d2e32-b555-43f0-83fb-3ad3c63b87f7"
-          ]
-        },
-        "debug_network": true
-      },
-      {
         "action_id": "7f1d2e32-b555-43f0-83fb-3ad3c63b87f7",
         "provider": "hetznerCloud",
         "version": "1.0.0",
@@ -2906,6 +2859,159 @@
         "debug_network": true
       },
       {
+        "action_id": "536d8ec4-bb78-478d-9d5f-64ac2dc09809",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "findone_primary_ip",
+        "parameters": {
+          "max_retries": 5,
+          "Name": "{{ bridge-primary-ip-name }}"
+        },
+        "output": "bridge_primary_ip",
+        "next_action": {
+          "ok": [
+            "7692cf16-12de-4e3c-b96b-e2cbda1b132b"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "7692cf16-12de-4e3c-b96b-e2cbda1b132b",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "assign_primary_ip",
+        "parameters": {
+          "ID": "{{bridge_primary_ip}}",
+          "AssigneeID": "{{new_bridge}}",
+          "_waiters": [
+            "success"
+          ],
+          "max_retries": 5
+        },
+        "output": "HC_ACTION",
+        "next_action": {},
+        "debug_network": true
+      },
+      {
+        "action_id": "e4f5a441-6329-4fbf-a128-ed35215726db",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "create_server",
+        "parameters": {
+          "Name": "{{ bridge-name }}",
+          "ServerType": {
+            "Name": "cax11"
+          },
+          "Image": {
+            "ID": "{{debian}}"
+          },
+          "SSHKeys": [
+            {
+              "ID": "20340981"
+            }
+          ],
+          "Location": {
+            "Name": "fsn1"
+          },
+          "UserData": "#cloud-config\n",
+          "PublicNet": {
+            "EnableIPv4": false,
+            "EnableIPv6": false
+          },
+          "Networks": [
+            {
+              "ID": "{{network}}"
+            }
+          ],
+          "Labels": {
+            "bridge": "true"
+          },
+          "_waiters": [
+            "success"
+          ],
+          "max_retries": 5
+        },
+        "output": "new_bridge",
+        "next_action": {
+          "ok": [
+            "7f1d2e32-b555-43f0-83fb-3ad3c63b87f7"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "9eaf5d61-ea7b-40b0-b270-195f742c671b",
+        "provider": "generic",
+        "version": "1.0.2",
+        "action": "define_variables",
+        "parameters": {
+          "vars": [
+            {
+              "key": "bastion-name",
+              "ask_at_runtime": false,
+              "required": false,
+              "type": "string",
+              "stack": false,
+              "value": "Bastion"
+            },
+            {
+              "key": "bridge-name",
+              "ask_at_runtime": false,
+              "required": false,
+              "type": "string",
+              "stack": false,
+              "value": "Bridge-{{ ENV.random }}"
+            },
+            {
+              "key": "network-name",
+              "ask_at_runtime": false,
+              "required": false,
+              "type": "string",
+              "stack": false,
+              "value": "nebulant-lan"
+            },
+            {
+              "key": "bridge-path",
+              "ask_at_runtime": false,
+              "required": false,
+              "type": "string",
+              "stack": false,
+              "value": "./dist"
+            },
+            {
+              "key": "netdata-uuid",
+              "ask_at_runtime": false,
+              "required": false,
+              "type": "string",
+              "stack": false,
+              "value": "eba90f71-d35e-4158-9fd5-ea518c5d97b6"
+            },
+            {
+              "key": "config-path",
+              "ask_at_runtime": false,
+              "required": false,
+              "type": "string",
+              "stack": false,
+              "value": "./deploy_conf"
+            },
+            {
+              "key": "bridge-primary-ip-name",
+              "ask_at_runtime": false,
+              "required": false,
+              "type": "string",
+              "stack": false,
+              "value": "Bridge"
+            }
+          ]
+        },
+        "next_action": {
+          "ok": [
+            "bf84b9ce-d1fe-4995-8aca-a2dd33bb13e6"
+          ]
+        },
+        "debug_network": true
+      },
+      {
         "action_id": "0705c312-d9b2-4530-bae2-b6d12d1d21dc",
         "provider": "generic",
         "version": "1.0.2",
@@ -2913,10 +3019,11 @@
         "parameters": {
           "paths": [
             {
-              "_src_type": "file",
+              "_src_type": "folder",
               "src": "{{ bridge-path }}",
-              "dest": "/tmp/",
-              "overwrite": false
+              "dest": "/tmp/src",
+              "overwrite": false,
+              "recursive": true
             },
             {
               "_src_type": "folder",
@@ -2957,7 +3064,7 @@
         "action": "run_script",
         "parameters": {
           "pass_to_entrypoint_as_single_param": false,
-          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/nebulant-bridge-linux-arm64 /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx",
+          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge-linux-arm64 /var/www/webapp/nebulant-bridge\nsudo cp /tmp/sc/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx",
           "target": "{{ new_bridge.server.private_net[0].ip }}",
           "username": "admin",
           "port": 22,
@@ -2982,112 +3089,6 @@
           "ok": [
             "3eaa02dc-49ec-4977-be75-5298595c1ee1",
             "536d8ec4-bb78-478d-9d5f-64ac2dc09809"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "536d8ec4-bb78-478d-9d5f-64ac2dc09809",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "findone_primary_ip",
-        "parameters": {
-          "max_retries": 5,
-          "Name": "{{ bridge-primary-ip-name }}"
-        },
-        "output": "bridge_primary_ip",
-        "next_action": {
-          "ok": [
-            "7692cf16-12de-4e3c-b96b-e2cbda1b132b"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "7692cf16-12de-4e3c-b96b-e2cbda1b132b",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "assign_primary_ip",
-        "parameters": {
-          "ID": "{{bridge_primary_ip}}",
-          "AssigneeID": "{{new_bridge}}",
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "HC_ACTION",
-        "next_action": {},
-        "debug_network": true
-      },
-      {
-        "action_id": "9eaf5d61-ea7b-40b0-b270-195f742c671b",
-        "provider": "generic",
-        "version": "1.0.2",
-        "action": "define_variables",
-        "parameters": {
-          "vars": [
-            {
-              "key": "bastion-name",
-              "ask_at_runtime": false,
-              "required": false,
-              "type": "string",
-              "stack": false,
-              "value": "Bastion"
-            },
-            {
-              "key": "bridge-name",
-              "ask_at_runtime": false,
-              "required": false,
-              "type": "string",
-              "stack": false,
-              "value": "Bridge-{{ ENV.random }}"
-            },
-            {
-              "key": "network-name",
-              "ask_at_runtime": false,
-              "required": false,
-              "type": "string",
-              "stack": false,
-              "value": "nebulant-lan"
-            },
-            {
-              "key": "bridge-path",
-              "ask_at_runtime": false,
-              "required": false,
-              "type": "string",
-              "stack": false,
-              "value": "./dist/nebulant-bridge-linux-arm64"
-            },
-            {
-              "key": "netdata-uuid",
-              "ask_at_runtime": false,
-              "required": false,
-              "type": "string",
-              "stack": false,
-              "value": "eba90f71-d35e-4158-9fd5-ea518c5d97b6"
-            },
-            {
-              "key": "config-path",
-              "ask_at_runtime": false,
-              "required": false,
-              "type": "string",
-              "stack": false,
-              "value": "./deploy_conf"
-            },
-            {
-              "key": "bridge-primary-ip-name",
-              "ask_at_runtime": false,
-              "required": false,
-              "type": "string",
-              "stack": false,
-              "value": "Bridge"
-            }
-          ]
-        },
-        "next_action": {
-          "ok": [
-            "bf84b9ce-d1fe-4995-8aca-a2dd33bb13e6"
           ]
         },
         "debug_network": true
