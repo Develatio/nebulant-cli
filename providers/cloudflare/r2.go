@@ -568,6 +568,7 @@ func (p *Provider) touchSession() error {
 		config.WithEndpointResolverWithOptions(r2Resolver),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKeyID, accessKeySecret, "")),
 		config.WithRetryMaxAttempts(0),
+		config.WithRegion("auto"), // fix dns err
 	)
 	if err != nil {
 		return err
