@@ -1062,7 +1062,7 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 
 		cc.RestorerealOSTerm()
 
-		f, err := nebulant_term.GetOSPTY(shell)
+		f, err := nebulant_term.GetOSPTY(&nebulant_term.OSPTYConf{Shell: shell})
 		if err != nil {
 			cast.LogErr(err.Error(), d.runtime.irb.ExecutionUUID)
 			fmt.Fprintln(clientFD, err.Error())

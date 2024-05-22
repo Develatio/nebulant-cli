@@ -83,6 +83,11 @@ type OSPTY interface {
 	Wait(ctx context.Context) (int64, error)
 }
 
+type OSPTYConf struct {
+	Shell string
+	Env   []string
+}
+
 // https://github.com/manifoldco/promptui/issues/49
 type noBellStdout struct{}
 

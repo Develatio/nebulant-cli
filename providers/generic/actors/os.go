@@ -29,7 +29,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/creack/pty"
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/ipc"
 	"github.com/develatio/nebulant-cli/term"
@@ -96,9 +95,7 @@ func newLocalDebugShell(ctx *ActionContext, failed *exec.Cmd) error {
 
 	ctx.Logger.LogInfo(fmt.Sprintf("original exec: %s", strings.Join(failed.Args, " ")))
 
-	cmd := exec.Command(shell)
-	cmd.Env = failed.Env
-	f, err := pty.Start(cmd)
+	f, err := nebulant_term.GetOSPTY(&nebulant_term.OSPTYConf{Shell: shell, Env: failed.Env})
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-//go:build !windows
+//go:build !windows && !js
 
 // Nebulant
 // Copyright (C) 2023  Develatio Technologies S.L.
@@ -68,8 +68,9 @@ func (n *nixPTY) Wait(ctx context.Context) (int64, error) {
 	return 0, nil
 }
 
-func GetOSPTY(shell string) (OSPTY, error) {
-	cmd := exec.Command(shell)
+func GetOSPTY(cfg *OSPTYConf) (OSPTY, error) {
+	cmd := exec.Command(cfg.Shell)
+	cmd.Env = append(cmd.Env, cfg.Env...)
 	f, err := pty.Start(cmd)
 	if err != nil {
 		return nil, err

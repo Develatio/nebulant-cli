@@ -94,8 +94,8 @@ func (n *winPTY) Wait(ctx context.Context) (int64, error) {
 	return int64(exitCode), err
 }
 
-func GetOSPTY(shell string) (OSPTY, error) {
-	cpty, err := conpty.Start(shell)
+func GetOSPTY(cfg *OSPTYConf) (OSPTY, error) {
+	cpty, err := conpty.Start(cfg.Shell)
 	if err != nil {
 		return nil, err
 	}
