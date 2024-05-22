@@ -79,7 +79,7 @@ deploy_bridge_develop:
     - apk update && apk add vault make git libcap curl
     - setcap -r /usr/sbin/vault
     - curl "https://releases.nebulant.dev/v0.3.0-beta-git-6acffbc/nebulant-linux-amd64" -o nebulant-linux-amd64
-    - make buildbridge
+    - GOOS=linux GOARCH=arm64 make buildbridge
 
     - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
 
@@ -115,7 +115,7 @@ deploy_bridge_master:
     - setcap -r /usr/sbin/vault
     # TODO: This should point at releases.nebulant.app and use a stable release
     - curl "https://releases.nebulant.dev/v0.3.0-beta-git-6acffbc/nebulant-linux-amd64" -o nebulant-linux-amd64
-    - make buildbridge
+    - GOOS=linux GOARCH=arm64 make buildbridge
 
     - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
 
