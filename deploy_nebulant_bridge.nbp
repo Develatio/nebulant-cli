@@ -1888,97 +1888,6 @@
           "z": 227
         },
         {
-          "position": {
-            "x": 2362,
-            "y": 3115
-          },
-          "type": "nebulant.rectangle.vertical.generic.RunCommand",
-          "data": {
-            "id": "run-command",
-            "version": "1.0.13",
-            "provider": "generic",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "generic:script_execution",
-                  "value": "RUN_COMMAND_RESULT"
-                }
-              },
-              "info": "Provisionamos el nuevo server",
-              "parameters": {
-                "upload_to_remote_target": true,
-                "dump_json": false,
-                "vars": [],
-                "open_dbg_shell_onerror": false,
-                "open_dbg_shell_after": false,
-                "open_dbg_shell_before": false,
-                "proxies": [
-                  {
-                    "__uniq": 1715858664287,
-                    "name": "new-ssh-config",
-                    "value": {
-                      "_credentials": "privkey",
-                      "target": [
-                        "{{ bastion.server.public_net.ipv4.ip }}"
-                      ],
-                      "username": "admin",
-                      "privkeyPath": "",
-                      "privkey": "{{ sshkey }}",
-                      "passphrase": "",
-                      "password": "",
-                      "port": 22
-                    }
-                  }
-                ],
-                "port": 22,
-                "password": "",
-                "passphrase": "",
-                "privkey": "{{ sshkey }}",
-                "privkeyPath": "",
-                "username": "root",
-                "target": [
-                  "{{ new_bridge.server.private_net[0].ip }}"
-                ],
-                "_credentials": "privkey",
-                "_run_on_remote": true,
-                "scriptParameters": "",
-                "scriptName": "",
-                "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# Add user 'admin' to the sudo group\nuseradd -m -s /bin/bash admin\nusermod -aG sudo admin\n\n# Allow sudo without password for the 'admin' user\necho 'admin ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/admin\n\n# Disable password authentication for SSH\nsed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config\n\n# Route the traffic through the Bastion\nip route add default via 172.16.0.1\necho \"nameserver 1.1.1.1\" >> /etc/resolvconf/resolv.conf.d/head\necho \"nameserver 8.8.8.8\" >> /etc/resolvconf/resolv.conf.d/head\nresolvconf -u\ncat <<'EOF' >> /etc/network/interfaces\n  auto enp7s0\n  iface enp7s0 inet dhcp\n      post-up ip route add default via 172.16.0.1\nEOF\n\n# Update and upgrade packages\napt update && apt upgrade -y\n\n# Set locale\nupdate-locale LANG=en_US.UTF-8\n\n# Set timezone\ntimedatectl set-timezone Etc/UTC\n\n# Create swap file\nfallocate -l 2G /swap\nchmod 600 /swap\nmkswap /swap\nswapon /swap\n\n# Make sure the swap file is mounted on boot\necho '/swap none swap sw 0 0' >> /etc/fstab\n\n# SSH\nmkdir -p /home/admin/.ssh\ncp /root/.ssh/authorized_keys /home/admin/.ssh/\nchown -R admin:admin /home/admin/.ssh\nchmod 700 /home/admin/.ssh\nchmod 600 /home/admin/.ssh/authorized_keys\nsed -i -e '/^\\(#\\|\\)PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)KbdInteractiveAuthentication/s/^.*$/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)ChallengeResponseAuthentication/s/^.*$/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)MaxAuthTries/s/^.*$/MaxAuthTries 10/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)X11Forwarding/s/^.*$/X11Forwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AllowAgentForwarding/s/^.*$/AllowAgentForwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AuthorizedKeysFile/s/^.*$/AuthorizedKeysFile .ssh\\/authorized_keys/' /etc/ssh/sshd_config\nsed -i '$a AllowUsers admin' /etc/ssh/sshd_config\nsystemctl restart sshd\n\n# Netdata\ncurl https://get.netdata.cloud/kickstart.sh > /tmp/netdata-kickstart.sh && sh /tmp/netdata-kickstart.sh --stable-channel\ncp /usr/lib/netdata/conf.d/stream.conf /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*enabled\\s*=\\s*\\)no/\\1yes/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*destination\\s*=\\s*\\)/\\1 {{ bastion.server.private_net[0].ip }}/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*api key\\s*=\\s*\\)/\\1 {{ netdata-uuid }}/' /etc/netdata/stream.conf\nsystemctl restart netdata",
-                "command": "",
-                "pass_to_entrypoint_as_single_param": false,
-                "entrypoint": "",
-                "_custom_entrypoint": false,
-                "_type": "script",
-                "_maxRetries": 5
-              }
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "68ca6a02-3b68-4e2e-93ad-e25beaa6c5fb"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "58c8418a-00c8-4a31-bc8d-ad65f89cc7df"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "730513be-18d6-4879-a9fa-1ace1e35574a"
-              }
-            ]
-          },
-          "id": "24ee50c1-91a2-463f-b5aa-cddd41af5315",
-          "z": 228
-        },
-        {
           "type": "nebulant.link.Smart",
           "source": {
             "id": "eb84303a-19ad-4633-8b95-b23183cafd9e",
@@ -3336,6 +3245,97 @@
         },
         {
           "position": {
+            "x": 2362,
+            "y": 3115
+          },
+          "type": "nebulant.rectangle.vertical.generic.RunCommand",
+          "data": {
+            "id": "run-command",
+            "version": "1.0.13",
+            "provider": "generic",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "generic:script_execution",
+                  "value": "RUN_COMMAND_RESULT"
+                }
+              },
+              "info": "Provisionamos el nuevo server",
+              "parameters": {
+                "upload_to_remote_target": true,
+                "dump_json": false,
+                "vars": [],
+                "open_dbg_shell_onerror": false,
+                "open_dbg_shell_after": false,
+                "open_dbg_shell_before": false,
+                "proxies": [
+                  {
+                    "__uniq": 1715858664287,
+                    "name": "new-ssh-config",
+                    "value": {
+                      "_credentials": "privkey",
+                      "target": [
+                        "{{ bastion.server.public_net.ipv4.ip }}"
+                      ],
+                      "username": "admin",
+                      "privkeyPath": "",
+                      "privkey": "{{ sshkey }}",
+                      "passphrase": "",
+                      "password": "",
+                      "port": 22
+                    }
+                  }
+                ],
+                "port": 22,
+                "password": "",
+                "passphrase": "",
+                "privkey": "{{ sshkey }}",
+                "privkeyPath": "",
+                "username": "root",
+                "target": [
+                  "{{ new_bridge.server.private_net[0].ip }}"
+                ],
+                "_credentials": "privkey",
+                "_run_on_remote": true,
+                "scriptParameters": "",
+                "scriptName": "",
+                "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# Add user 'admin' to the sudo group\nuseradd -m -s /bin/bash admin\nusermod -aG sudo admin\n\n# Allow sudo without password for the 'admin' user\necho 'admin ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/admin\n\n# Disable password authentication for SSH\nsed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config\n\n# Route the traffic through the Bastion\nip route add default via 172.16.0.1\necho \"nameserver 1.1.1.1\" >> /etc/resolvconf/resolv.conf.d/head\necho \"nameserver 8.8.8.8\" >> /etc/resolvconf/resolv.conf.d/head\nresolvconf -u\ncat <<'EOF' >> /etc/network/interfaces\n  auto enp7s0\n  iface enp7s0 inet dhcp\n      post-up ip route add default via 172.16.0.1\nEOF\n\n# Update and upgrade packages\napt update && apt upgrade -y\n\n# Set locale\nupdate-locale LANG=en_US.UTF-8\n\n# Set timezone\ntimedatectl set-timezone Etc/UTC\n\n# Create swap file\nfallocate -l 2G /swap\nchmod 600 /swap\nmkswap /swap\nswapon /swap\n\n# Make sure the swap file is mounted on boot\necho '/swap none swap sw 0 0' >> /etc/fstab\n\n# SSH\nmkdir -p /home/admin/.ssh\ncp /root/.ssh/authorized_keys /home/admin/.ssh/\nchown -R admin:admin /home/admin/.ssh\nchmod 700 /home/admin/.ssh\nchmod 600 /home/admin/.ssh/authorized_keys\nsed -i -e '/^\\(#\\|\\)PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)KbdInteractiveAuthentication/s/^.*$/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)ChallengeResponseAuthentication/s/^.*$/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)MaxAuthTries/s/^.*$/MaxAuthTries 10/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)X11Forwarding/s/^.*$/X11Forwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AllowAgentForwarding/s/^.*$/AllowAgentForwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AuthorizedKeysFile/s/^.*$/AuthorizedKeysFile .ssh\\/authorized_keys/' /etc/ssh/sshd_config\nsed -i '$a AllowUsers admin' /etc/ssh/sshd_config\nsystemctl restart sshd\n\n# Netdata\ncurl https://get.netdata.cloud/kickstart.sh > /tmp/netdata-kickstart.sh && sh /tmp/netdata-kickstart.sh --stable-channel\ncp /usr/lib/netdata/conf.d/stream.conf /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*enabled\\s*=\\s*\\)no/\\1yes/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*destination\\s*=\\s*\\)/\\1 {{ bastion.server.private_net[0].ip }}/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*api key\\s*=\\s*\\)/\\1 {{ netdata-uuid }}/' /etc/netdata/stream.conf\nsystemctl restart netdata",
+                "command": "",
+                "pass_to_entrypoint_as_single_param": false,
+                "entrypoint": "",
+                "_custom_entrypoint": false,
+                "_type": "script",
+                "_maxRetries": 5
+              }
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "68ca6a02-3b68-4e2e-93ad-e25beaa6c5fb"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "58c8418a-00c8-4a31-bc8d-ad65f89cc7df"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "730513be-18d6-4879-a9fa-1ace1e35574a"
+              }
+            ]
+          },
+          "id": "24ee50c1-91a2-463f-b5aa-cddd41af5315",
+          "z": 350
+        },
+        {
+          "position": {
             "x": 2444,
             "y": 3551
           },
@@ -3393,7 +3393,7 @@
                 "_run_on_remote": true,
                 "scriptParameters": "",
                 "scriptName": "",
-                "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo ls -la /tmp/deploy_conf/nginx/\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\nsudo ls -la /etc/nginx/\nsudo cat /etc/nginx/nginx.conf\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx",
+                "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx",
                 "command": "",
                 "pass_to_entrypoint_as_single_param": false,
                 "entrypoint": "",
@@ -3423,12 +3423,12 @@
             ]
           },
           "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
-          "z": 349
+          "z": 351
         }
       ],
       "zoom": 0.6867012683612106,
-      "x": 2666.3704833984375,
-      "y": 4137.170166015625
+      "x": 2627.0521240234375,
+      "y": 3812.42919921875
     },
     "diagram_version": "1.0.7",
     "n_warnings": 4,
@@ -3772,44 +3772,6 @@
         "debug_network": true
       },
       {
-        "action_id": "24ee50c1-91a2-463f-b5aa-cddd41af5315",
-        "provider": "generic",
-        "version": "1.0.13",
-        "action": "run_script",
-        "parameters": {
-          "pass_to_entrypoint_as_single_param": false,
-          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# Add user 'admin' to the sudo group\nuseradd -m -s /bin/bash admin\nusermod -aG sudo admin\n\n# Allow sudo without password for the 'admin' user\necho 'admin ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/admin\n\n# Disable password authentication for SSH\nsed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config\n\n# Route the traffic through the Bastion\nip route add default via 172.16.0.1\necho \"nameserver 1.1.1.1\" >> /etc/resolvconf/resolv.conf.d/head\necho \"nameserver 8.8.8.8\" >> /etc/resolvconf/resolv.conf.d/head\nresolvconf -u\ncat <<'EOF' >> /etc/network/interfaces\n  auto enp7s0\n  iface enp7s0 inet dhcp\n      post-up ip route add default via 172.16.0.1\nEOF\n\n# Update and upgrade packages\napt update && apt upgrade -y\n\n# Set locale\nupdate-locale LANG=en_US.UTF-8\n\n# Set timezone\ntimedatectl set-timezone Etc/UTC\n\n# Create swap file\nfallocate -l 2G /swap\nchmod 600 /swap\nmkswap /swap\nswapon /swap\n\n# Make sure the swap file is mounted on boot\necho '/swap none swap sw 0 0' >> /etc/fstab\n\n# SSH\nmkdir -p /home/admin/.ssh\ncp /root/.ssh/authorized_keys /home/admin/.ssh/\nchown -R admin:admin /home/admin/.ssh\nchmod 700 /home/admin/.ssh\nchmod 600 /home/admin/.ssh/authorized_keys\nsed -i -e '/^\\(#\\|\\)PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)KbdInteractiveAuthentication/s/^.*$/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)ChallengeResponseAuthentication/s/^.*$/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)MaxAuthTries/s/^.*$/MaxAuthTries 10/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)X11Forwarding/s/^.*$/X11Forwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AllowAgentForwarding/s/^.*$/AllowAgentForwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AuthorizedKeysFile/s/^.*$/AuthorizedKeysFile .ssh\\/authorized_keys/' /etc/ssh/sshd_config\nsed -i '$a AllowUsers admin' /etc/ssh/sshd_config\nsystemctl restart sshd\n\n# Netdata\ncurl https://get.netdata.cloud/kickstart.sh > /tmp/netdata-kickstart.sh && sh /tmp/netdata-kickstart.sh --stable-channel\ncp /usr/lib/netdata/conf.d/stream.conf /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*enabled\\s*=\\s*\\)no/\\1yes/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*destination\\s*=\\s*\\)/\\1 {{ bastion.server.private_net[0].ip }}/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*api key\\s*=\\s*\\)/\\1 {{ netdata-uuid }}/' /etc/netdata/stream.conf\nsystemctl restart netdata",
-          "target": "{{ new_bridge.server.private_net[0].ip }}",
-          "username": "root",
-          "port": 22,
-          "privkey": "{{ sshkey }}",
-          "upload_to_remote_target": true,
-          "proxies": [
-            {
-              "username": "admin",
-              "target": "{{ bastion.server.public_net.ipv4.ip }}",
-              "port": 22,
-              "privkey": "{{ sshkey }}"
-            }
-          ],
-          "open_dbg_shell_before": false,
-          "open_dbg_shell_after": false,
-          "open_dbg_shell_onerror": false,
-          "dump_json": false,
-          "max_retries": 5
-        },
-        "output": "RUN_COMMAND_RESULT",
-        "next_action": {
-          "ok": [
-            "a0c5621f-6a60-4ec9-bdd9-0f0984f8b3ad"
-          ],
-          "ko": [
-            "158528a8-d2d1-443d-b0ac-b29d3bf4ae16"
-          ]
-        },
-        "debug_network": true
-      },
-      {
         "action_id": "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8",
         "provider": "hetznerCloud",
         "version": "1.0.0",
@@ -4143,13 +4105,51 @@
         "debug_network": true
       },
       {
+        "action_id": "24ee50c1-91a2-463f-b5aa-cddd41af5315",
+        "provider": "generic",
+        "version": "1.0.13",
+        "action": "run_script",
+        "parameters": {
+          "pass_to_entrypoint_as_single_param": false,
+          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# Add user 'admin' to the sudo group\nuseradd -m -s /bin/bash admin\nusermod -aG sudo admin\n\n# Allow sudo without password for the 'admin' user\necho 'admin ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/admin\n\n# Disable password authentication for SSH\nsed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config\n\n# Route the traffic through the Bastion\nip route add default via 172.16.0.1\necho \"nameserver 1.1.1.1\" >> /etc/resolvconf/resolv.conf.d/head\necho \"nameserver 8.8.8.8\" >> /etc/resolvconf/resolv.conf.d/head\nresolvconf -u\ncat <<'EOF' >> /etc/network/interfaces\n  auto enp7s0\n  iface enp7s0 inet dhcp\n      post-up ip route add default via 172.16.0.1\nEOF\n\n# Update and upgrade packages\napt update && apt upgrade -y\n\n# Set locale\nupdate-locale LANG=en_US.UTF-8\n\n# Set timezone\ntimedatectl set-timezone Etc/UTC\n\n# Create swap file\nfallocate -l 2G /swap\nchmod 600 /swap\nmkswap /swap\nswapon /swap\n\n# Make sure the swap file is mounted on boot\necho '/swap none swap sw 0 0' >> /etc/fstab\n\n# SSH\nmkdir -p /home/admin/.ssh\ncp /root/.ssh/authorized_keys /home/admin/.ssh/\nchown -R admin:admin /home/admin/.ssh\nchmod 700 /home/admin/.ssh\nchmod 600 /home/admin/.ssh/authorized_keys\nsed -i -e '/^\\(#\\|\\)PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)KbdInteractiveAuthentication/s/^.*$/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)ChallengeResponseAuthentication/s/^.*$/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)MaxAuthTries/s/^.*$/MaxAuthTries 10/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)X11Forwarding/s/^.*$/X11Forwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AllowAgentForwarding/s/^.*$/AllowAgentForwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AuthorizedKeysFile/s/^.*$/AuthorizedKeysFile .ssh\\/authorized_keys/' /etc/ssh/sshd_config\nsed -i '$a AllowUsers admin' /etc/ssh/sshd_config\nsystemctl restart sshd\n\n# Netdata\ncurl https://get.netdata.cloud/kickstart.sh > /tmp/netdata-kickstart.sh && sh /tmp/netdata-kickstart.sh --stable-channel\ncp /usr/lib/netdata/conf.d/stream.conf /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*enabled\\s*=\\s*\\)no/\\1yes/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*destination\\s*=\\s*\\)/\\1 {{ bastion.server.private_net[0].ip }}/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*api key\\s*=\\s*\\)/\\1 {{ netdata-uuid }}/' /etc/netdata/stream.conf\nsystemctl restart netdata",
+          "target": "{{ new_bridge.server.private_net[0].ip }}",
+          "username": "root",
+          "port": 22,
+          "privkey": "{{ sshkey }}",
+          "upload_to_remote_target": true,
+          "proxies": [
+            {
+              "username": "admin",
+              "target": "{{ bastion.server.public_net.ipv4.ip }}",
+              "port": 22,
+              "privkey": "{{ sshkey }}"
+            }
+          ],
+          "open_dbg_shell_before": false,
+          "open_dbg_shell_after": false,
+          "open_dbg_shell_onerror": false,
+          "dump_json": false,
+          "max_retries": 5
+        },
+        "output": "RUN_COMMAND_RESULT",
+        "next_action": {
+          "ok": [
+            "a0c5621f-6a60-4ec9-bdd9-0f0984f8b3ad"
+          ],
+          "ko": [
+            "158528a8-d2d1-443d-b0ac-b29d3bf4ae16"
+          ]
+        },
+        "debug_network": true
+      },
+      {
         "action_id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
         "provider": "generic",
         "version": "1.0.13",
         "action": "run_script",
         "parameters": {
           "pass_to_entrypoint_as_single_param": false,
-          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo ls -la /tmp/deploy_conf/nginx/\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\nsudo ls -la /etc/nginx/\nsudo cat /etc/nginx/nginx.conf\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx",
+          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx",
           "target": "{{ new_bridge.server.private_net[0].ip }}",
           "username": "admin",
           "port": 22,
