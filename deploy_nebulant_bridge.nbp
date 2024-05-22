@@ -2575,59 +2575,6 @@
         },
         {
           "position": {
-            "x": 2958,
-            "y": 3946
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.StopServer",
-          "data": {
-            "id": "stop-server",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "async": false,
-                  "waiters": [
-                    "success"
-                  ],
-                  "capabilities": [],
-                  "type": "hetznerCloud:action",
-                  "value": "HC_ACTION"
-                }
-              },
-              "parameters": {
-                "ids": [
-                  "{{old_bridge}}"
-                ],
-                "_maxRetries": 5
-              },
-              "info": "Stop the server (because it must be stopped before attempting the assign op)"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "0443d9fb-d974-4537-bf1c-250445b900cf"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "1359ee1e-ff6a-43d0-8548-2a2bfb5efbd7"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "e4985c99-71e1-4bf4-ba2c-80638abf4ba5"
-              }
-            ]
-          },
-          "id": "c496f750-79d9-4b2e-9b05-47e76a0e4286",
-          "z": 333
-        },
-        {
-          "position": {
             "x": 2668,
             "y": 4531
           },
@@ -2942,59 +2889,6 @@
           },
           "id": "eb84303a-19ad-4633-8b95-b23183cafd9e",
           "z": 340
-        },
-        {
-          "position": {
-            "x": 2672,
-            "y": 4333
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.StopServer",
-          "data": {
-            "id": "stop-server",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "async": false,
-                  "waiters": [
-                    "success"
-                  ],
-                  "capabilities": [],
-                  "type": "hetznerCloud:action",
-                  "value": "HC_ACTION"
-                }
-              },
-              "parameters": {
-                "ids": [
-                  "{{new_bridge}}"
-                ],
-                "_maxRetries": 5
-              },
-              "info": "Stop the server (because it must be stopped before attempting the assign op)"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "0443d9fb-d974-4537-bf1c-250445b900cf"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "1359ee1e-ff6a-43d0-8548-2a2bfb5efbd7"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "e4985c99-71e1-4bf4-ba2c-80638abf4ba5"
-              }
-            ]
-          },
-          "id": "c531a217-7d68-4d04-a99c-b3ff0aeacf34",
-          "z": 341
         },
         {
           "position": {
@@ -3336,6 +3230,112 @@
         },
         {
           "position": {
+            "x": 2958,
+            "y": 3946
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.StopServer",
+          "data": {
+            "id": "stop-server",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "async": false,
+                  "waiters": [
+                    "success"
+                  ],
+                  "capabilities": [],
+                  "type": "hetznerCloud:action",
+                  "value": "HC_ACTION"
+                }
+              },
+              "parameters": {
+                "ids": [
+                  "{{old_bridge}}"
+                ],
+                "_maxRetries": 5
+              },
+              "info": "Stop the server (because it must be stopped before attempting the assign op)"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "0443d9fb-d974-4537-bf1c-250445b900cf"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "1359ee1e-ff6a-43d0-8548-2a2bfb5efbd7"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "e4985c99-71e1-4bf4-ba2c-80638abf4ba5"
+              }
+            ]
+          },
+          "id": "c496f750-79d9-4b2e-9b05-47e76a0e4286",
+          "z": 354
+        },
+        {
+          "position": {
+            "x": 2672,
+            "y": 4333
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.StopServer",
+          "data": {
+            "id": "stop-server",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "async": false,
+                  "waiters": [
+                    "success"
+                  ],
+                  "capabilities": [],
+                  "type": "hetznerCloud:action",
+                  "value": "HC_ACTION"
+                }
+              },
+              "parameters": {
+                "ids": [
+                  "{{new_bridge}}"
+                ],
+                "_maxRetries": 5
+              },
+              "info": "Stop the server (because it must be stopped before attempting the assign op)"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "0443d9fb-d974-4537-bf1c-250445b900cf"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "1359ee1e-ff6a-43d0-8548-2a2bfb5efbd7"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "e4985c99-71e1-4bf4-ba2c-80638abf4ba5"
+              }
+            ]
+          },
+          "id": "c531a217-7d68-4d04-a99c-b3ff0aeacf34",
+          "z": 355
+        },
+        {
+          "position": {
             "x": 2444,
             "y": 3551
           },
@@ -3393,7 +3393,7 @@
                 "_run_on_remote": true,
                 "scriptParameters": "",
                 "scriptName": "",
-                "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\nsudo ls -la /etc/nginx/\nsudo cat /etc/nginx/nginx.conf\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx\n\nsudo ls -la /etc/nginx/\nsudo cat /etc/nginx/nginx.conf",
+                "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx\n\nsync",
                 "command": "",
                 "pass_to_entrypoint_as_single_param": false,
                 "entrypoint": "",
@@ -3423,7 +3423,7 @@
             ]
           },
           "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
-          "z": 353
+          "z": 356
         }
       ],
       "zoom": 0.6867012683612106,
@@ -3899,26 +3899,6 @@
         "debug_network": true
       },
       {
-        "action_id": "c496f750-79d9-4b2e-9b05-47e76a0e4286",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "stop_server",
-        "parameters": {
-          "ID": "{{old_bridge}}",
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "HC_ACTION",
-        "next_action": {
-          "ok": [
-            "34bcb85b-a916-475a-b351-32f1b0453f0c"
-          ]
-        },
-        "debug_network": true
-      },
-      {
         "action_id": "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30",
         "provider": "hetznerCloud",
         "version": "1.0.0",
@@ -4044,26 +4024,6 @@
         "debug_network": true
       },
       {
-        "action_id": "c531a217-7d68-4d04-a99c-b3ff0aeacf34",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "stop_server",
-        "parameters": {
-          "ID": "{{new_bridge}}",
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "HC_ACTION",
-        "next_action": {
-          "ok": [
-            "798602bc-2d91-4abb-b499-c2ed8a57d223"
-          ]
-        },
-        "debug_network": true
-      },
-      {
         "action_id": "3eaa02dc-49ec-4977-be75-5298595c1ee1",
         "provider": "generic",
         "version": "1.0.0",
@@ -4143,13 +4103,53 @@
         "debug_network": true
       },
       {
+        "action_id": "c496f750-79d9-4b2e-9b05-47e76a0e4286",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "stop_server",
+        "parameters": {
+          "ID": "{{old_bridge}}",
+          "_waiters": [
+            "success"
+          ],
+          "max_retries": 5
+        },
+        "output": "HC_ACTION",
+        "next_action": {
+          "ok": [
+            "34bcb85b-a916-475a-b351-32f1b0453f0c"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "c531a217-7d68-4d04-a99c-b3ff0aeacf34",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "stop_server",
+        "parameters": {
+          "ID": "{{new_bridge}}",
+          "_waiters": [
+            "success"
+          ],
+          "max_retries": 5
+        },
+        "output": "HC_ACTION",
+        "next_action": {
+          "ok": [
+            "798602bc-2d91-4abb-b499-c2ed8a57d223"
+          ]
+        },
+        "debug_network": true
+      },
+      {
         "action_id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
         "provider": "generic",
         "version": "1.0.13",
         "action": "run_script",
         "parameters": {
           "pass_to_entrypoint_as_single_param": false,
-          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\nsudo ls -la /etc/nginx/\nsudo cat /etc/nginx/nginx.conf\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx\n\nsudo ls -la /etc/nginx/\nsudo cat /etc/nginx/nginx.conf",
+          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx\n\nsync",
           "target": "{{ new_bridge.server.private_net[0].ip }}",
           "username": "admin",
           "port": 22,
