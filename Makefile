@@ -160,8 +160,8 @@ buildall:
 	shasum -a 256 dist/v$(CLIVERSION)/nebulant-darwin-amd64 > dist/v$(CLIVERSION)/nebulant-darwin-amd64.checksum
 	GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-darwin-arm64 nebulant.go
 	shasum -a 256 dist/v$(CLIVERSION)/nebulant-darwin-arm64 > dist/v$(CLIVERSION)/nebulant-darwin-arm64.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=js GOARCH=wasm go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-js-wasm nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-js-wasm > dist/v$(CLIVERSION)/nebulant-js-wasm.checksum
+#	GO111MODULE=on CGO_ENABLED=0 GOOS=js GOARCH=wasm go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-js-wasm nebulant.go
+#	shasum -a 256 dist/v$(CLIVERSION)/nebulant-js-wasm > dist/v$(CLIVERSION)/nebulant-js-wasm.checksum
 	@echo "Check dist/ for builds"
 
 .PHONY: buildalldev
