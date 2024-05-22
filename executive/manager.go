@@ -141,6 +141,7 @@ func (m *Manager) Run() error {
 	// set vars from cli args
 	for _, irbarg := range m.IRB.Args {
 		if st.ExistsRefName(irbarg.Name) {
+			// this is an stack var wich can acumulate values
 			err := st.Push(&base.StorageRecord{
 				RefName: irbarg.Name,
 				Aout:    nil,
@@ -155,6 +156,7 @@ func (m *Manager) Run() error {
 				RefName: irbarg.Name,
 				Aout:    nil,
 				Value:   irbarg.Value,
+				Literal: true,
 				Action:  nil,
 			}, "")
 			if err != nil {
