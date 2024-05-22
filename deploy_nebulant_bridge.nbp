@@ -1581,77 +1581,6 @@
           "z": 173
         },
         {
-          "position": {
-            "x": 2444,
-            "y": 3774
-          },
-          "type": "nebulant.threepstar.vertical.executionControl.Condition",
-          "data": {
-            "id": "condition",
-            "version": "1.0.0",
-            "provider": "executionControl",
-            "settings": {
-              "parameters": {
-                "conditions_cli": {
-                  "rules": []
-                },
-                "conditions": {
-                  "rules": [
-                    {
-                      "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
-                      "field": "{{old-bridge-exists}}",
-                      "operator": "=",
-                      "valueSource": "value",
-                      "value": "yes"
-                    }
-                  ],
-                  "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a"
-                },
-                "conditions_nonic": {
-                  "rules": [
-                    {
-                      "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
-                      "field": "{{old-bridge-exists}}",
-                      "operator": "=",
-                      "valueSource": "value",
-                      "value": "yes"
-                    }
-                  ],
-                  "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a",
-                  "combinator": "and"
-                }
-              },
-              "info": "Si había un viejo server..."
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "3d7de3b3-e33b-43a3-b845-1939348f49aa"
-              },
-              {
-                "group": "out-false",
-                "attrs": {},
-                "id": "688cc296-30eb-4fb9-a1f0-8d03ef90b715"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "ec71b379-6258-4709-bd2e-5bcc3603f280"
-              },
-              {
-                "group": "out-true",
-                "attrs": {},
-                "id": "b2b600d9-3772-4553-9d6c-8c87aad84f0f"
-              }
-            ]
-          },
-          "id": "3eaa02dc-49ec-4977-be75-5298595c1ee1",
-          "z": 174
-        },
-        {
           "type": "nebulant.link.Smart",
           "source": {
             "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
@@ -1848,42 +1777,6 @@
           "z": 202
         },
         {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "c531a217-7d68-4d04-a99c-b3ff0aeacf34",
-            "magnet": "circle",
-            "port": "e4985c99-71e1-4bf4-ba2c-80638abf4ba5"
-          },
-          "target": {
-            "id": "7692cf16-12de-4e3c-b96b-e2cbda1b132b",
-            "magnet": "circle",
-            "port": "b930ce21-e3f5-41bb-b184-d83d187e4f13"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "a2072acf-f55a-4169-82d4-3e873a286e18",
-          "z": 203
-        },
-        {
           "position": {
             "x": 2755,
             "y": 3769
@@ -1994,62 +1887,6 @@
         },
         {
           "position": {
-            "x": 2805,
-            "y": 4141
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.AssignPrimaryIP",
-          "data": {
-            "id": "assign-primary-ip",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "async": false,
-                  "waiters": [
-                    "success"
-                  ],
-                  "capabilities": [],
-                  "type": "hetznerCloud:action",
-                  "value": "HC_ACTION"
-                }
-              },
-              "parameters": {
-                "ServerIds": [
-                  "{{new_bridge}}"
-                ],
-                "PrimaryIpIds": [
-                  "{{bridge_primary_ip}}"
-                ],
-                "_maxRetries": 5
-              },
-              "info": "Assign the Bridge IP"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "b930ce21-e3f5-41bb-b184-d83d187e4f13"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "8ebaf729-5b07-46cc-a91d-43c3f36c0831"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "e08b48d6-95dd-40c2-8b6d-83e4554835f2"
-              }
-            ]
-          },
-          "id": "7692cf16-12de-4e3c-b96b-e2cbda1b132b",
-          "z": 213
-        },
-        {
-          "position": {
             "x": 2517,
             "y": 3967
           },
@@ -2155,59 +1992,6 @@
           "z": 216
         },
         {
-          "position": {
-            "x": 2815,
-            "y": 4510
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.StartServer",
-          "data": {
-            "id": "start-server",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "async": false,
-                  "waiters": [
-                    "success"
-                  ],
-                  "capabilities": [],
-                  "type": "hetznerCloud:action",
-                  "value": "HC_ACTION"
-                }
-              },
-              "parameters": {
-                "ids": [
-                  "{{new_bridge}}"
-                ],
-                "_maxRetries": 5
-              },
-              "info": "Start the server"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "cb9c251e-6ade-4014-b163-af5eb500b80d"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "63d75921-b7c5-45e7-8720-7988451d672c"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "2c6297d9-a13e-47a8-a26f-e5e5c7d46498"
-              }
-            ]
-          },
-          "id": "41f353bb-f11e-466a-a024-86dc6d705f21",
-          "z": 219
-        },
-        {
           "type": "nebulant.link.Smart",
           "source": {
             "id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
@@ -2242,76 +2026,6 @@
           },
           "id": "d3710b5f-02a4-4231-9801-6dee258ff25b",
           "z": 220
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "7692cf16-12de-4e3c-b96b-e2cbda1b132b",
-            "magnet": "circle",
-            "port": "e08b48d6-95dd-40c2-8b6d-83e4554835f2"
-          },
-          "target": {
-            "id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
-            "magnet": "circle",
-            "port": "2399a66b-208c-4249-8cf3-1320169f16dd"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "84ff011f-98f6-4028-8926-a75f4eb2c485",
-          "z": 221
-        },
-        {
-          "position": {
-            "x": 2812,
-            "y": 4331
-          },
-          "type": "nebulant.rectangle.vertical.executionControl.Sleep",
-          "data": {
-            "id": "sleep",
-            "version": "1.0.0",
-            "provider": "executionControl",
-            "settings": {
-              "parameters": {
-                "seconds": 15
-              },
-              "info": "Hetzner keep the server in \"locked\" state a few seconds after assigning a primary IP to it"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "2399a66b-208c-4249-8cf3-1320169f16dd"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "df602dc9-21f0-43cf-bfdc-48d17efe6c40"
-              }
-            ]
-          },
-          "id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
-          "z": 222
         },
         {
           "position": {
@@ -2823,11 +2537,422 @@
           },
           "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
           "z": 229
+        },
+        {
+          "position": {
+            "x": 2444,
+            "y": 3774
+          },
+          "type": "nebulant.threepstar.vertical.executionControl.Condition",
+          "data": {
+            "id": "condition",
+            "version": "1.0.0",
+            "provider": "executionControl",
+            "settings": {
+              "parameters": {
+                "conditions_cli": {
+                  "rules": []
+                },
+                "conditions": {
+                  "rules": [
+                    {
+                      "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
+                      "field": "{{old-bridge-exists}}",
+                      "operator": "=",
+                      "valueSource": "value",
+                      "value": "yes"
+                    }
+                  ],
+                  "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a"
+                },
+                "conditions_nonic": {
+                  "rules": [
+                    {
+                      "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
+                      "field": "{{old-bridge-exists}}",
+                      "operator": "=",
+                      "valueSource": "value",
+                      "value": "yes"
+                    }
+                  ],
+                  "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a",
+                  "combinator": "and"
+                }
+              },
+              "info": "Si había un viejo server..."
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "3d7de3b3-e33b-43a3-b845-1939348f49aa"
+              },
+              {
+                "group": "out-false",
+                "attrs": {},
+                "id": "688cc296-30eb-4fb9-a1f0-8d03ef90b715"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "ec71b379-6258-4709-bd2e-5bcc3603f280"
+              },
+              {
+                "group": "out-true",
+                "attrs": {},
+                "id": "b2b600d9-3772-4553-9d6c-8c87aad84f0f"
+              }
+            ]
+          },
+          "id": "3eaa02dc-49ec-4977-be75-5298595c1ee1",
+          "z": 230
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30",
+            "magnet": "circle",
+            "port": "35f57f86-d033-4eae-ae08-0ab2a519467c"
+          },
+          "target": {
+            "id": "eb84303a-19ad-4633-8b95-b23183cafd9e",
+            "magnet": "circle",
+            "port": "b930ce21-e3f5-41bb-b184-d83d187e4f13"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "88f6d7b7-ade0-43f7-8992-3ed49c8b54d8",
+          "z": 246
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "eb84303a-19ad-4633-8b95-b23183cafd9e",
+            "magnet": "circle",
+            "port": "e08b48d6-95dd-40c2-8b6d-83e4554835f2"
+          },
+          "target": {
+            "id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
+            "magnet": "circle",
+            "port": "2399a66b-208c-4249-8cf3-1320169f16dd"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "13feb5f3-5e43-440d-b188-007ad8ddd2aa",
+          "z": 252
+        },
+        {
+          "position": {
+            "x": 2787,
+            "y": 4177
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.UnassignPrimaryIP",
+          "data": {
+            "id": "unassign-primary-ip",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [
+                    "success"
+                  ],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "hetznerCloud:action",
+                  "value": "HC_ACTION_3"
+                }
+              },
+              "parameters": {
+                "PrimaryIpIds": [
+                  "{{bridge_primary_ip}}"
+                ],
+                "_maxRetries": 5
+              },
+              "info": ""
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "87a341ba-a753-45de-a6c0-20ad806517f8"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "33173901-5364-449f-9e82-b500b10e8042"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "35f57f86-d033-4eae-ae08-0ab2a519467c"
+              }
+            ]
+          },
+          "id": "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30",
+          "z": 253
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "c531a217-7d68-4d04-a99c-b3ff0aeacf34",
+            "magnet": "circle",
+            "port": "e4985c99-71e1-4bf4-ba2c-80638abf4ba5"
+          },
+          "target": {
+            "id": "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30",
+            "magnet": "circle",
+            "port": "87a341ba-a753-45de-a6c0-20ad806517f8"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "9efafc51-a454-4640-9cfe-12dc2035f568",
+          "z": 254
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30",
+            "magnet": "circle",
+            "port": "33173901-5364-449f-9e82-b500b10e8042"
+          },
+          "target": {
+            "id": "eb84303a-19ad-4633-8b95-b23183cafd9e",
+            "magnet": "circle",
+            "port": "b930ce21-e3f5-41bb-b184-d83d187e4f13"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "67acf5a9-5139-4760-a5c0-01940b01feaf",
+          "z": 255
+        },
+        {
+          "position": {
+            "x": 2788,
+            "y": 4378
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.AssignPrimaryIP",
+          "data": {
+            "id": "assign-primary-ip",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "async": false,
+                  "waiters": [
+                    "success"
+                  ],
+                  "capabilities": [],
+                  "type": "hetznerCloud:action",
+                  "value": "HC_ACTION"
+                }
+              },
+              "parameters": {
+                "ServerIds": [
+                  "{{new_bridge}}"
+                ],
+                "PrimaryIpIds": [
+                  "{{bridge_primary_ip}}"
+                ],
+                "_maxRetries": 5
+              },
+              "info": "Assign the Bridge IP"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "b930ce21-e3f5-41bb-b184-d83d187e4f13"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "8ebaf729-5b07-46cc-a91d-43c3f36c0831"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "e08b48d6-95dd-40c2-8b6d-83e4554835f2"
+              }
+            ]
+          },
+          "id": "eb84303a-19ad-4633-8b95-b23183cafd9e",
+          "z": 256
+        },
+        {
+          "position": {
+            "x": 2803,
+            "y": 4745
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.StartServer",
+          "data": {
+            "id": "start-server",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "async": false,
+                  "waiters": [
+                    "success"
+                  ],
+                  "capabilities": [],
+                  "type": "hetznerCloud:action",
+                  "value": "HC_ACTION"
+                }
+              },
+              "parameters": {
+                "ids": [
+                  "{{new_bridge}}"
+                ],
+                "_maxRetries": 5
+              },
+              "info": "Start the server"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "cb9c251e-6ade-4014-b163-af5eb500b80d"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "63d75921-b7c5-45e7-8720-7988451d672c"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "2c6297d9-a13e-47a8-a26f-e5e5c7d46498"
+              }
+            ]
+          },
+          "id": "41f353bb-f11e-466a-a024-86dc6d705f21",
+          "z": 257
+        },
+        {
+          "position": {
+            "x": 2800,
+            "y": 4566
+          },
+          "type": "nebulant.rectangle.vertical.executionControl.Sleep",
+          "data": {
+            "id": "sleep",
+            "version": "1.0.0",
+            "provider": "executionControl",
+            "settings": {
+              "parameters": {
+                "seconds": 15
+              },
+              "info": "Hetzner keep the server in \"locked\" state a few seconds after assigning a primary IP to it"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "2399a66b-208c-4249-8cf3-1320169f16dd"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "df602dc9-21f0-43cf-bfdc-48d17efe6c40"
+              }
+            ]
+          },
+          "id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
+          "z": 258
         }
       ],
-      "zoom": 0.5349453170026358,
-      "x": 2626.4366149902344,
-      "y": 3333.9855346679688
+      "zoom": 0.4846342825242255,
+      "x": 2531.8060607910156,
+      "y": 3499.5460205078125
     },
     "diagram_version": "1.0.7",
     "n_warnings": 3,
@@ -3044,35 +3169,6 @@
         "debug_network": true
       },
       {
-        "action_id": "3eaa02dc-49ec-4977-be75-5298595c1ee1",
-        "provider": "generic",
-        "version": "1.0.0",
-        "action": "condition",
-        "parameters": {
-          "conditions": {
-            "rules": [
-              {
-                "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
-                "field": "{{old-bridge-exists}}",
-                "operator": "=",
-                "valueSource": "value",
-                "value": "yes"
-              }
-            ],
-            "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a",
-            "combinator": "and"
-          }
-        },
-        "next_action": {
-          "ok": {
-            "true": [
-              "45023830-eaa9-470c-a71e-efa995bf4f3b"
-            ]
-          }
-        },
-        "debug_network": true
-      },
-      {
         "action_id": "e4f5a441-6329-4fbf-a128-ed35215726db",
         "provider": "hetznerCloud",
         "version": "1.0.0",
@@ -3151,28 +3247,7 @@
         "output": "HC_ACTION",
         "next_action": {
           "ok": [
-            "7692cf16-12de-4e3c-b96b-e2cbda1b132b"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "7692cf16-12de-4e3c-b96b-e2cbda1b132b",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "assign_primary_ip",
-        "parameters": {
-          "ID": "{{bridge_primary_ip}}",
-          "AssigneeID": "{{new_bridge}}",
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "HC_ACTION",
-        "next_action": {
-          "ok": [
-            "a9e1062d-d774-4fad-8ddf-eca6b44740da"
+            "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30"
           ]
         },
         "debug_network": true
@@ -3207,37 +3282,6 @@
         },
         "output": "HC_ACTION_2",
         "next_action": {},
-        "debug_network": true
-      },
-      {
-        "action_id": "41f353bb-f11e-466a-a024-86dc6d705f21",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "start_server",
-        "parameters": {
-          "ID": "{{new_bridge}}",
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "HC_ACTION",
-        "next_action": {},
-        "debug_network": true
-      },
-      {
-        "action_id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
-        "provider": "generic",
-        "version": "1.0.0",
-        "action": "sleep",
-        "parameters": {
-          "seconds": 15
-        },
-        "next_action": {
-          "ok": [
-            "41f353bb-f11e-466a-a024-86dc6d705f21"
-          ]
-        },
         "debug_network": true
       },
       {
@@ -3455,6 +3499,110 @@
           ],
           "ko": [
             "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "3eaa02dc-49ec-4977-be75-5298595c1ee1",
+        "provider": "generic",
+        "version": "1.0.0",
+        "action": "condition",
+        "parameters": {
+          "conditions": {
+            "rules": [
+              {
+                "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
+                "field": "{{old-bridge-exists}}",
+                "operator": "=",
+                "valueSource": "value",
+                "value": "yes"
+              }
+            ],
+            "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a",
+            "combinator": "and"
+          }
+        },
+        "next_action": {
+          "ok": {
+            "true": [
+              "45023830-eaa9-470c-a71e-efa995bf4f3b"
+            ]
+          }
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "unassign_primary_ip",
+        "parameters": {
+          "id": "{{bridge_primary_ip}}",
+          "_waiters": [
+            "success"
+          ],
+          "max_retries": 5
+        },
+        "output": "HC_ACTION_3",
+        "next_action": {
+          "ok": [
+            "eb84303a-19ad-4633-8b95-b23183cafd9e"
+          ],
+          "ko": [
+            "eb84303a-19ad-4633-8b95-b23183cafd9e"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "eb84303a-19ad-4633-8b95-b23183cafd9e",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "assign_primary_ip",
+        "parameters": {
+          "ID": "{{bridge_primary_ip}}",
+          "AssigneeID": "{{new_bridge}}",
+          "_waiters": [
+            "success"
+          ],
+          "max_retries": 5
+        },
+        "output": "HC_ACTION",
+        "next_action": {
+          "ok": [
+            "a9e1062d-d774-4fad-8ddf-eca6b44740da"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "41f353bb-f11e-466a-a024-86dc6d705f21",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "start_server",
+        "parameters": {
+          "ID": "{{new_bridge}}",
+          "_waiters": [
+            "success"
+          ],
+          "max_retries": 5
+        },
+        "output": "HC_ACTION",
+        "next_action": {},
+        "debug_network": true
+      },
+      {
+        "action_id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
+        "provider": "generic",
+        "version": "1.0.0",
+        "action": "sleep",
+        "parameters": {
+          "seconds": 15
+        },
+        "next_action": {
+          "ok": [
+            "41f353bb-f11e-466a-a024-86dc6d705f21"
           ]
         },
         "debug_network": true
