@@ -1979,97 +1979,6 @@
           "z": 228
         },
         {
-          "position": {
-            "x": 2444,
-            "y": 3551
-          },
-          "type": "nebulant.rectangle.vertical.generic.RunCommand",
-          "data": {
-            "id": "run-command",
-            "version": "1.0.13",
-            "provider": "generic",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "generic:script_execution",
-                  "value": "RUN_COMMAND_RESULT_1"
-                }
-              },
-              "info": "Configuración común tanto para el Backend como para los Workers",
-              "parameters": {
-                "upload_to_remote_target": true,
-                "dump_json": false,
-                "vars": [],
-                "open_dbg_shell_onerror": false,
-                "open_dbg_shell_after": false,
-                "open_dbg_shell_before": false,
-                "proxies": [
-                  {
-                    "__uniq": 1715961984332,
-                    "name": "new-ssh-config",
-                    "value": {
-                      "_credentials": "privkey",
-                      "target": [
-                        "{{ bastion.server.public_net.ipv4.ip }}"
-                      ],
-                      "username": "admin",
-                      "privkeyPath": "",
-                      "privkey": "{{ sshkey }}",
-                      "passphrase": "",
-                      "password": "",
-                      "port": 22
-                    }
-                  }
-                ],
-                "port": 22,
-                "password": "",
-                "passphrase": "",
-                "privkey": "{{ sshkey }}",
-                "privkeyPath": "",
-                "username": "admin",
-                "target": [
-                  "{{ new_bridge.server.private_net[0].ip }}"
-                ],
-                "_credentials": "privkey",
-                "_run_on_remote": true,
-                "scriptParameters": "",
-                "scriptName": "",
-                "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx",
-                "command": "",
-                "pass_to_entrypoint_as_single_param": false,
-                "entrypoint": "",
-                "_custom_entrypoint": false,
-                "_type": "script",
-                "_maxRetries": 5
-              }
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "0d90f030-fab0-4413-aa41-3346ff704faf"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "0d5e165d-3bd2-4422-9701-01aea0ba4d3d"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "f9d85c2c-f1d2-4000-85a7-add8089a52b8"
-              }
-            ]
-          },
-          "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
-          "z": 229
-        },
-        {
           "type": "nebulant.link.Smart",
           "source": {
             "id": "eb84303a-19ad-4633-8b95-b23183cafd9e",
@@ -3424,11 +3333,102 @@
           },
           "id": "e9b446a1-cd08-4df3-969c-e5da9fa8b1ac",
           "z": 348
+        },
+        {
+          "position": {
+            "x": 2444,
+            "y": 3551
+          },
+          "type": "nebulant.rectangle.vertical.generic.RunCommand",
+          "data": {
+            "id": "run-command",
+            "version": "1.0.13",
+            "provider": "generic",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "generic:script_execution",
+                  "value": "RUN_COMMAND_RESULT_1"
+                }
+              },
+              "info": "Configuración común tanto para el Backend como para los Workers",
+              "parameters": {
+                "upload_to_remote_target": true,
+                "dump_json": false,
+                "vars": [],
+                "open_dbg_shell_onerror": false,
+                "open_dbg_shell_after": false,
+                "open_dbg_shell_before": false,
+                "proxies": [
+                  {
+                    "__uniq": 1715961984332,
+                    "name": "new-ssh-config",
+                    "value": {
+                      "_credentials": "privkey",
+                      "target": [
+                        "{{ bastion.server.public_net.ipv4.ip }}"
+                      ],
+                      "username": "admin",
+                      "privkeyPath": "",
+                      "privkey": "{{ sshkey }}",
+                      "passphrase": "",
+                      "password": "",
+                      "port": 22
+                    }
+                  }
+                ],
+                "port": 22,
+                "password": "",
+                "passphrase": "",
+                "privkey": "{{ sshkey }}",
+                "privkeyPath": "",
+                "username": "admin",
+                "target": [
+                  "{{ new_bridge.server.private_net[0].ip }}"
+                ],
+                "_credentials": "privkey",
+                "_run_on_remote": true,
+                "scriptParameters": "",
+                "scriptName": "",
+                "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo ls -la /tmp/deploy_conf/nginx/\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\nsudo ls -la /etc/nginx/\nsudo cat /etc/nginx/nginx.conf\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx",
+                "command": "",
+                "pass_to_entrypoint_as_single_param": false,
+                "entrypoint": "",
+                "_custom_entrypoint": false,
+                "_type": "script",
+                "_maxRetries": 5
+              }
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "0d90f030-fab0-4413-aa41-3346ff704faf"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "0d5e165d-3bd2-4422-9701-01aea0ba4d3d"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "f9d85c2c-f1d2-4000-85a7-add8089a52b8"
+              }
+            ]
+          },
+          "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
+          "z": 349
         }
       ],
-      "zoom": 0.4045998128358369,
-      "x": 2451.805450439453,
-      "y": 3774.0995483398438
+      "zoom": 0.6867012683612106,
+      "x": 2666.3704833984375,
+      "y": 4137.170166015625
     },
     "diagram_version": "1.0.7",
     "n_warnings": 4,
@@ -3810,45 +3810,6 @@
         "debug_network": true
       },
       {
-        "action_id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
-        "provider": "generic",
-        "version": "1.0.13",
-        "action": "run_script",
-        "parameters": {
-          "pass_to_entrypoint_as_single_param": false,
-          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx",
-          "target": "{{ new_bridge.server.private_net[0].ip }}",
-          "username": "admin",
-          "port": 22,
-          "privkey": "{{ sshkey }}",
-          "upload_to_remote_target": true,
-          "proxies": [
-            {
-              "username": "admin",
-              "target": "{{ bastion.server.public_net.ipv4.ip }}",
-              "port": 22,
-              "privkey": "{{ sshkey }}"
-            }
-          ],
-          "open_dbg_shell_before": false,
-          "open_dbg_shell_after": false,
-          "open_dbg_shell_onerror": false,
-          "dump_json": false,
-          "max_retries": 5
-        },
-        "output": "RUN_COMMAND_RESULT_1",
-        "next_action": {
-          "ok": [
-            "536d8ec4-bb78-478d-9d5f-64ac2dc09809",
-            "6ed9cc1d-6bca-46a2-b7d2-867e1f68d607"
-          ],
-          "ko": [
-            "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8"
-          ]
-        },
-        "debug_network": true
-      },
-      {
         "action_id": "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8",
         "provider": "hetznerCloud",
         "version": "1.0.0",
@@ -4177,6 +4138,45 @@
         "next_action": {
           "ok": [
             "c531a217-7d68-4d04-a99c-b3ff0aeacf34"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
+        "provider": "generic",
+        "version": "1.0.13",
+        "action": "run_script",
+        "parameters": {
+          "pass_to_entrypoint_as_single_param": false,
+          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo ls -la /tmp/deploy_conf/nginx/\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\nsudo ls -la /etc/nginx/\nsudo cat /etc/nginx/nginx.conf\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx",
+          "target": "{{ new_bridge.server.private_net[0].ip }}",
+          "username": "admin",
+          "port": 22,
+          "privkey": "{{ sshkey }}",
+          "upload_to_remote_target": true,
+          "proxies": [
+            {
+              "username": "admin",
+              "target": "{{ bastion.server.public_net.ipv4.ip }}",
+              "port": 22,
+              "privkey": "{{ sshkey }}"
+            }
+          ],
+          "open_dbg_shell_before": false,
+          "open_dbg_shell_after": false,
+          "open_dbg_shell_onerror": false,
+          "dump_json": false,
+          "max_retries": 5
+        },
+        "output": "RUN_COMMAND_RESULT_1",
+        "next_action": {
+          "ok": [
+            "536d8ec4-bb78-478d-9d5f-64ac2dc09809",
+            "6ed9cc1d-6bca-46a2-b7d2-867e1f68d607"
+          ],
+          "ko": [
+            "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8"
           ]
         },
         "debug_network": true
