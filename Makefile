@@ -115,11 +115,6 @@ buildlocal:
 builddev:
 	go build -ldflags "$(LDFLAGS) $(DEVLDFLAGS)" -trimpath -o dist/nebulant-dev-NOPROD nebulant.go
 
-# This is a temporal hack that I need for the CI/CD. Remove once we have released something that can be curl-ed
-.PHONY: buildlinuxamd64
-buildlinuxamd64:
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/nebulant-linux-amd64 nebulant.go
-
 .PHONY: buildall
 buildall:
 	@echo "Building..."

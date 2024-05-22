@@ -76,9 +76,9 @@ deploy_bridge_develop:
   tags:
     - local
   script:
-    - apk update && apk add vault make git libcap
+    - apk update && apk add vault make git libcap curl
     - setcap -r /usr/sbin/vault
-    - make buildlinuxamd64
+    - curl "https://releases.nebulant.dev/v0.3.0-beta-git-6acffbc/nebulant-linux-amd64" -o nebulant-linux-amd64
     - make buildbridge
 
     - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
@@ -100,20 +100,21 @@ deploy_bridge_develop:
     - export ENV=$(vault kv get -field=.env "secret/Nebulant/Dev/PRE")
     - echo "$ENV" | sed 's/\r/\n/g' > dist/.env
 
-    - chmod +x ./dist/nebulant-linux-amd64
-    - mv ./dist/nebulant-linux-amd64 nebulant-linux-amd64
+    - chmod +x ./nebulant-linux-amd64
     - ./nebulant-linux-amd64 run -f ./deploy_nebulant_bridge.nbp
-  only:
-    - develop
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+      when: manual
 
 deploy_bridge_master:
   stage: deploy
   tags:
     - local
   script:
-    - apk update && apk add vault make git libcap
+    - apk update && apk add vault make git libcap curl
     - setcap -r /usr/sbin/vault
-    - make buildlinuxamd64
+    # TODO: This should point at releases.nebulant.app and use a stable release
+    - curl "https://releases.nebulant.dev/v0.3.0-beta-git-6acffbc/nebulant-linux-amd64" -o nebulant-linux-amd64
     - make buildbridge
 
     - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
@@ -135,11 +136,11 @@ deploy_bridge_master:
     - export ENV=$(vault kv get -field=.env "secret/Nebulant/Dev/PRO")
     - echo "$ENV" | sed 's/\r/\n/g' > dist/.env
 
-    - chmod +x ./dist/nebulant-linux-amd64
-    - mv ./dist/nebulant-linux-amd64 nebulant-linux-amd64
+    - chmod +x ./nebulant-linux-amd64
     - ./nebulant-linux-amd64 run -f ./deploy_nebulant_bridge.nbp
-  only:
-    - master
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      when: manual
 
 dev_gobuild_and_r2upload:
   stage: deploy
@@ -157,7 +158,7 @@ dev_gobuild_and_r2upload:
     - export CLOUDFLARE_SECRET_ACCESS_KEY=$(vault kv get -field="Builder assets generator secret access key" secret/Develatio/Dev/Cloudflare/API/api-tokens)
     - export VERSION_NUMBER=$(./nebulant -v | head -n 1)
     - export VERSION_DATE=$(git log -1 --date=format:'%Y/%m/%d' --format=%cd)
-    - ./nebulant -x run -f ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=releases.nebulant.dev
+    - ./nebulant run -f ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=releases.nebulant.dev
   rules:
     - if: $CI_COMMIT_TAG && $CI_COMMIT_BRANCH == "develop" && $CI_COMMIT_TAG =~ /v\d\.\d.\d-rc.$/
       variables:
@@ -185,7 +186,7 @@ prod_gobuild_and_r2upload:
     - export CLOUDFLARE_SECRET_ACCESS_KEY=$(vault kv get -field="Builder assets generator secret access key" secret/Develatio/Dev/Cloudflare/API/api-tokens)
     - export VERSION_NUMBER=$(./nebulant -v | head -n 1)
     - export VERSION_DATE=$(git log -1 --date=format:'%Y/%m/%d' --format=%cd)
-    - ./nebulant -x run -f ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=releases.nebulant.io
+    - ./nebulant run -f ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=releases.nebulant.io
   rules:
     - if: $CI_COMMIT_BRANCH == "master"
       variables:
