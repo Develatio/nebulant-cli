@@ -1127,190 +1127,6 @@
         },
         {
           "position": {
-            "x": 2200,
-            "y": 1864
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.FindNetwork",
-          "data": {
-            "id": "find-network",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "hetznerCloud:network",
-                  "value": "network"
-                }
-              },
-              "parameters": {
-                "PerPage": 10,
-                "Page": 1,
-                "ids": [],
-                "Name": "{{ network-name }}",
-                "_activeTab": "filters",
-                "Filters": [],
-                "_maxRetries": 5
-              },
-              "info": "Buscamos la lan"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "f9bd3962-2d2a-4fe1-9b95-2318cd00c197"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "c0e2fb8e-f9d1-4d3b-aef1-0afb88912c49"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "cd6b2b77-d2a1-42c3-b4e6-1b59818504d8"
-              }
-            ]
-          },
-          "id": "8d9a629e-1386-44fe-8304-d8f7e4858803",
-          "z": 157
-        },
-        {
-          "position": {
-            "x": 2336,
-            "y": 1864
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.FindServer",
-          "data": {
-            "id": "find-server",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [
-                    "ip"
-                  ],
-                  "type": "hetznerCloud:server",
-                  "value": "bastion"
-                }
-              },
-              "parameters": {
-                "PerPage": 10,
-                "Page": 1,
-                "ids": [],
-                "Name": "{{ bastion-name }}",
-                "_activeTab": "filters",
-                "Filters": [],
-                "_maxRetries": 5
-              },
-              "info": "Buscamos el Bastion"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "ca1519b0-cc81-429f-8f92-ad4abc8f679c"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "317ef89e-bed2-44f9-b49a-83b19819b7f4"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "108dd2df-24e7-47a1-856d-de41ee104c79"
-              }
-            ]
-          },
-          "id": "b8018309-3e2d-4f45-acad-650ada992b7c",
-          "z": 158
-        },
-        {
-          "position": {
-            "x": 2059,
-            "y": 1864
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.FindImage",
-          "data": {
-            "id": "find-image",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "hetznerCloud:image",
-                  "value": "debian"
-                }
-              },
-              "parameters": {
-                "PerPage": 10,
-                "Page": 1,
-                "_activeTab": "hetzner_images",
-                "HetznerImageID": [
-                  "114690389"
-                ],
-                "ImageID": [],
-                "Description": "",
-                "Name": "",
-                "Filters": [
-                  {
-                    "__uniq": 1715821124110,
-                    "name": "Type",
-                    "value": [
-                      "snapshot",
-                      "backup"
-                    ]
-                  },
-                  {
-                    "__uniq": 1715821124111,
-                    "name": "Status",
-                    "value": [
-                      "available"
-                    ]
-                  }
-                ],
-                "_maxRetries": 5
-              },
-              "info": "Buscamos la imagen base (Debian 12)"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "8d3da84f-a38b-4fa5-98f0-95996049a0ff"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "f5d226e7-b00d-4f88-974a-ac26df49f2ef"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "a7894bf0-89a3-4796-b9fa-6b75c6eaa19f"
-              }
-            ]
-          },
-          "id": "f42adb9a-a7c7-496c-aa33-0bcd8ba36f40",
-          "z": 159
-        },
-        {
-          "position": {
             "x": 2285,
             "y": 2471
           },
@@ -1423,42 +1239,6 @@
           },
           "id": "2de5320e-d3c9-40e7-9a96-80fb9c0b2390",
           "z": 167
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
-            "magnet": "circle",
-            "port": "f9d85c2c-f1d2-4000-85a7-add8089a52b8"
-          },
-          "target": {
-            "id": "536d8ec4-bb78-478d-9d5f-64ac2dc09809",
-            "magnet": "circle",
-            "port": "36ce4e2b-797e-4ccc-80a1-0be3b2aeaa63"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "f9438890-4460-48ff-b63e-47151279ef6a",
-          "z": 186
         },
         {
           "position": {
@@ -1585,345 +1365,6 @@
           "z": 198
         },
         {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
-            "magnet": "circle",
-            "port": "df602dc9-21f0-43cf-bfdc-48d17efe6c40"
-          },
-          "target": {
-            "id": "41f353bb-f11e-466a-a024-86dc6d705f21",
-            "magnet": "circle",
-            "port": "cb9c251e-6ade-4014-b163-af5eb500b80d"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "d3710b5f-02a4-4231-9801-6dee258ff25b",
-          "z": 220
-        },
-        {
-          "position": {
-            "x": 2213,
-            "y": 3113
-          },
-          "type": "nebulant.rectangle.vertical.generic.UploadFiles",
-          "data": {
-            "id": "upload-files",
-            "version": "1.0.3",
-            "provider": "generic",
-            "settings": {
-              "info": "Subimos el código del proyecto",
-              "parameters": {
-                "proxies": [
-                  {
-                    "__uniq": 1715858809965,
-                    "name": "new-ssh-config",
-                    "value": {
-                      "_credentials": "privkey",
-                      "target": [
-                        "{{ bastion.server.public_net.ipv4.ip }}"
-                      ],
-                      "username": "admin",
-                      "privkeyPath": "",
-                      "privkey": "{{ sshkey }}",
-                      "passphrase": "",
-                      "password": "",
-                      "port": 22
-                    }
-                  }
-                ],
-                "port": 22,
-                "password": "",
-                "passphrase": "",
-                "privkey": "{{ sshkey }}",
-                "privkeyPath": "",
-                "username": "root",
-                "target": [
-                  "{{ new_bridge.server.private_net[0].ip }}"
-                ],
-                "_credentials": "privkey",
-                "paths": [
-                  {
-                    "__uniq": 1716390693240,
-                    "name": "new-path-pair",
-                    "value": {
-                      "_src_type": "folder",
-                      "src": "{{ bridge-path }}",
-                      "dest": "/tmp/src",
-                      "overwrite": false,
-                      "recursive": true
-                    }
-                  },
-                  {
-                    "__uniq": 1716390693241,
-                    "name": "new-path-pair",
-                    "value": {
-                      "_src_type": "folder",
-                      "src": "{{ config-path }}",
-                      "dest": "/tmp/deploy_conf",
-                      "overwrite": false,
-                      "recursive": true
-                    }
-                  }
-                ],
-                "_maxRetries": 5
-              }
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "485a46af-dc95-43f7-8fa9-4a3fe225672f"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "528aa4da-ed33-4514-b8c8-fe75e3b1979f"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "1bd983de-0b41-4cc7-8172-a20e734f4d27"
-              }
-            ]
-          },
-          "id": "0705c312-d9b2-4530-bae2-b6d12d1d21dc",
-          "z": 225
-        },
-        {
-          "position": {
-            "x": 2124,
-            "y": 1462
-          },
-          "type": "nebulant.rectangle.vertical.generic.DefineVariables",
-          "data": {
-            "id": "define-variables",
-            "version": "1.0.2",
-            "provider": "generic",
-            "settings": {
-              "parameters": {
-                "files": [],
-                "vars": [
-                  {
-                    "__uniq": 1715811343813,
-                    "name": "new-variable",
-                    "value": {
-                      "name": "bastion-name",
-                      "type": "text",
-                      "value": "Bastion",
-                      "required": false,
-                      "ask_at_runtime": false,
-                      "stack": false
-                    }
-                  },
-                  {
-                    "__uniq": 1715811350049,
-                    "name": "new-variable",
-                    "value": {
-                      "name": "bridge-name",
-                      "type": "text",
-                      "value": "Bridge-{{ ENV.random }}",
-                      "required": false,
-                      "ask_at_runtime": false,
-                      "stack": false
-                    }
-                  },
-                  {
-                    "__uniq": 1715854791225,
-                    "name": "new-variable",
-                    "value": {
-                      "name": "network-name",
-                      "type": "text",
-                      "value": "nebulant-lan",
-                      "required": false,
-                      "ask_at_runtime": false,
-                      "stack": false
-                    }
-                  },
-                  {
-                    "__uniq": 1715858836012,
-                    "name": "new-variable",
-                    "value": {
-                      "name": "bridge-path",
-                      "type": "text",
-                      "value": "./dist",
-                      "required": false,
-                      "ask_at_runtime": false,
-                      "stack": false
-                    }
-                  },
-                  {
-                    "__uniq": 1715967853164,
-                    "name": "new-variable",
-                    "value": {
-                      "name": "netdata-uuid",
-                      "type": "text",
-                      "value": "eba90f71-d35e-4158-9fd5-ea518c5d97b6",
-                      "required": false,
-                      "ask_at_runtime": false,
-                      "stack": false
-                    }
-                  },
-                  {
-                    "__uniq": 1716204642895,
-                    "name": "new-variable",
-                    "value": {
-                      "name": "config-path",
-                      "type": "text",
-                      "value": "./deploy_conf",
-                      "required": false,
-                      "ask_at_runtime": false,
-                      "stack": false
-                    }
-                  },
-                  {
-                    "__uniq": 1716206081492,
-                    "name": "new-variable",
-                    "value": {
-                      "name": "bridge-primary-ip-name",
-                      "type": "text",
-                      "value": "Bridge",
-                      "required": false,
-                      "ask_at_runtime": false,
-                      "stack": false
-                    }
-                  }
-                ]
-              },
-              "info": "Definimos variables",
-              "outputs": {
-                "bridge-primary-ip-name": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "generic:user_variable",
-                  "value": "bridge-primary-ip-name"
-                },
-                "config-path": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "generic:user_variable",
-                  "value": "config-path"
-                },
-                "netdata-uuid": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "generic:user_variable",
-                  "value": "netdata-uuid"
-                },
-                "bridge-path": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "generic:user_variable",
-                  "value": "bridge-path"
-                },
-                "network-name": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "generic:user_variable",
-                  "value": "network-name"
-                },
-                "bridge-name": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "generic:user_variable",
-                  "value": "bridge-name"
-                },
-                "bastion-name": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "generic:user_variable",
-                  "value": "bastion-name"
-                }
-              }
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "656d482f-e9a6-4206-9651-7e1fd2045588"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "0656d7ef-aee8-491b-837b-2aab799cce1a"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "52f0d84f-67bc-4c51-806c-6729c931f4d7"
-              }
-            ]
-          },
-          "id": "9eaf5d61-ea7b-40b0-b270-195f742c671b",
-          "z": 227
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "eb84303a-19ad-4633-8b95-b23183cafd9e",
-            "magnet": "circle",
-            "port": "e08b48d6-95dd-40c2-8b6d-83e4554835f2"
-          },
-          "target": {
-            "id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
-            "magnet": "circle",
-            "port": "2399a66b-208c-4249-8cf3-1320169f16dd"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "13feb5f3-5e43-440d-b188-007ad8ddd2aa",
-          "z": 252
-        },
-        {
           "position": {
             "x": 2277,
             "y": 3772
@@ -1975,98 +1416,6 @@
           },
           "id": "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8",
           "z": 260
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "41f353bb-f11e-466a-a024-86dc6d705f21",
-            "magnet": "circle",
-            "port": "2c6297d9-a13e-47a8-a26f-e5e5c7d46498"
-          },
-          "target": {
-            "id": "3eaa02dc-49ec-4977-be75-5298595c1ee1",
-            "magnet": "circle",
-            "port": "3d7de3b3-e33b-43a3-b845-1939348f49aa"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "4bd75535-2c75-4be9-a2f5-924e9c96d554",
-          "z": 264
-        },
-        {
-          "position": {
-            "x": 2630,
-            "y": 3776
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.FindPrimaryIP",
-          "data": {
-            "id": "find-primary-ip",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [
-                    "ip"
-                  ],
-                  "type": "hetznerCloud:primary_ip",
-                  "value": "bridge_primary_ip"
-                }
-              },
-              "parameters": {
-                "PerPage": 10,
-                "Page": 1,
-                "ids": [],
-                "Name": "{{ bridge-primary-ip-name }}",
-                "_activeTab": "filters",
-                "Filters": [],
-                "_maxRetries": 5
-              },
-              "info": "Find the primary IP of the Bridge"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "36ce4e2b-797e-4ccc-80a1-0be3b2aeaa63"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "486028cd-7c25-4a88-9fde-1f7a0f733fc0"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "f4d92e22-6f39-49e8-9c92-439a84d13da8"
-              }
-            ]
-          },
-          "id": "536d8ec4-bb78-478d-9d5f-64ac2dc09809",
-          "z": 276
         },
         {
           "position": {
@@ -2251,1090 +1600,6 @@
           "z": 283
         },
         {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "c531a217-7d68-4d04-a99c-b3ff0aeacf34",
-            "magnet": "circle",
-            "port": "e4985c99-71e1-4bf4-ba2c-80638abf4ba5"
-          },
-          "target": {
-            "id": "798602bc-2d91-4abb-b499-c2ed8a57d223",
-            "magnet": "circle",
-            "port": "2399a66b-208c-4249-8cf3-1320169f16dd"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "e4b7b27c-46b5-4999-b61a-f8837c958d8a",
-          "z": 286
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "798602bc-2d91-4abb-b499-c2ed8a57d223",
-            "magnet": "circle",
-            "port": "df602dc9-21f0-43cf-bfdc-48d17efe6c40"
-          },
-          "target": {
-            "id": "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30",
-            "magnet": "circle",
-            "port": "87a341ba-a753-45de-a6c0-20ad806517f8"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "76ad3823-9935-49a1-9955-2681cd441882",
-          "z": 289
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30",
-            "magnet": "circle",
-            "port": "33173901-5364-449f-9e82-b500b10e8042"
-          },
-          "target": {
-            "id": "ddccd4cf-45a9-4cfb-ad32-d73a58245327",
-            "magnet": "circle",
-            "port": "2399a66b-208c-4249-8cf3-1320169f16dd"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "b7cbfcc0-37b6-48d4-8db1-ffa04608b4c7",
-          "z": 292
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30",
-            "magnet": "circle",
-            "port": "35f57f86-d033-4eae-ae08-0ab2a519467c"
-          },
-          "target": {
-            "id": "ddccd4cf-45a9-4cfb-ad32-d73a58245327",
-            "magnet": "circle",
-            "port": "2399a66b-208c-4249-8cf3-1320169f16dd"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "b0c9fd5e-dac4-4e47-a99c-ef1124bb2ded",
-          "z": 293
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "ddccd4cf-45a9-4cfb-ad32-d73a58245327",
-            "magnet": "circle",
-            "port": "df602dc9-21f0-43cf-bfdc-48d17efe6c40"
-          },
-          "target": {
-            "id": "eb84303a-19ad-4633-8b95-b23183cafd9e",
-            "magnet": "circle",
-            "port": "b930ce21-e3f5-41bb-b184-d83d187e4f13"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "a8447379-9efc-49e9-9a33-1573252d3234",
-          "z": 295
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
-            "magnet": "circle",
-            "port": "f9d85c2c-f1d2-4000-85a7-add8089a52b8"
-          },
-          "target": {
-            "id": "6ed9cc1d-6bca-46a2-b7d2-867e1f68d607",
-            "magnet": "circle",
-            "port": "3d7de3b3-e33b-43a3-b845-1939348f49aa"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "efefc111-9e6b-42ae-a1dc-c82876ef6da8",
-          "z": 319
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "6ed9cc1d-6bca-46a2-b7d2-867e1f68d607",
-            "magnet": "circle",
-            "port": "b2b600d9-3772-4553-9d6c-8c87aad84f0f"
-          },
-          "target": {
-            "id": "c496f750-79d9-4b2e-9b05-47e76a0e4286",
-            "magnet": "circle",
-            "port": "0443d9fb-d974-4537-bf1c-250445b900cf"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "8e529868-ffbf-44ca-b2d4-f1dfa3e27742",
-          "z": 320
-        },
-        {
-          "position": {
-            "x": 2804,
-            "y": 3775
-          },
-          "type": "nebulant.threepstar.vertical.executionControl.Condition",
-          "data": {
-            "id": "condition",
-            "version": "1.0.0",
-            "provider": "executionControl",
-            "settings": {
-              "parameters": {
-                "conditions_cli": {
-                  "rules": []
-                },
-                "conditions": {
-                  "rules": [
-                    {
-                      "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
-                      "field": "{{old-bridge-exists}}",
-                      "operator": "=",
-                      "valueSource": "value",
-                      "value": "yes"
-                    }
-                  ],
-                  "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a"
-                },
-                "conditions_nonic": {
-                  "rules": [
-                    {
-                      "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
-                      "field": "{{old-bridge-exists}}",
-                      "operator": "=",
-                      "valueSource": "value",
-                      "value": "yes"
-                    }
-                  ],
-                  "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a",
-                  "combinator": "and"
-                }
-              },
-              "info": "Si había un viejo server..."
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "3d7de3b3-e33b-43a3-b845-1939348f49aa"
-              },
-              {
-                "group": "out-false",
-                "attrs": {},
-                "id": "688cc296-30eb-4fb9-a1f0-8d03ef90b715"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "ec71b379-6258-4709-bd2e-5bcc3603f280"
-              },
-              {
-                "group": "out-true",
-                "attrs": {},
-                "id": "b2b600d9-3772-4553-9d6c-8c87aad84f0f"
-              }
-            ]
-          },
-          "id": "6ed9cc1d-6bca-46a2-b7d2-867e1f68d607",
-          "z": 332
-        },
-        {
-          "position": {
-            "x": 2668,
-            "y": 4531
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.UnassignPrimaryIP",
-          "data": {
-            "id": "unassign-primary-ip",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "waiters": [
-                    "success"
-                  ],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "hetznerCloud:action",
-                  "value": "HC_ACTION_3"
-                }
-              },
-              "parameters": {
-                "PrimaryIpIds": [
-                  "{{bridge_primary_ip}}"
-                ],
-                "_maxRetries": 5
-              },
-              "info": ""
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "87a341ba-a753-45de-a6c0-20ad806517f8"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "33173901-5364-449f-9e82-b500b10e8042"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "35f57f86-d033-4eae-ae08-0ab2a519467c"
-              }
-            ]
-          },
-          "id": "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30",
-          "z": 334
-        },
-        {
-          "position": {
-            "x": 2829,
-            "y": 4543
-          },
-          "type": "nebulant.rectangle.vertical.executionControl.Sleep",
-          "data": {
-            "id": "sleep",
-            "version": "1.0.0",
-            "provider": "executionControl",
-            "settings": {
-              "parameters": {
-                "seconds": 15
-              },
-              "info": "Hetzner keep the server in \"locked\" state a few seconds after assigning a primary IP to it"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "2399a66b-208c-4249-8cf3-1320169f16dd"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "df602dc9-21f0-43cf-bfdc-48d17efe6c40"
-              }
-            ]
-          },
-          "id": "ddccd4cf-45a9-4cfb-ad32-d73a58245327",
-          "z": 335
-        },
-        {
-          "position": {
-            "x": 2834,
-            "y": 4750
-          },
-          "type": "nebulant.rectangle.vertical.executionControl.Sleep",
-          "data": {
-            "id": "sleep",
-            "version": "1.0.0",
-            "provider": "executionControl",
-            "settings": {
-              "parameters": {
-                "seconds": 15
-              },
-              "info": "Hetzner keep the server in \"locked\" state a few seconds after assigning a primary IP to it"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "2399a66b-208c-4249-8cf3-1320169f16dd"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "df602dc9-21f0-43cf-bfdc-48d17efe6c40"
-              }
-            ]
-          },
-          "id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
-          "z": 336
-        },
-        {
-          "position": {
-            "x": 2674,
-            "y": 4942
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.StartServer",
-          "data": {
-            "id": "start-server",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "async": false,
-                  "waiters": [
-                    "success"
-                  ],
-                  "capabilities": [],
-                  "type": "hetznerCloud:action",
-                  "value": "HC_ACTION"
-                }
-              },
-              "parameters": {
-                "ids": [
-                  "{{new_bridge}}"
-                ],
-                "_maxRetries": 5
-              },
-              "info": "Start the server"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "cb9c251e-6ade-4014-b163-af5eb500b80d"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "63d75921-b7c5-45e7-8720-7988451d672c"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "2c6297d9-a13e-47a8-a26f-e5e5c7d46498"
-              }
-            ]
-          },
-          "id": "41f353bb-f11e-466a-a024-86dc6d705f21",
-          "z": 337
-        },
-        {
-          "position": {
-            "x": 2753,
-            "y": 5331
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.DeleteServer",
-          "data": {
-            "id": "delete-server",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "waiters": [
-                    "success"
-                  ],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "hetznerCloud:action",
-                  "value": "HC_ACTION_1"
-                }
-              },
-              "info": "... lo borramos",
-              "parameters": {
-                "ServerIds": [
-                  "{{old_bridge}}"
-                ],
-                "_maxRetries": 5
-              }
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "3c812f64-920b-4ef9-99c5-458f7eb11d67"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "c8f0ecc9-d336-4fc2-89f1-5fa71493bbfc"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "7459e9cf-56de-4942-aef4-858e39aa2f81"
-              }
-            ]
-          },
-          "id": "45023830-eaa9-470c-a71e-efa995bf4f3b",
-          "z": 338
-        },
-        {
-          "position": {
-            "x": 2825,
-            "y": 4339
-          },
-          "type": "nebulant.rectangle.vertical.executionControl.Sleep",
-          "data": {
-            "id": "sleep",
-            "version": "1.0.0",
-            "provider": "executionControl",
-            "settings": {
-              "parameters": {
-                "seconds": 15
-              },
-              "info": "Hetzner keep the server in \"locked\" state a few seconds after assigning a primary IP to it"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "2399a66b-208c-4249-8cf3-1320169f16dd"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "df602dc9-21f0-43cf-bfdc-48d17efe6c40"
-              }
-            ]
-          },
-          "id": "798602bc-2d91-4abb-b499-c2ed8a57d223",
-          "z": 339
-        },
-        {
-          "position": {
-            "x": 2676,
-            "y": 4742
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.AssignPrimaryIP",
-          "data": {
-            "id": "assign-primary-ip",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "async": false,
-                  "waiters": [
-                    "success"
-                  ],
-                  "capabilities": [],
-                  "type": "hetznerCloud:action",
-                  "value": "HC_ACTION"
-                }
-              },
-              "parameters": {
-                "ServerIds": [
-                  "{{new_bridge}}"
-                ],
-                "PrimaryIpIds": [
-                  "{{bridge_primary_ip}}"
-                ],
-                "_maxRetries": 5
-              },
-              "info": "Assign the Bridge IP"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "b930ce21-e3f5-41bb-b184-d83d187e4f13"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "8ebaf729-5b07-46cc-a91d-43c3f36c0831"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "e08b48d6-95dd-40c2-8b6d-83e4554835f2"
-              }
-            ]
-          },
-          "id": "eb84303a-19ad-4633-8b95-b23183cafd9e",
-          "z": 340
-        },
-        {
-          "position": {
-            "x": 2680,
-            "y": 5138
-          },
-          "type": "nebulant.threepstar.vertical.executionControl.Condition",
-          "data": {
-            "id": "condition",
-            "version": "1.0.0",
-            "provider": "executionControl",
-            "settings": {
-              "parameters": {
-                "conditions_cli": {
-                  "rules": []
-                },
-                "conditions": {
-                  "rules": [
-                    {
-                      "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
-                      "field": "{{old-bridge-exists}}",
-                      "operator": "=",
-                      "valueSource": "value",
-                      "value": "yes"
-                    }
-                  ],
-                  "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a"
-                },
-                "conditions_nonic": {
-                  "rules": [
-                    {
-                      "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
-                      "field": "{{old-bridge-exists}}",
-                      "operator": "=",
-                      "valueSource": "value",
-                      "value": "yes"
-                    }
-                  ],
-                  "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a",
-                  "combinator": "and"
-                }
-              },
-              "info": "Si había un viejo server..."
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "3d7de3b3-e33b-43a3-b845-1939348f49aa"
-              },
-              {
-                "group": "out-false",
-                "attrs": {},
-                "id": "688cc296-30eb-4fb9-a1f0-8d03ef90b715"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "ec71b379-6258-4709-bd2e-5bcc3603f280"
-              },
-              {
-                "group": "out-true",
-                "attrs": {},
-                "id": "b2b600d9-3772-4553-9d6c-8c87aad84f0f"
-              }
-            ]
-          },
-          "id": "3eaa02dc-49ec-4977-be75-5298595c1ee1",
-          "z": 342
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "536d8ec4-bb78-478d-9d5f-64ac2dc09809",
-            "magnet": "circle",
-            "port": "f4d92e22-6f39-49e8-9c92-439a84d13da8"
-          },
-          "target": {
-            "id": "34bcb85b-a916-475a-b351-32f1b0453f0c",
-            "magnet": "circle",
-            "port": "9e0123fc-a1c6-47e4-8ebb-5ee910eade0c"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "c0561e4d-6358-4c0d-8587-3dfd436da276",
-          "z": 344
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "6ed9cc1d-6bca-46a2-b7d2-867e1f68d607",
-            "magnet": "circle",
-            "port": "688cc296-30eb-4fb9-a1f0-8d03ef90b715"
-          },
-          "target": {
-            "id": "34bcb85b-a916-475a-b351-32f1b0453f0c",
-            "magnet": "circle",
-            "port": "9e0123fc-a1c6-47e4-8ebb-5ee910eade0c"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "0014a971-7d42-4898-a6d5-c7f9970e004b",
-          "z": 345
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "c496f750-79d9-4b2e-9b05-47e76a0e4286",
-            "magnet": "circle",
-            "port": "e4985c99-71e1-4bf4-ba2c-80638abf4ba5"
-          },
-          "target": {
-            "id": "34bcb85b-a916-475a-b351-32f1b0453f0c",
-            "magnet": "circle",
-            "port": "9e0123fc-a1c6-47e4-8ebb-5ee910eade0c"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "a0f250eb-3585-4e98-8a11-c64a841a7f88",
-          "z": 346
-        },
-        {
-          "position": {
-            "x": 2728,
-            "y": 4131
-          },
-          "type": "nebulant.rectangle.vertical.executionControl.JoinThreads",
-          "data": {
-            "id": "join-threads",
-            "version": "1.0.0",
-            "provider": "executionControl",
-            "settings": {
-              "parameters": {},
-              "info": ""
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "9e0123fc-a1c6-47e4-8ebb-5ee910eade0c"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "1824e687-5677-4316-9700-e5e7f9deff8d"
-              }
-            ]
-          },
-          "id": "34bcb85b-a916-475a-b351-32f1b0453f0c",
-          "z": 347
-        },
-        {
-          "type": "nebulant.link.Smart",
-          "source": {
-            "id": "34bcb85b-a916-475a-b351-32f1b0453f0c",
-            "magnet": "circle",
-            "port": "1824e687-5677-4316-9700-e5e7f9deff8d"
-          },
-          "target": {
-            "id": "c531a217-7d68-4d04-a99c-b3ff0aeacf34",
-            "magnet": "circle",
-            "port": "0443d9fb-d974-4537-bf1c-250445b900cf"
-          },
-          "router": {
-            "name": "manhattan",
-            "args": {
-              "maximumLoops": 10000,
-              "maxAllowedDirectionChange": 180,
-              "startDirections": [
-                "bottom"
-              ],
-              "endDirections": [
-                "top"
-              ],
-              "padding": 20
-            }
-          },
-          "connector": {
-            "name": "jumpover",
-            "args": {
-              "jump": "gap",
-              "radius": 10
-            }
-          },
-          "id": "e9b446a1-cd08-4df3-969c-e5da9fa8b1ac",
-          "z": 348
-        },
-        {
-          "position": {
-            "x": 2958,
-            "y": 3946
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.StopServer",
-          "data": {
-            "id": "stop-server",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "async": false,
-                  "waiters": [
-                    "success"
-                  ],
-                  "capabilities": [],
-                  "type": "hetznerCloud:action",
-                  "value": "HC_ACTION"
-                }
-              },
-              "parameters": {
-                "ids": [
-                  "{{old_bridge}}"
-                ],
-                "_maxRetries": 5
-              },
-              "info": "Stop the server (because it must be stopped before attempting the assign op)"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "0443d9fb-d974-4537-bf1c-250445b900cf"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "1359ee1e-ff6a-43d0-8548-2a2bfb5efbd7"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "e4985c99-71e1-4bf4-ba2c-80638abf4ba5"
-              }
-            ]
-          },
-          "id": "c496f750-79d9-4b2e-9b05-47e76a0e4286",
-          "z": 354
-        },
-        {
-          "position": {
-            "x": 2672,
-            "y": 4333
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.StopServer",
-          "data": {
-            "id": "stop-server",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "async": false,
-                  "waiters": [
-                    "success"
-                  ],
-                  "capabilities": [],
-                  "type": "hetznerCloud:action",
-                  "value": "HC_ACTION"
-                }
-              },
-              "parameters": {
-                "ids": [
-                  "{{new_bridge}}"
-                ],
-                "_maxRetries": 5
-              },
-              "info": "Stop the server (because it must be stopped before attempting the assign op)"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "0443d9fb-d974-4537-bf1c-250445b900cf"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "1359ee1e-ff6a-43d0-8548-2a2bfb5efbd7"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "e4985c99-71e1-4bf4-ba2c-80638abf4ba5"
-              }
-            ]
-          },
-          "id": "c531a217-7d68-4d04-a99c-b3ff0aeacf34",
-          "z": 355
-        },
-        {
-          "position": {
-            "x": 2362,
-            "y": 3115
-          },
-          "type": "nebulant.rectangle.vertical.generic.RunCommand",
-          "data": {
-            "id": "run-command",
-            "version": "1.0.13",
-            "provider": "generic",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "waiters": [],
-                  "async": false,
-                  "capabilities": [],
-                  "type": "generic:script_execution",
-                  "value": "RUN_COMMAND_RESULT"
-                }
-              },
-              "info": "Provisionamos el nuevo server",
-              "parameters": {
-                "upload_to_remote_target": true,
-                "dump_json": false,
-                "vars": [],
-                "open_dbg_shell_onerror": false,
-                "open_dbg_shell_after": false,
-                "open_dbg_shell_before": false,
-                "proxies": [
-                  {
-                    "__uniq": 1715858664287,
-                    "name": "new-ssh-config",
-                    "value": {
-                      "_credentials": "privkey",
-                      "target": [
-                        "{{ bastion.server.public_net.ipv4.ip }}"
-                      ],
-                      "username": "admin",
-                      "privkeyPath": "",
-                      "privkey": "{{ sshkey }}",
-                      "passphrase": "",
-                      "password": "",
-                      "port": 22
-                    }
-                  }
-                ],
-                "port": 22,
-                "password": "",
-                "passphrase": "",
-                "privkey": "{{ sshkey }}",
-                "privkeyPath": "",
-                "username": "root",
-                "target": [
-                  "{{ new_bridge.server.private_net[0].ip }}"
-                ],
-                "_credentials": "privkey",
-                "_run_on_remote": true,
-                "scriptParameters": "",
-                "scriptName": "",
-                "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# Add user 'admin' to the sudo group\nuseradd -m -s /bin/bash admin\nusermod -aG sudo admin\n\n# Allow sudo without password for the 'admin' user\necho 'admin ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/admin\n\n# Disable password authentication for SSH\nsed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config\n\n# Update and upgrade packages\napt update && apt upgrade -y\n\n# Set locale\nupdate-locale LANG=en_US.UTF-8\n\n# Set timezone\ntimedatectl set-timezone Etc/UTC\n\n# Create swap file\nfallocate -l 2G /swap\nchmod 600 /swap\nmkswap /swap\nswapon /swap\n\n# Make sure the swap file is mounted on boot\necho '/swap none swap sw 0 0' >> /etc/fstab\n\n# SSH\nmkdir -p /home/admin/.ssh\ncp /root/.ssh/authorized_keys /home/admin/.ssh/\nchown -R admin:admin /home/admin/.ssh\nchmod 700 /home/admin/.ssh\nchmod 600 /home/admin/.ssh/authorized_keys\nsed -i -e '/^\\(#\\|\\)PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)KbdInteractiveAuthentication/s/^.*$/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)ChallengeResponseAuthentication/s/^.*$/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)MaxAuthTries/s/^.*$/MaxAuthTries 10/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)X11Forwarding/s/^.*$/X11Forwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AllowAgentForwarding/s/^.*$/AllowAgentForwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AuthorizedKeysFile/s/^.*$/AuthorizedKeysFile .ssh\\/authorized_keys/' /etc/ssh/sshd_config\nsed -i '$a AllowUsers admin' /etc/ssh/sshd_config\nsystemctl restart sshd\n\n# Netdata\ncurl https://get.netdata.cloud/kickstart.sh > /tmp/netdata-kickstart.sh && sh /tmp/netdata-kickstart.sh --stable-channel\ncp /usr/lib/netdata/conf.d/stream.conf /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*enabled\\s*=\\s*\\)no/\\1yes/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*destination\\s*=\\s*\\)/\\1 {{ bastion.server.private_net[0].ip }}/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*api key\\s*=\\s*\\)/\\1 {{ netdata-uuid }}/' /etc/netdata/stream.conf\nsystemctl restart netdata",
-                "command": "",
-                "pass_to_entrypoint_as_single_param": false,
-                "entrypoint": "",
-                "_custom_entrypoint": false,
-                "_type": "script",
-                "_maxRetries": 5
-              }
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "68ca6a02-3b68-4e2e-93ad-e25beaa6c5fb"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "58c8418a-00c8-4a31-bc8d-ad65f89cc7df"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "730513be-18d6-4879-a9fa-1ace1e35574a"
-              }
-            ]
-          },
-          "id": "24ee50c1-91a2-463f-b5aa-cddd41af5315",
-          "z": 357
-        },
-        {
           "position": {
             "x": 2444,
             "y": 3551
@@ -3424,14 +1689,958 @@
           },
           "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
           "z": 358
+        },
+        {
+          "position": {
+            "x": 2213,
+            "y": 3113
+          },
+          "type": "nebulant.rectangle.vertical.generic.UploadFiles",
+          "data": {
+            "id": "upload-files",
+            "version": "1.0.3",
+            "provider": "generic",
+            "settings": {
+              "info": "Subimos el código del proyecto",
+              "parameters": {
+                "proxies": [
+                  {
+                    "__uniq": 1715858809965,
+                    "name": "new-ssh-config",
+                    "value": {
+                      "_credentials": "privkey",
+                      "target": [
+                        "{{ bastion.server.public_net.ipv4.ip }}"
+                      ],
+                      "username": "admin",
+                      "privkeyPath": "",
+                      "privkey": "{{ sshkey }}",
+                      "passphrase": "",
+                      "password": "",
+                      "port": 22
+                    }
+                  }
+                ],
+                "port": 22,
+                "password": "",
+                "passphrase": "",
+                "privkey": "{{ sshkey }}",
+                "privkeyPath": "",
+                "username": "root",
+                "target": [
+                  "{{ new_bridge.server.private_net[0].ip }}"
+                ],
+                "_credentials": "privkey",
+                "paths": [
+                  {
+                    "__uniq": 1716390693240,
+                    "name": "new-path-pair",
+                    "value": {
+                      "_src_type": "folder",
+                      "src": "{{ bridge-path }}",
+                      "dest": "/tmp/src",
+                      "overwrite": false,
+                      "recursive": true
+                    }
+                  },
+                  {
+                    "__uniq": 1716390693241,
+                    "name": "new-path-pair",
+                    "value": {
+                      "_src_type": "folder",
+                      "src": "{{ config-path }}",
+                      "dest": "/tmp/deploy_conf",
+                      "overwrite": false,
+                      "recursive": true
+                    }
+                  }
+                ],
+                "_maxRetries": 5
+              }
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "485a46af-dc95-43f7-8fa9-4a3fe225672f"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "528aa4da-ed33-4514-b8c8-fe75e3b1979f"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "1bd983de-0b41-4cc7-8172-a20e734f4d27"
+              }
+            ]
+          },
+          "id": "0705c312-d9b2-4530-bae2-b6d12d1d21dc",
+          "z": 359
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "bf84b9ce-d1fe-4995-8aca-a2dd33bb13e6",
+            "magnet": "circle",
+            "port": "fa2d2539-32b3-449d-9285-7d481885111b"
+          },
+          "target": {
+            "id": "595e440d-dda5-4a50-b433-03f399cb3171",
+            "magnet": "circle",
+            "port": "15221f6a-2a5a-474c-8c8c-2a1ea6afd72b"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "2d8dda74-37be-4e4b-906d-04c6397d1782",
+          "z": 362
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "595e440d-dda5-4a50-b433-03f399cb3171",
+            "magnet": "circle",
+            "port": "d2e4c61a-69af-4bae-a5a0-78a9524f5a1a"
+          },
+          "target": {
+            "id": "58ae9463-5dd7-44d8-b272-5a3e764580df",
+            "magnet": "circle",
+            "port": "5610b7a1-e6c8-4db8-b1c4-d2078213d9fc"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "6d83de6d-c151-4561-8bea-f3269a9fb259",
+          "z": 363
+        },
+        {
+          "position": {
+            "x": 2124,
+            "y": 1462
+          },
+          "type": "nebulant.rectangle.vertical.generic.DefineVariables",
+          "data": {
+            "id": "define-variables",
+            "version": "1.0.2",
+            "provider": "generic",
+            "settings": {
+              "parameters": {
+                "files": [],
+                "vars": [
+                  {
+                    "__uniq": 1715811343813,
+                    "name": "new-variable",
+                    "value": {
+                      "name": "bastion-name",
+                      "type": "text",
+                      "value": "Bastion",
+                      "required": false,
+                      "ask_at_runtime": false,
+                      "stack": false
+                    }
+                  },
+                  {
+                    "__uniq": 1715811350049,
+                    "name": "new-variable",
+                    "value": {
+                      "name": "bridge-name",
+                      "type": "text",
+                      "value": "Bridge-{{ ENV.random }}",
+                      "required": false,
+                      "ask_at_runtime": false,
+                      "stack": false
+                    }
+                  },
+                  {
+                    "__uniq": 1715854791225,
+                    "name": "new-variable",
+                    "value": {
+                      "name": "network-name",
+                      "type": "text",
+                      "value": "nebulant-lan",
+                      "required": false,
+                      "ask_at_runtime": false,
+                      "stack": false
+                    }
+                  },
+                  {
+                    "__uniq": 1715858836012,
+                    "name": "new-variable",
+                    "value": {
+                      "name": "bridge-path",
+                      "type": "text",
+                      "value": "./dist",
+                      "required": false,
+                      "ask_at_runtime": false,
+                      "stack": false
+                    }
+                  },
+                  {
+                    "__uniq": 1715967853164,
+                    "name": "new-variable",
+                    "value": {
+                      "name": "netdata-uuid",
+                      "type": "text",
+                      "value": "eba90f71-d35e-4158-9fd5-ea518c5d97b6",
+                      "required": false,
+                      "ask_at_runtime": false,
+                      "stack": false
+                    }
+                  },
+                  {
+                    "__uniq": 1716204642895,
+                    "name": "new-variable",
+                    "value": {
+                      "name": "config-path",
+                      "type": "text",
+                      "value": "./deploy_conf",
+                      "required": false,
+                      "ask_at_runtime": false,
+                      "stack": false
+                    }
+                  },
+                  {
+                    "__uniq": 1716206081492,
+                    "name": "new-variable",
+                    "value": {
+                      "name": "bridge-primary-ip-name",
+                      "type": "text",
+                      "value": "Bridge",
+                      "required": false,
+                      "ask_at_runtime": false,
+                      "stack": false
+                    }
+                  },
+                  {
+                    "__uniq": 1716495622791,
+                    "name": "new-variable",
+                    "value": {
+                      "name": "lb-bridge",
+                      "type": "text",
+                      "value": "Bridge balancer",
+                      "required": false,
+                      "ask_at_runtime": false,
+                      "stack": false
+                    }
+                  }
+                ]
+              },
+              "info": "Definimos variables",
+              "outputs": {
+                "lb-bridge": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "generic:user_variable",
+                  "value": "lb-bridge"
+                },
+                "bridge-primary-ip-name": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "generic:user_variable",
+                  "value": "bridge-primary-ip-name"
+                },
+                "config-path": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "generic:user_variable",
+                  "value": "config-path"
+                },
+                "netdata-uuid": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "generic:user_variable",
+                  "value": "netdata-uuid"
+                },
+                "bridge-path": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "generic:user_variable",
+                  "value": "bridge-path"
+                },
+                "network-name": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "generic:user_variable",
+                  "value": "network-name"
+                },
+                "bridge-name": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "generic:user_variable",
+                  "value": "bridge-name"
+                },
+                "bastion-name": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "generic:user_variable",
+                  "value": "bastion-name"
+                }
+              }
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "656d482f-e9a6-4206-9651-7e1fd2045588"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "0656d7ef-aee8-491b-837b-2aab799cce1a"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "52f0d84f-67bc-4c51-806c-6729c931f4d7"
+              }
+            ]
+          },
+          "id": "9eaf5d61-ea7b-40b0-b270-195f742c671b",
+          "z": 364
+        },
+        {
+          "position": {
+            "x": 2141,
+            "y": 1866
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.FindNetwork",
+          "data": {
+            "id": "find-network",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "hetznerCloud:network",
+                  "value": "network"
+                }
+              },
+              "parameters": {
+                "PerPage": 10,
+                "Page": 1,
+                "ids": [],
+                "Name": "{{ network-name }}",
+                "_activeTab": "filters",
+                "Filters": [],
+                "_maxRetries": 5
+              },
+              "info": "Buscamos la lan"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "f9bd3962-2d2a-4fe1-9b95-2318cd00c197"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "c0e2fb8e-f9d1-4d3b-aef1-0afb88912c49"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "cd6b2b77-d2a1-42c3-b4e6-1b59818504d8"
+              }
+            ]
+          },
+          "id": "8d9a629e-1386-44fe-8304-d8f7e4858803",
+          "z": 366
+        },
+        {
+          "position": {
+            "x": 2277,
+            "y": 1866
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.FindServer",
+          "data": {
+            "id": "find-server",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [
+                    "ip"
+                  ],
+                  "type": "hetznerCloud:server",
+                  "value": "bastion"
+                }
+              },
+              "parameters": {
+                "PerPage": 10,
+                "Page": 1,
+                "ids": [],
+                "Name": "{{ bastion-name }}",
+                "_activeTab": "filters",
+                "Filters": [],
+                "_maxRetries": 5
+              },
+              "info": "Buscamos el Bastion"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "ca1519b0-cc81-429f-8f92-ad4abc8f679c"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "317ef89e-bed2-44f9-b49a-83b19819b7f4"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "108dd2df-24e7-47a1-856d-de41ee104c79"
+              }
+            ]
+          },
+          "id": "b8018309-3e2d-4f45-acad-650ada992b7c",
+          "z": 367
+        },
+        {
+          "position": {
+            "x": 2000,
+            "y": 1866
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.FindImage",
+          "data": {
+            "id": "find-image",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "hetznerCloud:image",
+                  "value": "debian"
+                }
+              },
+              "parameters": {
+                "PerPage": 10,
+                "Page": 1,
+                "_activeTab": "hetzner_images",
+                "HetznerImageID": [
+                  "114690389"
+                ],
+                "ImageID": [],
+                "Description": "",
+                "Name": "",
+                "Filters": [
+                  {
+                    "__uniq": 1715821124110,
+                    "name": "Type",
+                    "value": [
+                      "snapshot",
+                      "backup"
+                    ]
+                  },
+                  {
+                    "__uniq": 1715821124111,
+                    "name": "Status",
+                    "value": [
+                      "available"
+                    ]
+                  }
+                ],
+                "_maxRetries": 5
+              },
+              "info": "Buscamos la imagen base (Debian 12)"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "8d3da84f-a38b-4fa5-98f0-95996049a0ff"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "f5d226e7-b00d-4f88-974a-ac26df49f2ef"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "a7894bf0-89a3-4796-b9fa-6b75c6eaa19f"
+              }
+            ]
+          },
+          "id": "f42adb9a-a7c7-496c-aa33-0bcd8ba36f40",
+          "z": 368
+        },
+        {
+          "position": {
+            "x": 2419,
+            "y": 1864
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.FindLoadBalancer",
+          "data": {
+            "id": "find-load-balancer",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [
+                    "ip"
+                  ],
+                  "type": "hetznerCloud:load_balancer",
+                  "value": "lb"
+                }
+              },
+              "parameters": {
+                "PerPage": 10,
+                "Page": 1,
+                "ids": [],
+                "Name": "{{ lb-bridge }}",
+                "_activeTab": "filters",
+                "Filters": [],
+                "_maxRetries": 5
+              },
+              "info": "Buscamos el load balancer"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "15221f6a-2a5a-474c-8c8c-2a1ea6afd72b"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "a6e2a58e-aad6-4b93-9881-7cb098fc50f4"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "d2e4c61a-69af-4bae-a5a0-78a9524f5a1a"
+              }
+            ]
+          },
+          "id": "595e440d-dda5-4a50-b433-03f399cb3171",
+          "z": 369
+        },
+        {
+          "position": {
+            "x": 2557,
+            "y": 3754
+          },
+          "type": "nebulant.threepstar.vertical.executionControl.Condition",
+          "data": {
+            "id": "condition",
+            "version": "1.0.0",
+            "provider": "executionControl",
+            "settings": {
+              "parameters": {
+                "conditions_cli": {
+                  "rules": []
+                },
+                "conditions": {
+                  "rules": [
+                    {
+                      "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
+                      "field": "{{old-bridge-exists}}",
+                      "operator": "=",
+                      "valueSource": "value",
+                      "value": "yes"
+                    }
+                  ],
+                  "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a"
+                },
+                "conditions_nonic": {
+                  "rules": [
+                    {
+                      "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
+                      "field": "{{old-bridge-exists}}",
+                      "operator": "=",
+                      "valueSource": "value",
+                      "value": "yes"
+                    }
+                  ],
+                  "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a",
+                  "combinator": "and"
+                }
+              },
+              "info": "Si había un viejo server..."
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "3d7de3b3-e33b-43a3-b845-1939348f49aa"
+              },
+              {
+                "group": "out-false",
+                "attrs": {},
+                "id": "688cc296-30eb-4fb9-a1f0-8d03ef90b715"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "ec71b379-6258-4709-bd2e-5bcc3603f280"
+              },
+              {
+                "group": "out-true",
+                "attrs": {},
+                "id": "b2b600d9-3772-4553-9d6c-8c87aad84f0f"
+              }
+            ]
+          },
+          "id": "3eaa02dc-49ec-4977-be75-5298595c1ee1",
+          "z": 379
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
+            "magnet": "circle",
+            "port": "f9d85c2c-f1d2-4000-85a7-add8089a52b8"
+          },
+          "target": {
+            "id": "3eaa02dc-49ec-4977-be75-5298595c1ee1",
+            "magnet": "circle",
+            "port": "3d7de3b3-e33b-43a3-b845-1939348f49aa"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "fd152a0f-083d-40d5-bf1c-60158d9e86a4",
+          "z": 381
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
+            "magnet": "circle",
+            "port": "f9d85c2c-f1d2-4000-85a7-add8089a52b8"
+          },
+          "target": {
+            "id": "02cefc03-449e-4525-9028-4da07798165d",
+            "magnet": "circle",
+            "port": "0da42850-e6c0-4cf5-b406-69bef61cc4df"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "242d8ef4-9a32-499c-83d3-924f5a56fc32",
+          "z": 382
+        },
+        {
+          "position": {
+            "x": 2630,
+            "y": 3947
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.DeleteServer",
+          "data": {
+            "id": "delete-server",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [
+                    "success"
+                  ],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "hetznerCloud:action",
+                  "value": "HC_ACTION_1"
+                }
+              },
+              "info": "... lo borramos",
+              "parameters": {
+                "ServerIds": [
+                  "{{old_bridge}}"
+                ],
+                "_maxRetries": 5
+              }
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "3c812f64-920b-4ef9-99c5-458f7eb11d67"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "c8f0ecc9-d336-4fc2-89f1-5fa71493bbfc"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "7459e9cf-56de-4942-aef4-858e39aa2f81"
+              }
+            ]
+          },
+          "id": "45023830-eaa9-470c-a71e-efa995bf4f3b",
+          "z": 384
+        },
+        {
+          "position": {
+            "x": 2740,
+            "y": 3752
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.AddTargetToLoadBalancer",
+          "data": {
+            "id": "add-target-to-load-balancer",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "async": false,
+                  "waiters": [
+                    "success"
+                  ],
+                  "capabilities": [],
+                  "type": "hetznerCloud:action",
+                  "value": "HC_ACTION"
+                }
+              },
+              "parameters": {
+                "UsePrivateIp": true,
+                "_activeTab": "servers",
+                "Label": "",
+                "ServerIds": [
+                  "{{new_bridge}}"
+                ],
+                "LoadBalancerIds": [
+                  "{{lb}}"
+                ],
+                "_maxRetries": 5
+              },
+              "info": "Añadimos el Backend como target al Load Balancer"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "0da42850-e6c0-4cf5-b406-69bef61cc4df"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "80b6443c-4f7f-445e-9dbf-372ed810a345"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "3f971fa1-25bf-488b-a486-caaa919a8781"
+              }
+            ]
+          },
+          "id": "02cefc03-449e-4525-9028-4da07798165d",
+          "z": 385
+        },
+        {
+          "position": {
+            "x": 2362,
+            "y": 3115
+          },
+          "type": "nebulant.rectangle.vertical.generic.RunCommand",
+          "data": {
+            "id": "run-command",
+            "version": "1.0.13",
+            "provider": "generic",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "generic:script_execution",
+                  "value": "RUN_COMMAND_RESULT"
+                }
+              },
+              "info": "Provisionamos el nuevo server",
+              "parameters": {
+                "upload_to_remote_target": true,
+                "dump_json": false,
+                "vars": [],
+                "open_dbg_shell_onerror": false,
+                "open_dbg_shell_after": false,
+                "open_dbg_shell_before": false,
+                "proxies": [
+                  {
+                    "__uniq": 1715858664287,
+                    "name": "new-ssh-config",
+                    "value": {
+                      "_credentials": "privkey",
+                      "target": [
+                        "{{ bastion.server.public_net.ipv4.ip }}"
+                      ],
+                      "username": "admin",
+                      "privkeyPath": "",
+                      "privkey": "{{ sshkey }}",
+                      "passphrase": "",
+                      "password": "",
+                      "port": 22
+                    }
+                  }
+                ],
+                "port": 22,
+                "password": "",
+                "passphrase": "",
+                "privkey": "{{ sshkey }}",
+                "privkeyPath": "",
+                "username": "root",
+                "target": [
+                  "{{ new_bridge.server.private_net[0].ip }}"
+                ],
+                "_credentials": "privkey",
+                "_run_on_remote": true,
+                "scriptParameters": "",
+                "scriptName": "",
+                "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# Add user 'admin' to the sudo group\nuseradd -m -s /bin/bash admin\nusermod -aG sudo admin\n\n# Allow sudo without password for the 'admin' user\necho 'admin ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/admin\n\n# Route the traffic through the Bastion\nip route add default via 172.16.0.1\necho \"nameserver 1.1.1.1\" >> /etc/resolvconf/resolv.conf.d/head\necho \"nameserver 8.8.8.8\" >> /etc/resolvconf/resolv.conf.d/head\nresolvconf -u\ncat <<'EOF' >> /etc/network/interfaces\n  auto enp7s0\n  iface enp7s0 inet dhcp\n      post-up ip route add default via 172.16.0.1\nEOF\n\n# Update and upgrade packages\napt update && apt upgrade -y\n\n# Set locale\nupdate-locale LANG=en_US.UTF-8\n\n# Set timezone\ntimedatectl set-timezone Etc/UTC\n\n# Create swap file\nfallocate -l 2G /swap\nchmod 600 /swap\nmkswap /swap\nswapon /swap\n\n# Make sure the swap file is mounted on boot\necho '/swap none swap sw 0 0' >> /etc/fstab\n\n# SSH\nmkdir -p /home/admin/.ssh\ncp /root/.ssh/authorized_keys /home/admin/.ssh/\nchown -R admin:admin /home/admin/.ssh\nchmod 700 /home/admin/.ssh\nchmod 600 /home/admin/.ssh/authorized_keys\nsed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)KbdInteractiveAuthentication/s/^.*$/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)ChallengeResponseAuthentication/s/^.*$/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)MaxAuthTries/s/^.*$/MaxAuthTries 10/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)X11Forwarding/s/^.*$/X11Forwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AllowAgentForwarding/s/^.*$/AllowAgentForwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AuthorizedKeysFile/s/^.*$/AuthorizedKeysFile .ssh\\/authorized_keys/' /etc/ssh/sshd_config\nsed -i '$a AllowUsers admin' /etc/ssh/sshd_config\nsystemctl restart sshd\n\n# Netdata\ncurl https://get.netdata.cloud/kickstart.sh > /tmp/netdata-kickstart.sh && sh /tmp/netdata-kickstart.sh --stable-channel\ncp /usr/lib/netdata/conf.d/stream.conf /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*enabled\\s*=\\s*\\)no/\\1yes/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*destination\\s*=\\s*\\)/\\1 {{ bastion.server.private_net[0].ip }}/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*api key\\s*=\\s*\\)/\\1 {{ netdata-uuid }}/' /etc/netdata/stream.conf\nsystemctl restart netdata",
+                "command": "",
+                "pass_to_entrypoint_as_single_param": false,
+                "entrypoint": "",
+                "_custom_entrypoint": false,
+                "_type": "script",
+                "_maxRetries": 5
+              }
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "68ca6a02-3b68-4e2e-93ad-e25beaa6c5fb"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "58c8418a-00c8-4a31-bc8d-ad65f89cc7df"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "730513be-18d6-4879-a9fa-1ace1e35574a"
+              }
+            ]
+          },
+          "id": "24ee50c1-91a2-463f-b5aa-cddd41af5315",
+          "z": 386
         }
       ],
-      "zoom": 0.6867012683612106,
-      "x": 2578.9962158203125,
-      "y": 3164.4036865234375
+      "zoom": 0.6190836023471881,
+      "x": 2421.32080078125,
+      "y": 2980.2113647460938
     },
     "diagram_version": "1.0.7",
-    "n_warnings": 4,
+    "n_warnings": 1,
     "n_errors": 0,
     "actions": [
       {
@@ -3457,7 +2666,8 @@
           "ok": [
             "b8018309-3e2d-4f45-acad-650ada992b7c",
             "8d9a629e-1386-44fe-8304-d8f7e4858803",
-            "f42adb9a-a7c7-496c-aa33-0bcd8ba36f40"
+            "f42adb9a-a7c7-496c-aa33-0bcd8ba36f40",
+            "595e440d-dda5-4a50-b433-03f399cb3171"
           ]
         },
         "debug_network": true
@@ -3511,57 +2721,6 @@
         "next_action": {
           "ok": [
             "7183510f-cb2d-4636-9d7d-c7870b7f5433"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "8d9a629e-1386-44fe-8304-d8f7e4858803",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "findone_network",
-        "parameters": {
-          "max_retries": 5,
-          "Name": "{{ network-name }}"
-        },
-        "output": "network",
-        "next_action": {
-          "ok": [
-            "58ae9463-5dd7-44d8-b272-5a3e764580df"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "b8018309-3e2d-4f45-acad-650ada992b7c",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "findone_server",
-        "parameters": {
-          "max_retries": 5,
-          "Name": "{{ bastion-name }}"
-        },
-        "output": "bastion",
-        "next_action": {
-          "ok": [
-            "58ae9463-5dd7-44d8-b272-5a3e764580df"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "f42adb9a-a7c7-496c-aa33-0bcd8ba36f40",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "findone_image",
-        "parameters": {
-          "max_retries": 5,
-          "id": "114690389"
-        },
-        "output": "debian",
-        "next_action": {
-          "ok": [
-            "58ae9463-5dd7-44d8-b272-5a3e764580df"
           ]
         },
         "debug_network": true
@@ -3649,6 +2808,123 @@
         "next_action": {
           "ok": [
             "7f1d2e32-b555-43f0-83fb-3ad3c63b87f7"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "delete_server",
+        "parameters": {
+          "ID": "{{new_bridge}}",
+          "_waiters": [
+            "success"
+          ],
+          "max_retries": 5
+        },
+        "output": "HC_ACTION_2",
+        "next_action": {},
+        "debug_network": true
+      },
+      {
+        "action_id": "7f1d2e32-b555-43f0-83fb-3ad3c63b87f7",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "findone_server",
+        "parameters": {
+          "max_retries": 5,
+          "id": "{{new_bridge}}"
+        },
+        "output": "new_bridge",
+        "next_action": {
+          "ok": [
+            "0705c312-d9b2-4530-bae2-b6d12d1d21dc",
+            "24ee50c1-91a2-463f-b5aa-cddd41af5315"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "3fd0dc83-80c3-4de5-9b88-7dd295b68b58",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "findone_server",
+        "parameters": {
+          "max_retries": 5,
+          "LabelSelector": "bridge=true"
+        },
+        "output": "old_bridge",
+        "next_action": {
+          "ok": [
+            "1e8a1f6c-b63f-4955-8b1e-af0fa21f3881"
+          ],
+          "ko": [
+            "b375c2c1-69f2-4faf-a443-b33e31accea3"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "b375c2c1-69f2-4faf-a443-b33e31accea3",
+        "provider": "generic",
+        "version": "1.0.2",
+        "action": "define_variables",
+        "parameters": {
+          "vars": [
+            {
+              "key": "old-bridge-exists",
+              "ask_at_runtime": false,
+              "required": false,
+              "type": "string",
+              "stack": false,
+              "value": "no"
+            }
+          ]
+        },
+        "next_action": {
+          "ok": [
+            "e4f5a441-6329-4fbf-a128-ed35215726db"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
+        "provider": "generic",
+        "version": "1.0.13",
+        "action": "run_script",
+        "parameters": {
+          "pass_to_entrypoint_as_single_param": false,
+          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx\n\nsync",
+          "target": "{{ new_bridge.server.private_net[0].ip }}",
+          "username": "admin",
+          "port": 22,
+          "privkey": "{{ sshkey }}",
+          "upload_to_remote_target": true,
+          "proxies": [
+            {
+              "username": "admin",
+              "target": "{{ bastion.server.public_net.ipv4.ip }}",
+              "port": 22,
+              "privkey": "{{ sshkey }}"
+            }
+          ],
+          "open_dbg_shell_before": false,
+          "open_dbg_shell_after": false,
+          "open_dbg_shell_onerror": false,
+          "dump_json": false,
+          "max_retries": 5
+        },
+        "output": "RUN_COMMAND_RESULT_1",
+        "next_action": {
+          "ok": [
+            "3eaa02dc-49ec-4977-be75-5298595c1ee1",
+            "02cefc03-449e-4525-9028-4da07798165d"
+          ],
+          "ko": [
+            "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8"
           ]
         },
         "debug_network": true
@@ -3761,6 +3037,14 @@
               "type": "string",
               "stack": false,
               "value": "Bridge"
+            },
+            {
+              "key": "lb-bridge",
+              "ask_at_runtime": false,
+              "required": false,
+              "type": "string",
+              "stack": false,
+              "value": "Bridge balancer"
             }
           ]
         },
@@ -3772,253 +3056,69 @@
         "debug_network": true
       },
       {
-        "action_id": "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8",
+        "action_id": "8d9a629e-1386-44fe-8304-d8f7e4858803",
         "provider": "hetznerCloud",
         "version": "1.0.0",
-        "action": "delete_server",
-        "parameters": {
-          "ID": "{{new_bridge}}",
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "HC_ACTION_2",
-        "next_action": {},
-        "debug_network": true
-      },
-      {
-        "action_id": "536d8ec4-bb78-478d-9d5f-64ac2dc09809",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "findone_primary_ip",
+        "action": "findone_network",
         "parameters": {
           "max_retries": 5,
-          "Name": "{{ bridge-primary-ip-name }}"
+          "Name": "{{ network-name }}"
         },
-        "output": "bridge_primary_ip",
+        "output": "network",
         "next_action": {
           "ok": [
-            "34bcb85b-a916-475a-b351-32f1b0453f0c"
+            "58ae9463-5dd7-44d8-b272-5a3e764580df"
           ]
         },
         "debug_network": true
       },
       {
-        "action_id": "7f1d2e32-b555-43f0-83fb-3ad3c63b87f7",
+        "action_id": "b8018309-3e2d-4f45-acad-650ada992b7c",
         "provider": "hetznerCloud",
         "version": "1.0.0",
         "action": "findone_server",
         "parameters": {
           "max_retries": 5,
-          "id": "{{new_bridge}}"
+          "Name": "{{ bastion-name }}"
         },
-        "output": "new_bridge",
+        "output": "bastion",
         "next_action": {
           "ok": [
-            "0705c312-d9b2-4530-bae2-b6d12d1d21dc",
-            "24ee50c1-91a2-463f-b5aa-cddd41af5315"
+            "58ae9463-5dd7-44d8-b272-5a3e764580df"
           ]
         },
         "debug_network": true
       },
       {
-        "action_id": "3fd0dc83-80c3-4de5-9b88-7dd295b68b58",
+        "action_id": "f42adb9a-a7c7-496c-aa33-0bcd8ba36f40",
         "provider": "hetznerCloud",
         "version": "1.0.0",
-        "action": "findone_server",
+        "action": "findone_image",
         "parameters": {
           "max_retries": 5,
-          "LabelSelector": "bridge=true"
+          "id": "114690389"
         },
-        "output": "old_bridge",
+        "output": "debian",
         "next_action": {
           "ok": [
-            "1e8a1f6c-b63f-4955-8b1e-af0fa21f3881"
-          ],
-          "ko": [
-            "b375c2c1-69f2-4faf-a443-b33e31accea3"
+            "58ae9463-5dd7-44d8-b272-5a3e764580df"
           ]
         },
         "debug_network": true
       },
       {
-        "action_id": "b375c2c1-69f2-4faf-a443-b33e31accea3",
-        "provider": "generic",
-        "version": "1.0.2",
-        "action": "define_variables",
-        "parameters": {
-          "vars": [
-            {
-              "key": "old-bridge-exists",
-              "ask_at_runtime": false,
-              "required": false,
-              "type": "string",
-              "stack": false,
-              "value": "no"
-            }
-          ]
-        },
-        "next_action": {
-          "ok": [
-            "e4f5a441-6329-4fbf-a128-ed35215726db"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "6ed9cc1d-6bca-46a2-b7d2-867e1f68d607",
-        "provider": "generic",
-        "version": "1.0.0",
-        "action": "condition",
-        "parameters": {
-          "conditions": {
-            "rules": [
-              {
-                "id": "bf2144e9-e4ff-4018-8ebd-a6af501eeb29",
-                "field": "{{old-bridge-exists}}",
-                "operator": "=",
-                "valueSource": "value",
-                "value": "yes"
-              }
-            ],
-            "id": "f2a92e38-5a3f-48ff-95f5-881511cc1b2a",
-            "combinator": "and"
-          }
-        },
-        "next_action": {
-          "ok": {
-            "true": [
-              "c496f750-79d9-4b2e-9b05-47e76a0e4286"
-            ],
-            "false": [
-              "34bcb85b-a916-475a-b351-32f1b0453f0c"
-            ]
-          }
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30",
+        "action_id": "595e440d-dda5-4a50-b433-03f399cb3171",
         "provider": "hetznerCloud",
         "version": "1.0.0",
-        "action": "unassign_primary_ip",
+        "action": "findone_load_balancer",
         "parameters": {
-          "id": "{{bridge_primary_ip}}",
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
+          "max_retries": 5,
+          "Name": "{{ lb-bridge }}"
         },
-        "output": "HC_ACTION_3",
+        "output": "lb",
         "next_action": {
           "ok": [
-            "ddccd4cf-45a9-4cfb-ad32-d73a58245327"
-          ],
-          "ko": [
-            "ddccd4cf-45a9-4cfb-ad32-d73a58245327"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "ddccd4cf-45a9-4cfb-ad32-d73a58245327",
-        "provider": "generic",
-        "version": "1.0.0",
-        "action": "sleep",
-        "parameters": {
-          "seconds": 15
-        },
-        "next_action": {
-          "ok": [
-            "eb84303a-19ad-4633-8b95-b23183cafd9e"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "a9e1062d-d774-4fad-8ddf-eca6b44740da",
-        "provider": "generic",
-        "version": "1.0.0",
-        "action": "sleep",
-        "parameters": {
-          "seconds": 15
-        },
-        "next_action": {
-          "ok": [
-            "41f353bb-f11e-466a-a024-86dc6d705f21"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "41f353bb-f11e-466a-a024-86dc6d705f21",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "start_server",
-        "parameters": {
-          "ID": "{{new_bridge}}",
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "HC_ACTION",
-        "next_action": {
-          "ok": [
-            "3eaa02dc-49ec-4977-be75-5298595c1ee1"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "45023830-eaa9-470c-a71e-efa995bf4f3b",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "delete_server",
-        "parameters": {
-          "ID": "{{old_bridge}}",
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "HC_ACTION_1",
-        "next_action": {},
-        "debug_network": true
-      },
-      {
-        "action_id": "798602bc-2d91-4abb-b499-c2ed8a57d223",
-        "provider": "generic",
-        "version": "1.0.0",
-        "action": "sleep",
-        "parameters": {
-          "seconds": 15
-        },
-        "next_action": {
-          "ok": [
-            "482bfbaa-9eb1-43a5-b9ba-a581bfa35e30"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "eb84303a-19ad-4633-8b95-b23183cafd9e",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "assign_primary_ip",
-        "parameters": {
-          "ID": "{{bridge_primary_ip}}",
-          "AssigneeID": "{{new_bridge}}",
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "HC_ACTION",
-        "next_action": {
-          "ok": [
-            "a9e1062d-d774-4fad-8ddf-eca6b44740da"
+            "58ae9463-5dd7-44d8-b272-5a3e764580df"
           ]
         },
         "debug_network": true
@@ -4053,22 +3153,10 @@
         "debug_network": true
       },
       {
-        "action_id": "34bcb85b-a916-475a-b351-32f1b0453f0c",
-        "provider": "generic",
-        "version": "1.0.0",
-        "action": "join_threads",
-        "next_action": {
-          "ok": [
-            "c531a217-7d68-4d04-a99c-b3ff0aeacf34"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "c496f750-79d9-4b2e-9b05-47e76a0e4286",
+        "action_id": "45023830-eaa9-470c-a71e-efa995bf4f3b",
         "provider": "hetznerCloud",
         "version": "1.0.0",
-        "action": "stop_server",
+        "action": "delete_server",
         "parameters": {
           "ID": "{{old_bridge}}",
           "_waiters": [
@@ -4076,32 +3164,33 @@
           ],
           "max_retries": 5
         },
-        "output": "HC_ACTION",
-        "next_action": {
-          "ok": [
-            "34bcb85b-a916-475a-b351-32f1b0453f0c"
-          ]
-        },
+        "output": "HC_ACTION_1",
+        "next_action": {},
         "debug_network": true
       },
       {
-        "action_id": "c531a217-7d68-4d04-a99c-b3ff0aeacf34",
+        "action_id": "02cefc03-449e-4525-9028-4da07798165d",
         "provider": "hetznerCloud",
         "version": "1.0.0",
-        "action": "stop_server",
+        "action": "add_target_to_load_balancer",
         "parameters": {
-          "ID": "{{new_bridge}}",
+          "load_balancer": {
+            "ID": "{{lb}}"
+          },
           "_waiters": [
             "success"
           ],
-          "max_retries": 5
+          "max_retries": 5,
+          "type": "server",
+          "server_opts": {
+            "Server": {
+              "ID": "{{new_bridge}}"
+            },
+            "UsePrivateIP": true
+          }
         },
         "output": "HC_ACTION",
-        "next_action": {
-          "ok": [
-            "798602bc-2d91-4abb-b499-c2ed8a57d223"
-          ]
-        },
+        "next_action": {},
         "debug_network": true
       },
       {
@@ -4111,7 +3200,7 @@
         "action": "run_script",
         "parameters": {
           "pass_to_entrypoint_as_single_param": false,
-          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# Add user 'admin' to the sudo group\nuseradd -m -s /bin/bash admin\nusermod -aG sudo admin\n\n# Allow sudo without password for the 'admin' user\necho 'admin ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/admin\n\n# Disable password authentication for SSH\nsed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config\n\n# Update and upgrade packages\napt update && apt upgrade -y\n\n# Set locale\nupdate-locale LANG=en_US.UTF-8\n\n# Set timezone\ntimedatectl set-timezone Etc/UTC\n\n# Create swap file\nfallocate -l 2G /swap\nchmod 600 /swap\nmkswap /swap\nswapon /swap\n\n# Make sure the swap file is mounted on boot\necho '/swap none swap sw 0 0' >> /etc/fstab\n\n# SSH\nmkdir -p /home/admin/.ssh\ncp /root/.ssh/authorized_keys /home/admin/.ssh/\nchown -R admin:admin /home/admin/.ssh\nchmod 700 /home/admin/.ssh\nchmod 600 /home/admin/.ssh/authorized_keys\nsed -i -e '/^\\(#\\|\\)PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)KbdInteractiveAuthentication/s/^.*$/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)ChallengeResponseAuthentication/s/^.*$/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)MaxAuthTries/s/^.*$/MaxAuthTries 10/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)X11Forwarding/s/^.*$/X11Forwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AllowAgentForwarding/s/^.*$/AllowAgentForwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AuthorizedKeysFile/s/^.*$/AuthorizedKeysFile .ssh\\/authorized_keys/' /etc/ssh/sshd_config\nsed -i '$a AllowUsers admin' /etc/ssh/sshd_config\nsystemctl restart sshd\n\n# Netdata\ncurl https://get.netdata.cloud/kickstart.sh > /tmp/netdata-kickstart.sh && sh /tmp/netdata-kickstart.sh --stable-channel\ncp /usr/lib/netdata/conf.d/stream.conf /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*enabled\\s*=\\s*\\)no/\\1yes/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*destination\\s*=\\s*\\)/\\1 {{ bastion.server.private_net[0].ip }}/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*api key\\s*=\\s*\\)/\\1 {{ netdata-uuid }}/' /etc/netdata/stream.conf\nsystemctl restart netdata",
+          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# Add user 'admin' to the sudo group\nuseradd -m -s /bin/bash admin\nusermod -aG sudo admin\n\n# Allow sudo without password for the 'admin' user\necho 'admin ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/admin\n\n# Route the traffic through the Bastion\nip route add default via 172.16.0.1\necho \"nameserver 1.1.1.1\" >> /etc/resolvconf/resolv.conf.d/head\necho \"nameserver 8.8.8.8\" >> /etc/resolvconf/resolv.conf.d/head\nresolvconf -u\ncat <<'EOF' >> /etc/network/interfaces\n  auto enp7s0\n  iface enp7s0 inet dhcp\n      post-up ip route add default via 172.16.0.1\nEOF\n\n# Update and upgrade packages\napt update && apt upgrade -y\n\n# Set locale\nupdate-locale LANG=en_US.UTF-8\n\n# Set timezone\ntimedatectl set-timezone Etc/UTC\n\n# Create swap file\nfallocate -l 2G /swap\nchmod 600 /swap\nmkswap /swap\nswapon /swap\n\n# Make sure the swap file is mounted on boot\necho '/swap none swap sw 0 0' >> /etc/fstab\n\n# SSH\nmkdir -p /home/admin/.ssh\ncp /root/.ssh/authorized_keys /home/admin/.ssh/\nchown -R admin:admin /home/admin/.ssh\nchmod 700 /home/admin/.ssh\nchmod 600 /home/admin/.ssh/authorized_keys\nsed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)PasswordAuthentication/s/^.*$/PasswordAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)KbdInteractiveAuthentication/s/^.*$/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)ChallengeResponseAuthentication/s/^.*$/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)MaxAuthTries/s/^.*$/MaxAuthTries 10/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)X11Forwarding/s/^.*$/X11Forwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AllowAgentForwarding/s/^.*$/AllowAgentForwarding no/' /etc/ssh/sshd_config\nsed -i -e '/^\\(#\\|\\)AuthorizedKeysFile/s/^.*$/AuthorizedKeysFile .ssh\\/authorized_keys/' /etc/ssh/sshd_config\nsed -i '$a AllowUsers admin' /etc/ssh/sshd_config\nsystemctl restart sshd\n\n# Netdata\ncurl https://get.netdata.cloud/kickstart.sh > /tmp/netdata-kickstart.sh && sh /tmp/netdata-kickstart.sh --stable-channel\ncp /usr/lib/netdata/conf.d/stream.conf /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*enabled\\s*=\\s*\\)no/\\1yes/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*destination\\s*=\\s*\\)/\\1 {{ bastion.server.private_net[0].ip }}/' /etc/netdata/stream.conf\nsed -i '/^\\[stream\\]/,/^\\[/ s/\\(^\\s*api key\\s*=\\s*\\)/\\1 {{ netdata-uuid }}/' /etc/netdata/stream.conf\nsystemctl restart netdata",
           "target": "{{ new_bridge.server.private_net[0].ip }}",
           "username": "root",
           "port": 22,
@@ -4138,45 +3227,6 @@
           ],
           "ko": [
             "158528a8-d2d1-443d-b0ac-b29d3bf4ae16"
-          ]
-        },
-        "debug_network": true
-      },
-      {
-        "action_id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
-        "provider": "generic",
-        "version": "1.0.13",
-        "action": "run_script",
-        "parameters": {
-          "pass_to_entrypoint_as_single_param": false,
-          "script": "#!/bin/bash\n\nset -e\nset -u\nset -o pipefail\nset -x\n\n# apt noninteractive\nexport DEBIAN_FRONTEND=noninteractive\n\n# Install\nsudo apt-get -o DPkg::Lock::Timeout=60 update\nsudo apt-mark hold grub*\nsudo apt-get -y full-upgrade\nsudo apt-get -y install libterm-readline-perl-perl\nsudo apt-get install --no-install-recommends -y rsync unzip htop lsof jq curl wget strace traceroute build-essential git acl nano vim gettext locales-all\n\n# Add noatime - http://archive.is/m9X7x#selection-345.0-455.311\nsudo sed -i -r 's/(ext[2-4]\\s+)rw/\\1rw,noatime/g' /etc/fstab\n\n# Remove discard - we're running on SSD\nsudo sed -i -r 's/discard,//g' /etc/fstab\nsudo systemctl enable fstrim.timer\n\n# Instalamos y configuramos nginx\nsudo apt-get install --no-install-recommends -y nginx\nsudo rm -rf /etc/nginx/nginx.conf\nsudo rsync -r /tmp/deploy_conf/nginx/ /etc/nginx/\n\n# Add the \"admin\" user to the \"www-data\" group\nsudo usermod -a -G www-data admin\n\n# Install the project here\nsudo mkdir -p /var/www/webapp\nsudo cp /tmp/src/nebulant-bridge /var/www/webapp/nebulant-bridge\nsudo cp /tmp/src/.env /var/www/webapp/\n\n# webap perms\nsudo chown root:root /var/www/webapp\n\n# This will change the Default ACL\nsudo setfacl -R -d -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -d -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -d -m o::--- /var/www/webapp\n\n# This will change the current ACL\nsudo setfacl -R -m u:admin:rwx /var/www/webapp\nsudo setfacl -R -m g:www-data:rx /var/www/webapp\nsudo setfacl -R -m o::--- /var/www/webapp\n\n# Start the systemd service\nsudo cp /tmp/deploy_conf/systemd/bridge.service /etc/systemd/system/bridge.service\nsudo systemctl enable bridge\nsudo systemctl start bridge\n\nsudo systemctl restart nginx\n\nsync",
-          "target": "{{ new_bridge.server.private_net[0].ip }}",
-          "username": "admin",
-          "port": 22,
-          "privkey": "{{ sshkey }}",
-          "upload_to_remote_target": true,
-          "proxies": [
-            {
-              "username": "admin",
-              "target": "{{ bastion.server.public_net.ipv4.ip }}",
-              "port": 22,
-              "privkey": "{{ sshkey }}"
-            }
-          ],
-          "open_dbg_shell_before": false,
-          "open_dbg_shell_after": false,
-          "open_dbg_shell_onerror": false,
-          "dump_json": false,
-          "max_retries": 5
-        },
-        "output": "RUN_COMMAND_RESULT_1",
-        "next_action": {
-          "ok": [
-            "536d8ec4-bb78-478d-9d5f-64ac2dc09809",
-            "6ed9cc1d-6bca-46a2-b7d2-867e1f68d607"
-          ],
-          "ko": [
-            "e1cabfd1-2e44-490d-99c4-5ff5c7e55ad8"
           ]
         },
         "debug_network": true
