@@ -149,8 +149,15 @@ func ReadCredential(credentialName string) (*Credential, error) {
 	return nil, fmt.Errorf("Credential not found")
 }
 
-func GetJar() *cookiejar.Jar {
-	return cachedjar
+func GetJar() (*cookiejar.Jar, error) {
+	if cachedjar == nil {
+		_cj, err := cookiejar.New(nil)
+		if err != nil {
+			return nil, err
+		}
+		cachedjar = _cj
+	}
+	return cachedjar, nil
 }
 
 func Login(credential *Credential) (*cookiejar.Jar, error) {
@@ -166,7 +173,7 @@ func Login(credential *Credential) (*cookiejar.Jar, error) {
 		IdleConnTimeout:    30 * time.Second,
 		DisableCompression: true,
 	}
-	jar, err := cookiejar.New(nil)
+	jar, err := GetJar()
 	if err != nil {
 		return nil, err
 	}

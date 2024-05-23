@@ -300,7 +300,11 @@ func getRemoteBP(url *url.URL) (*Blueprint, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Jar: config.GetJar()}
+	jj, err := config.GetJar()
+	if err != nil {
+		return nil, err
+	}
+	client := &http.Client{Jar: jj}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
