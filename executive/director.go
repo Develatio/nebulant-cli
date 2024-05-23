@@ -52,6 +52,10 @@ func InitDirector(serverMode bool, interactiveMode bool) error {
 	return nil
 }
 
+func RemoveDirector() {
+	MDirector = nil
+}
+
 type HandleIRBConfig struct {
 	Manager *Manager
 	IRB     *blueprint.IRBlueprint
@@ -74,10 +78,6 @@ type Director struct {
 // Wait func
 func (d *Director) Wait() {
 	d.directorWaiter.Wait()
-}
-
-func (d *Director) Clean() {
-	MDirector = nil
 }
 
 // startDirector func
@@ -205,7 +205,6 @@ L:
 			delete(d.managers, manager)
 			delete(d.managersByExecutionID, *irb.ExecutionUUID)
 			if len(d.managers) <= 0 && !d.serverMode {
-				d.Clean()
 				d.ExitCode = exitCode
 				break L
 			}

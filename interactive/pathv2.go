@@ -80,6 +80,6 @@ func PathV2(nblc *subsystem.NBLcommand) error {
 	}
 	executive.MDirector.HandleIRB <- &executive.HandleIRBConfig{IRB: irb}
 	executive.MDirector.Wait()
-	executive.MDirector.Clean()
+	executive.RemoveDirector()
 	return nil
 }

@@ -71,6 +71,7 @@ func main() {
 		} else {
 			cast.LogInfo("exit with status "+strconv.Itoa(exitCode), nil)
 		}
+		executive.RemoveDirector()
 		cast.SBus.Close().Wait()
 		os.Exit(exitCode)
 	}()
