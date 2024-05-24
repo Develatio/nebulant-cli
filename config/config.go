@@ -112,10 +112,10 @@ var BRIDGE_PORT = "16789"
 var BRIDGE_SECRET = os.Getenv("NEBULANT_BRIDGE_SECRET")
 
 // AssetDescriptorURL conf
-var AssetDescriptorURL = "https://builder-assets.nebulant.io/assets.json"
+var AssetDescriptorURL = "https://builder-assets.nebulant.app/assets.json"
 
 // UpdateDescriptorURL conf
-var UpdateDescriptorURL string = "https://releases.nebulant.io/version.json"
+var UpdateDescriptorURL string = "https://releases.nebulant.app/version.json"
 
 var BACKEND_REQUEST_NEW_SSO_TOKEN_PATH = "/v1/sso/"
 var PANEL_SSO_TOKEN_VALIDATION_PATH = "/sso/%s"
