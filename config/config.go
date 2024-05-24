@@ -46,25 +46,25 @@ var WSScheme string = "wss"
 var BASE_SCHEME string = "https"
 
 // BACKEND_API_HOST var
-var BACKEND_API_HOST string = "api.nebulant.io"
+var BACKEND_API_HOST string = "api.nebulant.app"
 
 // BACKEND_ACCOUNT_HOST var
-var BACKEND_ACCOUNT_HOST string = "account.nebulant.io"
+var BACKEND_ACCOUNT_HOST string = "account.nebulant.app"
 
 // PANEL_HOST var
-var PANEL_HOST string = "panel.nebulant.io"
+var PANEL_HOST string = "panel.nebulant.app"
 
 // MARKET_API_HOST var
-var MARKET_API_HOST string = "marketplace.nebulant.io"
+var MARKET_API_HOST string = "marketplace.nebulant.app"
 
 // FrontOrigin var
-var FrontOrigin string = "https://builder.nebulant.io"
+var FrontOrigin string = "https://builder.nebulant.app"
 
 // BridgeOrigin var
-var BridgeOrigin string = "https://bridge.nebulant.io"
+var BridgeOrigin string = "https://bridge.nebulant.app"
 
 // FrontUrl var
-var FrontUrl string = "https://builder.nebulant.io"
+var FrontUrl string = "https://builder.nebulant.app"
 
 // FrontOriginPre var
 var FrontOriginPre string = "https://builder.nebulant.dev"
