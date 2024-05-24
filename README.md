@@ -172,4 +172,4 @@ If you find an issue, please report it on the
 License
 -------
 
-[GNU Affero General Public License v3](https://github.com/develatio/nebulant-cli/blob/master/LICENSE)
+[MIT License](https://github.com/develatio/nebulant-cli/blob/master/LICENSE)
