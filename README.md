@@ -1,24 +1,24 @@
 Nebulant CLI
 ============
 
-- Website: https://nebulant.io
-- Documentation: [https://nebulant.io/docs.html](https://nebulant.io/docs.html)
+- Website: https://nebulant.app
+- Documentation: [https://nebulant.app/docs.html](https://nebulant.app/docs.html)
 
 ![Nebulant](https://raw.githubusercontent.com/develatio/nebulant-cli/master/logo.png)
 
 The Nebulant CLI tool is a single binary that can be used as a helper for the web editor (providing live-run and autocomplete features) or as a standalone executor of Nebulant blueprint files (suitable for CI/CD environments).
 
-The Nebulant project is a simplet yet powerful UI-based tool that allows you to define and execute a chain of actions. Think about it as a "cloud automation toolkit" that you can use to script and automate actions performed on your cloud services providers, without writing code. 
+The Nebulant project is a simplet yet powerful UI-based tool that allows you to define and execute a chain of actions. Think about it as a "cloud automation toolkit" that you can use to script and automate actions performed on your cloud services providers, without writing code.
 
-Actions can be anything, from simple operations such as sleep or print, to execution control with conditional evaluation and loops, to API calls (eg. create an AWS EC2 instance) performed on your favourite cloud services provider. 
+Actions can be anything, from simple operations such as sleep or print, to execution control with conditional evaluation and loops, to API calls (eg. create an AWS EC2 instance) performed on your favourite cloud services provider.
 
 Nebulant is an imperative way for controling resources, which means that instead of describing the final result you're willing to obtain, you have the power to define exactly how and when each action should be done.
 
-For more information, see the [website](https://nebulant.io) of the Nebulant.
+For more information, see the [website](https://nebulant.app) of the Nebulant.
 
 Documentation
 -------------
-Documentation is available on the [Nebulant website](https://nebulant.io) at [Docs](https://nebulant.io/docs.html) section.
+Documentation is available on the [Nebulant website](https://nebulant.app) at [Docs](https://nebulant.app/docs.html) section.
 
 Quick Start
 -----------
@@ -37,8 +37,8 @@ You can choose between server mode:
 
 - `$ ./nebulant -d`
 
-which will be useful to develop your blueprints with the [Nebulant Builder](https://builder.nebulant.io), or production mode:
- 
+which will be useful to develop your blueprints with the [Nebulant Builder](https://builder.nebulant.app), or production mode:
+
 - `$ ./nebulant myblueprint.json`
 
 with which you will run your blueprints indicating only the path to the json file.
