@@ -185,7 +185,7 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 			case <-out:
 				break L1
 			default:
-				ctx.Logger.LogDebug("Waiting ssh event...")
+				// ctx.Logger.LogDebug("Waiting ssh event...")
 				time.Sleep(200000 * time.Microsecond)
 			}
 		}
@@ -304,10 +304,13 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
-	// if p.OpenDbgShellBefore {
-	// 	ctx.Logger.LogInfo("Opening debug before run...")
-	// 	ctx.DebugInit()
-	// }
+	if p.OpenDbgShellBefore {
+		ctx.Logger.LogInfo("Opening debug before run...")
+		err = newSSHDebugShell(ctx, sshClient)
+		if err != nil {
+			ctx.Logger.LogWarn(err.Error())
+		}
+	}
 
 	if p.Command != nil { // run cmd
 		sshmfd.Write([]byte(*p.Command))

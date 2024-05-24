@@ -58,9 +58,9 @@ type newBridgePoolSerializer struct {
 	Scheme       string `json:"scheme"`
 	Host         string `json:"host"`
 	Port         int    `json:"port"`
-	ConsumerPath string `json:"consumer_url"`
-	XtermPath    string `json:"xterm_url"`
-	CliPath      string `json:"cli_url"`
+	ConsumerPath string `json:"consumer_path"`
+	XtermPath    string `json:"xterm_path"`
+	CliPath      string `json:"cli_path"`
 	cliURL       *url.URL
 }
 
@@ -299,7 +299,7 @@ func (d *debugger) _bridgeConnect(newp *newBridgePoolSerializer) error {
 	}
 	c, _, err := dialer.Dial(u.String(), headers)
 	if err != nil {
-		return err
+		return errors.Join(fmt.Errorf("dialing bridge err"), err)
 	}
 	defer c.Close()
 	wsrw := ws.NewWebSocketReadWriteCloser(c)
@@ -343,7 +343,7 @@ func (d *debugger) reverseCloudServer() error {
 	}
 	jar, err := config.Login(nil)
 	if err != nil {
-		return err
+		return errors.Join(fmt.Errorf("backend login problem"), err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
