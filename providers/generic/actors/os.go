@@ -38,7 +38,6 @@ import (
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/ipc"
-	"github.com/develatio/nebulant-cli/term"
 	nebulant_term "github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/joho/godotenv"
@@ -174,7 +173,7 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	if p.Entrypoint == nil || p.Entrypoint != nil && len(strings.Replace(*p.Entrypoint, " ", "", -1)) <= 0 {
-		shellpath, err := term.DetermineOsShell()
+		shellpath, err := nebulant_term.DetermineOsShell()
 		if err != nil {
 			return nil, err
 		}
