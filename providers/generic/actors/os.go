@@ -271,6 +271,16 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	})
 	cmd.Stdout = cmdOut
 	cmd.Stderr = cmdErr
+
+	if p.OpenDbgShellBefore {
+		ctx.Logger.LogInfo("opening before run cmd dbg...")
+		ctx.Logger.LogInfo("waiting for debug session to finish")
+		dbgErr := newLocalDebugShell(ctx, cmd)
+		if dbgErr != nil {
+			err = errors.Join(dbgErr, err)
+		}
+	}
+
 	cmdRunError := cmd.Run()
 	result.Stdout = result.RawStdout.String()
 	result.Stderr = result.RawStderr.String()
@@ -290,7 +300,14 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	if err != nil && p.OpenDbgShellOnerror {
-		ctx.Logger.LogErr(errors.Join(fmt.Errorf("exec fail"), err.(error)).Error())
+		ctx.Logger.LogErr(errors.Join(fmt.Errorf("exec fail"), err).Error())
+		ctx.Logger.LogInfo("waiting for debug session to finish")
+		dbgErr := newLocalDebugShell(ctx, cmd)
+		if dbgErr != nil {
+			err = errors.Join(dbgErr, err)
+		}
+	} else if p.OpenDbgShellAfter {
+		ctx.Logger.LogInfo("opening after run cmd dbg...")
 		ctx.Logger.LogInfo("waiting for debug session to finish")
 		dbgErr := newLocalDebugShell(ctx, cmd)
 		if dbgErr != nil {
