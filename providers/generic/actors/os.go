@@ -32,6 +32,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -173,12 +174,19 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	if p.Entrypoint == nil || p.Entrypoint != nil && len(strings.Replace(*p.Entrypoint, " ", "", -1)) <= 0 {
-		shell, err := term.DetermineOsShell()
+		shellpath, err := term.DetermineOsShell()
 		if err != nil {
 			return nil, err
 		}
 
-		p.Entrypoint = &shell
+		shellname := filepath.Base(shellpath)
+		if shellname == "cmd.exe" {
+			shellpath = shellpath + " /c"
+		} else {
+			shellpath = shellpath + " -c"
+		}
+
+		p.Entrypoint = &shellpath
 		p.CommandAsSingleArg = true
 	}
 
