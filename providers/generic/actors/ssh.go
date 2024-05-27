@@ -381,6 +381,13 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		ctx.Logger.LogInfo("waiting for debug session to finish")
 		sshRunErr = newSSHDebugShell(ctx, sshClient)
 		ctx.Logger.LogInfo("debugger finished")
+	} else if p.OpenDbgShellAfter {
+		ctx.Logger.LogInfo("Opening debug after run...")
+		err = newSSHDebugShell(ctx, sshClient)
+		if err != nil {
+			ctx.Logger.LogWarn(err.Error())
+		}
+		ctx.Logger.LogInfo("debugger finished")
 	}
 
 	// after
