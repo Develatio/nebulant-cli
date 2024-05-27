@@ -29,6 +29,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
@@ -116,19 +117,18 @@ func R2Upload(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
-	var rherr error
-	for i := 0; i < len(params.Paths); i++ {
-		upp := params.Paths[i]
-		if upp.Dst != nil && *upp.Dst != "" && *upp.Dst == "/" {
-			rherr = errors.Join(rherr, fmt.Errorf("please remove starting slash (/) from %s path", *upp.Dst))
-		}
-	}
-	if rherr != nil {
-		return nil, rherr
-	}
-
 	if ctx.Rehearsal {
 		return nil, nil
+	}
+
+	for i := 0; i < len(params.Paths); i++ {
+		upp := params.Paths[i]
+		if upp.Dst != nil {
+			if ndst, ok := strings.CutPrefix(*upp.Dst, "/"); ok {
+				ctx.Logger.LogWarn(fmt.Sprintf("starting slash of path %s will be removed: %s", *upp.Dst, ndst))
+				upp.Dst = &ndst
+			}
+		}
 	}
 
 	err := ctx.Store.DeepInterpolation(params)
