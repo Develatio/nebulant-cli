@@ -126,7 +126,7 @@ func R2Upload(ctx *ActionContext) (*base.ActionOutput, error) {
 		if upp.Dst != nil {
 			if ndst, ok := strings.CutPrefix(*upp.Dst, "/"); ok {
 				ctx.Logger.LogWarn(fmt.Sprintf("starting slash of path %s will be removed: %s", *upp.Dst, ndst))
-				upp.Dst = &ndst
+				*upp.Dst = ndst
 			}
 		}
 	}
