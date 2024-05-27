@@ -115,6 +115,18 @@ func R2Upload(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
 		return nil, err
 	}
+
+	var rherr error
+	for i := 0; i < len(params.Paths); i++ {
+		upp := params.Paths[i]
+		if upp.Dst != nil && *upp.Dst != "" && *upp.Dst == "/" {
+			rherr = errors.Join(rherr, fmt.Errorf("please remove starting slash (/) from %s path", *upp.Dst))
+		}
+	}
+	if rherr != nil {
+		return nil, rherr
+	}
+
 	if ctx.Rehearsal {
 		return nil, nil
 	}
