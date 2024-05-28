@@ -644,7 +644,7 @@ func (d *debugger) hightLightCursor() {
 		return
 	}
 	action := d.cursor.GetAction()
-	active_ids := d.runtime.GetActiveActionIds()
+	active_ids := d.runtime.activeActionsID.Slice()
 	active_ids = append(active_ids, action.ActionID)
 	cast.PushState(active_ids, cast.EventRuntimeStarted, d.runtime.irb.ExecutionUUID)
 }
