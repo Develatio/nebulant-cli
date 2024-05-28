@@ -181,17 +181,17 @@ prod_gobuild_and_r2upload:
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
     - setcap -r /usr/sbin/vault
     - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
-    - export CLOUDFLARE_ACCOUNT_ID=$(vault kv get -field="accountid" secret/Nebulant/Dev/Cloudflare/API/nebulant.io)
+    - export CLOUDFLARE_ACCOUNT_ID=$(vault kv get -field="accountid" secret/Nebulant/Dev/Cloudflare/API/nebulant.app)
     - export CLOUDFLARE_ACCESS_KEY_ID=$(vault kv get -field="Builder assets generator access key id" secret/Develatio/Dev/Cloudflare/API/api-tokens)
     - export CLOUDFLARE_SECRET_ACCESS_KEY=$(vault kv get -field="Builder assets generator secret access key" secret/Develatio/Dev/Cloudflare/API/api-tokens)
     - export VERSION_NUMBER=$(./nebulant -v | head -n 1)
     - export VERSION_DATE=$(git log -1 --date=format:'%Y/%m/%d' --format=%cd)
-    - ./nebulant run -f ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=releases.nebulant.io
+    - ./nebulant run -f ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=releases.nebulant.app
   rules:
     - if: $CI_COMMIT_BRANCH == "master"
       variables:
         BUILD_BRANCH: "release"
-        DEPLOY_BUCKET: "nebulant-io-cli-releases"
+        DEPLOY_BUCKET: "nebulant-app-cli-releases"
       when: manual
 
 # r2upload:
