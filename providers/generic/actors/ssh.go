@@ -1,18 +1,24 @@
-// Nebulant
+// MIT License
+//
 // Copyright (C) 2020  Develatio Technologies S.L.
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package actors
 
@@ -29,6 +35,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
@@ -38,6 +45,8 @@ import (
 
 	"github.com/develatio/nebulant-cli/base"
 	nebulantssh "github.com/develatio/nebulant-cli/netproto/ssh"
+	"github.com/develatio/nebulant-cli/nsterm"
+	"github.com/develatio/nebulant-cli/util"
 	"github.com/povsister/scp"
 	"golang.org/x/crypto/ssh"
 )
@@ -52,6 +61,9 @@ import (
 // 	Port                 uint16  `json:"port"`
 // }
 
+// type generateKeypairParameters struct {
+// }
+
 type runRemoteParameters struct {
 	nebulantssh.ClientConfigParameters
 	// Proxies     []*nebulantssh.ClientConfigParameters `json:"proxies"`
@@ -60,13 +72,40 @@ type runRemoteParameters struct {
 	Command    *string           `json:"command"`
 	Vars       map[string]string `json:"vars"`
 	// VarsTargets []string          `json:"vars_targets"`
-	DumpJSON *bool `json:"dump_json"`
+	DumpJSON            *bool `json:"dump_json"`
+	OpenDbgShellAfter   bool  `json:"open_dbg_shell_after"`
+	OpenDbgShellBefore  bool  `json:"open_dbg_shell_before"`
+	OpenDbgShellOnerror bool  `json:"open_dbg_shell_onerror"`
 }
 
 type runRemoteScriptOutput struct {
 	Stdout   *bytes.Buffer `json:"stdout"`
 	Stderr   *bytes.Buffer `json:"stderr"`
+	Error    error         `json:"error"`
 	ExitCode string        `json:"exit_code"`
+}
+
+func newSSHDebugShell(ctx *ActionContext, sshClient *nebulantssh.SSHClient) error {
+	mst := ctx.GetMustarFD()
+	svu := ctx.GetSluvaFD()
+	// ctx.Logger.LogErr(errors.Join(fmt.Errorf("remote exec fail"), sshRunErr.(error)).Error())
+	dbgsession, err := sshClient.NewSessionShellWithOpts(&nebulantssh.SessOpts{
+		Stdin:   svu,
+		Stdout:  svu,
+		Stderr:  svu,
+		WithPTY: true,
+	})
+	if err != nil {
+		return err
+	}
+	ctx.DebugInit()
+	ctx.Logger.LogInfo("waiting for debug session to finish")
+	err = dbgsession.Wait()
+	ctx.Logger.LogInfo("debug session finished")
+	// svu.Close()
+	mst.Close() // force close of mustar
+	// ctx.Logger.LogInfo("debugger finished")
+	return err
 }
 
 // RunRemoteScript func
@@ -81,7 +120,8 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	if err = ctx.Store.Interpolate(p.Target); err != nil {
+	err = ctx.Store.DeepInterpolation(p)
+	if err != nil {
 		return nil, err
 	}
 
@@ -89,10 +129,6 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	combineOut := true
 
 	remoteAddress := p.Target
-	err = ctx.Store.Interpolate(remoteAddress)
-	if err != nil {
-		return nil, err
-	}
 	if strings.Trim(*remoteAddress, " ") == "" {
 		return nil, fmt.Errorf("the target addr is empty. Please provide one")
 	}
@@ -155,7 +191,7 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 			case <-out:
 				break L1
 			default:
-				ctx.Logger.LogDebug("Waiting ssh event...")
+				// ctx.Logger.LogDebug("Waiting ssh event...")
 				time.Sleep(200000 * time.Microsecond)
 			}
 		}
@@ -190,6 +226,10 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	result := &runRemoteScriptOutput{}
 	var sshOut io.Writer
 	var sshErr io.Writer
+	sshVpty := nsterm.NewVirtPTY()
+	sshVpty.SetLDisc(nsterm.NewRawLdisc())
+	sshmfd := sshVpty.MustarFD()
+	sshStdin := sshVpty.SluvaFD()
 
 	result.Stdout = new(bytes.Buffer)
 	result.Stderr = new(bytes.Buffer)
@@ -197,6 +237,25 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		result.Stdout = new(bytes.Buffer)
 		result.Stderr = result.Stdout
 	}
+
+	logStdoutSwch := util.NewSwitchableWriter(&logWriter{
+		Log:       ctx.Logger.ByteLogInfo,
+		LogPrefix: []byte(*p.Target + ":ssh> "),
+	})
+	resultStdoutSwch := util.NewSwitchableWriter(result.Stdout)
+	logStderrSwch := util.NewSwitchableWriter(&logWriter{
+		Log:       ctx.Logger.ByteLogErr,
+		LogPrefix: []byte(*p.Target + ":ssh> "),
+	})
+	resultStderrSwch := util.NewSwitchableWriter(result.Stderr)
+
+	// start writers off
+
+	logStdoutSwch.Off()
+	resultStdoutSwch.Off()
+	logStderrSwch.Off()
+	resultStderrSwch.Off()
+
 	sshOut = io.MultiWriter(result.Stdout, &logWriter{
 		Log:       ctx.Logger.ByteLogInfo,
 		LogPrefix: []byte(*p.Target + ":ssh> "),
@@ -206,8 +265,17 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		LogPrefix: []byte(*p.Target + ":ssh> "),
 	})
 
-	sshClient.Stderr = sshErr
-	sshClient.Stdout = sshOut
+	session, err := sshClient.NewSessionShellWithOpts(&nebulantssh.SessOpts{
+		Stdout: sshOut,
+		Stderr: sshErr,
+		Stdin:  sshStdin,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.Logger.LogInfo("Setting env vars...")
+	// WIP: prevent log sensible vars
 	if p.Vars != nil {
 		for key, val := range p.Vars {
 			vv := val
@@ -215,11 +283,14 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 			if err != nil {
 				return nil, err
 			}
-			sshClient.Env[key] = vv
+			// too asumptions?
+			sshmfd.Write([]byte(fmt.Sprintf("export %s=$( cat <<EOF\n%s\nEOF\n)\n", key, vv)))
+			// sshClient.Env[key] = vv
 		}
 	}
 
 	if p.DumpJSON != nil && *p.DumpJSON {
+		ctx.Logger.LogInfo("Uploading a dump of json vars...")
 		f, err := ctx.Store.DumpValuesToJSONFile()
 		if err != nil {
 			return nil, err
@@ -239,15 +310,98 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
+	if p.OpenDbgShellBefore {
+		ctx.Logger.LogInfo("Opening debug before run...")
+		err = newSSHDebugShell(ctx, sshClient)
+		if err != nil {
+			ctx.Logger.LogWarn(err.Error())
+		}
+	}
+
 	if p.Command != nil { // run cmd
-		sshRunErr = sshClient.RunCmd(*p.Command)
+		sshmfd.Write([]byte(*p.Command))
+		sshmfd.Write([]byte("\n"))
+		sshmfd.Write([]byte("exit $?"))
+		sshmfd.Write([]byte("\n"))
 	} else if p.ScriptPath != nil { // upload local script and run
-		sshRunErr = sshClient.RunScriptFromLocalPath(*p.ScriptPath)
+		// TODO: configurable dst path
+		scriptpath := fmt.Sprintf("/tmp/nscript_%d.sh", rand.Int())
+		ctx.Logger.LogInfo(fmt.Sprintf("Uploading local:%s -> remote:%s script...", *p.ScriptPath, scriptpath))
+		scpClient, err := sshClient.NewSCPClientFromExistingSSH()
+		if err != nil {
+			ctx.Logger.LogErr("errr1" + err.Error())
+			return nil, err
+		}
+		err = scpClient.CopyFileToRemote(*p.ScriptPath, scriptpath, &scp.FileTransferOption{Perm: 0700})
+		if err != nil {
+			ctx.Logger.LogErr("errr2" + err.Error())
+			return nil, err
+		}
+		sshmfd.Write([]byte(scriptpath))
+		sshmfd.Write([]byte("\n"))
+		sshmfd.Write([]byte("exit $?"))
+		sshmfd.Write([]byte("\n"))
 	} else if p.ScriptText != nil {
-		sshRunErr = sshClient.RunScriptFromText(p.ScriptText)
+		// TODO: configurable dst path
+		scriptpath := fmt.Sprintf("/tmp/nscript_%d.sh", rand.Int())
+		ctx.Logger.LogInfo(fmt.Sprintf("Uploading remote:%s script...", scriptpath))
+		scpClient, err := sshClient.NewSCPClientFromExistingSSH()
+		if err != nil {
+			ctx.Logger.LogErr("errr3" + err.Error())
+			return nil, err
+		}
+		rr := bytes.NewReader([]byte(*p.ScriptText))
+		err = scpClient.CopyToRemote(rr, scriptpath, &scp.FileTransferOption{Perm: 0700})
+		if err != nil {
+			ctx.Logger.LogErr("errr4" + err.Error())
+			return nil, err
+		}
+		sshmfd.Write([]byte(scriptpath))
+		sshmfd.Write([]byte("\n"))
+		sshmfd.Write([]byte("exit $?"))
+		sshmfd.Write([]byte("\n"))
 	} else {
 		return nil, fmt.Errorf("no script provided")
 	}
+
+	// TODO: capture ^D to exit debug
+	// and keep shell alive
+	// if p.OpenDbgShellAfter {
+	// 	ctx.Logger.LogInfo("Opening debug after shell...")
+	// 	ctx.DebugInit()
+	// }
+
+	// before
+
+	ctx.Logger.LogInfo("Waiting shell to finish...")
+	sshRunErr = session.Wait()
+	ctx.Logger.LogInfo("Finished")
+	if sshRunErr != nil && p.OpenDbgShellOnerror {
+		ctx.Logger.LogErr(errors.Join(fmt.Errorf("remote exec fail"), sshRunErr.(error)).Error())
+		ctx.Logger.LogInfo("waiting for debug session to finish")
+		sshRunErr = newSSHDebugShell(ctx, sshClient)
+		ctx.Logger.LogInfo("debugger finished")
+	} else if p.OpenDbgShellAfter {
+		ctx.Logger.LogInfo("Opening debug after run...")
+		err = newSSHDebugShell(ctx, sshClient)
+		if err != nil {
+			ctx.Logger.LogWarn(err.Error())
+		}
+		ctx.Logger.LogInfo("debugger finished")
+	}
+
+	// after
+	// ctx.DebugInit()
+
+	// if p.Command != nil { // run cmd
+	// 	sshRunErr = sshClient.RunCmd(*p.Command)
+	// } else if p.ScriptPath != nil { // upload local script and run
+	// 	sshRunErr = sshClient.RunScriptFromLocalPath(*p.ScriptPath)
+	// } else if p.ScriptText != nil {
+	// 	sshRunErr = sshClient.RunScriptFromText(p.ScriptText)
+	// } else {
+	// 	return nil, fmt.Errorf("no script provided")
+	// }
 	ctx.Logger.ByteLogInfo([]byte("\n----------\n"))
 
 	if sshRunErr == nil {
@@ -264,6 +418,25 @@ func RunRemoteScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		err = sshRunErr.(error)
 	}
 
+	ctx.Logger.ByteLogInfo([]byte("\nout of remotescript actionn"))
 	aout := base.NewActionOutput(ctx.Action, result, nil)
 	return aout, err
 }
+
+// TODO:
+// func GenerateKeyPair(ctx *ActionContext) (*base.ActionOutput, error) {
+// 	var err error
+// 	input := &generateKeypairParameters{}
+// 	if err = json.Unmarshal(ctx.Action.Parameters, input); err != nil {
+// 		return nil, err
+// 	}
+
+// 	if ctx.Rehearsal {
+// 		return nil, nil
+// 	}
+
+// 	err = ctx.Store.DeepInterpolation(input)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// }

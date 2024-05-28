@@ -1,18 +1,24 @@
-// Nebulant
+// MIT License
+//
 // Copyright (C) 2023  Develatio Technologies S.L.
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package subcom
 
@@ -22,6 +28,7 @@ import (
 	"os"
 
 	"github.com/develatio/nebulant-cli/ipc"
+	"github.com/develatio/nebulant-cli/subsystem"
 )
 
 // strict *bool by default is false
@@ -33,22 +40,23 @@ import (
 // true: all errors are printed
 var strict *bool
 
-func parseReadVar() (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("readvar", flag.ExitOnError)
+func parseReadVar(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
+	fs := flag.NewFlagSet("readvar", flag.ContinueOnError)
+	fs.SetOutput(cmdline.Output())
 	strict = fs.Bool("strict", false, "Force err msg instead empty string")
 	fs.Usage = func() {
 		fmt.Fprint(fs.Output(), "\nUsage: nebulant readvar [variable name] [flags]\n")
-		PrintDefaults(fs)
+		subsystem.PrintDefaults(fs)
 	}
-	err := fs.Parse(flag.Args()[1:])
+	err := fs.Parse(cmdline.Args()[1:])
 	if err != nil {
 		return fs, err
 	}
 	return fs, nil
 }
 
-func ReadvarCmd() (int, error) {
-	_, err := parseReadVar()
+func ReadvarCmd(nblc *subsystem.NBLcommand) (int, error) {
+	_, err := parseReadVar(nblc.CommandLine())
 	if err != nil {
 		return 1, err
 	}

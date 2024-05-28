@@ -1,23 +1,28 @@
-// Nebulant
+// MIT License
+//
 // Copyright (C) 2020  Develatio Technologies S.L.
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package ssh
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -25,7 +30,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/develatio/nebulant-cli/ipc"
@@ -191,27 +195,28 @@ const (
 type SSHClientEvent struct {
 	Type      SSHClientEventType
 	Error     error
-	SSHClient *sshClient
+	SSHClient *SSHClient
 }
 
-var NewSSHClient = func() *sshClient {
-	c := &sshClient{}
+var NewSSHClient = func() *SSHClient {
+	c := &SSHClient{}
 	c.Events = make(chan *SSHClientEvent, 10)
 	c.Env = make(map[string]string)
 	return c
 }
 
 // sshClient obj
-type sshClient struct {
+type SSHClient struct {
 	DialAddr string
 	// conn
 	clientConn *ssh.Client
 	//
-	Stdout io.Writer
-	Stderr io.Writer
+	// Stdout io.Writer
+	// Stderr io.Writer
+	// Stdin  io.ReadWriter
 	// store of those clients jumping
 	// from self client
-	subClients []*sshClient
+	subClients []*SSHClient
 	// will be shared between clients
 	Events chan *SSHClientEvent
 	Env    map[string]string
@@ -220,7 +225,7 @@ type sshClient struct {
 }
 
 // Connect func
-func (s *sshClient) Connect(addr string, config *ssh.ClientConfig) error {
+func (s *SSHClient) Connect(addr string, config *ssh.ClientConfig) error {
 	sshClient, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
 		return err
@@ -229,11 +234,11 @@ func (s *sshClient) Connect(addr string, config *ssh.ClientConfig) error {
 	return nil
 }
 
-func (s *sshClient) GetConn() *ssh.Client {
+func (s *SSHClient) GetConn() *ssh.Client {
 	return s.clientConn
 }
 
-func (s *sshClient) Dial(addr string, config *ssh.ClientConfig) (*sshClient, error) {
+func (s *SSHClient) Dial(addr string, config *ssh.ClientConfig) (*SSHClient, error) {
 	s.DialAddr = addr
 	s.Events <- &SSHClientEvent{Type: SSHClientEventDialing, SSHClient: s}
 	if s.clientConn == nil {
@@ -257,22 +262,22 @@ func (s *sshClient) Dial(addr string, config *ssh.ClientConfig) (*sshClient, err
 		return nil, err
 	}
 	cc := ssh.NewClient(c, chans, reqs)
-	sshclient := &sshClient{
+	sshclient := &SSHClient{
 		clientConn: cc,
 		Env:        s.Env,
-		Stdout:     s.Stdout,
-		Stderr:     s.Stderr,
-		Events:     s.Events,
+		// Stdout:     s.Stdout,
+		// Stderr:     s.Stderr,
+		Events: s.Events,
 	}
 	s.subClients = append(s.subClients, sshclient)
 	return sshclient, nil
 }
 
-func (s *sshClient) Listen(network string, address string) (net.Listener, error) {
+func (s *SSHClient) Listen(network string, address string) (net.Listener, error) {
 	return s.clientConn.Listen(network, address)
 }
 
-func (s *sshClient) StartIPC() (*ipc.IPCConsumer, error) {
+func (s *SSHClient) StartIPC() (*ipc.IPCConsumer, error) {
 	lid := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
 	fullpath := filepath.Join("/tmp", "ipc_"+lid+".sock")
 	l, err := s.Listen("unix", fullpath)
@@ -328,7 +333,7 @@ func (s *sshClient) StartIPC() (*ipc.IPCConsumer, error) {
 	return ipcc, nil
 }
 
-func (s *sshClient) DialWithProxies(ccp *ClientConfigParameters) (*sshClient, error) {
+func (s *SSHClient) DialWithProxies(ccp *ClientConfigParameters) (*SSHClient, error) {
 	var connections []*ClientConfigParameters
 	if len(ccp.Proxies) > 0 {
 		connections = append(connections, ccp.Proxies...)
@@ -367,7 +372,7 @@ func (s *sshClient) DialWithProxies(ccp *ClientConfigParameters) (*sshClient, er
 }
 
 // Disconnect func
-func (s *sshClient) Disconnect() error {
+func (s *SSHClient) Disconnect() error {
 	var errs []error
 	// close IPCS listener
 	if s.ipcs != nil {
@@ -395,142 +400,196 @@ func (s *sshClient) Disconnect() error {
 	return errors.Join(errs...)
 }
 
-// RunCmd func
-func (s *sshClient) RunCmd(cmd string) error { // stdout, stderr, error
-	session, sesserr := s.clientConn.NewSession()
-	if sesserr != nil {
-		return sesserr
-	}
-	defer session.Close()
+// // RunCmd func
+// func (s *SSHClient) RunCmd(cmd string) error { // stdout, stderr, error
+// 	session, sesserr := s.clientConn.NewSession()
+// 	if sesserr != nil {
+// 		return sesserr
+// 	}
+// 	defer session.Close()
 
-	session.Stdout = s.Stdout
-	session.Stderr = s.Stderr
-	inlineEnv := ""
-	for n, v := range s.Env {
-		err := session.Setenv(n, v)
-		if err != nil {
-			// AcceptEnv should be enabled to accept envs from session.Setenv
-			// https://manpages.debian.org/unstable/openssh-server/sshd_config.5.en.html#AcceptEnv
-			// but this is commonly not allowed because:
-			// https://serverfault.com/questions/427522/why-is-acceptenv-considered-insecure
-			// so here the setenv err gets gracefully ignored and env var gets inserted inline
-			inlineEnv = inlineEnv + "export " + n + "=$( cat <<EOF\n" + v + "\nEOF\n) && "
+// 	session.Stdout = s.Stdout
+// 	session.Stderr = s.Stderr
+// 	inlineEnv := ""
+// 	for n, v := range s.Env {
+// 		err := session.Setenv(n, v)
+// 		if err != nil {
+// 			// AcceptEnv should be enabled to accept envs from session.Setenv
+// 			// https://manpages.debian.org/unstable/openssh-server/sshd_config.5.en.html#AcceptEnv
+// 			// but this is commonly not allowed because:
+// 			// https://serverfault.com/questions/427522/why-is-acceptenv-considered-insecure
+// 			// so here the setenv err gets gracefully ignored and env var gets inserted inline
+// 			inlineEnv = inlineEnv + "export " + n + "=$( cat <<EOF\n" + v + "\nEOF\n) && "
+// 		}
+// 	}
+
+// 	// The returned error is nil if the command runs, has no problems copying
+// 	// stdin, stdout, and stderr, and exits with a zero exit status.
+// 	// If the remote server does not send an exit status, an error of
+// 	// type *ExitMissingError is returned. If the command completes
+// 	// unsuccessfully or is interrupted by a signal, the error is of type
+// 	// *ExitError. Other error types may be returned for I/O problems.
+// 	// cast.LogInfo( "ssh> "+cmd)
+// 	cmd = inlineEnv + injecfuncs + " && " + cmd
+// 	runerr := session.Run(cmd)
+// 	// This freezes the execution of the command as we want. Do not use:
+// 	// if err := session.Wait(); err != nil {
+// 	// 	return err
+// 	// }
+// 	return runerr
+// }
+
+// // RunScriptFromLocalPath func. Run local script file sending it to the remote machine
+// func (s *SSHClient) RunScriptFromLocalPath(localPath string) error { // stdout, stderr, error
+// 	var stdin bytes.Buffer
+// 	file, err := os.Open(localPath) // #nosec G304 -- This is indeed an inclusion, but the user is fully responsible for this.
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer file.Close()
+
+// 	session, sesserr := s.clientConn.NewSession()
+// 	if sesserr != nil {
+// 		return sesserr
+// 	}
+// 	defer session.Close()
+// 	session.Stdin = &stdin
+// 	session.Stdout = s.Stdout
+// 	session.Stderr = s.Stderr
+// 	inlineEnv := ""
+// 	for n, v := range s.Env {
+// 		err := session.Setenv(n, v)
+// 		if err != nil {
+// 			// AcceptEnv should be enabled to accept envs from session.Setenv
+// 			// https://manpages.debian.org/unstable/openssh-server/sshd_config.5.en.html#AcceptEnv
+// 			// but this is commonly not allowed because:
+// 			// https://serverfault.com/questions/427522/why-is-acceptenv-considered-insecure
+// 			// so here the setenv err gets gracefully ignored and env var gets inserted inline
+// 			inlineEnv = inlineEnv + n + "=$( cat <<EOF\n" + v + "\nEOF\n)\n"
+// 		}
+// 	}
+// 	inlineEnv = inlineEnv + "\n" + injecfuncs + "\n"
+// 	envr := strings.NewReader(inlineEnv)
+// 	r := io.MultiReader(envr, file)
+
+// 	_, err = io.Copy(&stdin, r)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	// The returned error is nil if the command runs, has no problems copying
+// 	// stdin, stdout, and stderr, and exits with a zero exit status.
+// 	// If the remote server does not send an exit status, an error of
+// 	// type *ExitMissingError is returned. If the command completes
+// 	// unsuccessfully or is interrupted by a signal, the error is of type
+// 	// *ExitError. Other error types may be returned for I/O problems.
+// 	// cast.LogInfo( "ssh> " + cmd)
+// 	// runerr := session.Run(cmd)
+// 	if err := session.Shell(); err != nil {
+// 		return err
+// 	}
+// 	if err := session.Wait(); err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
+
+type SessOpts struct {
+	Stdin   io.Reader
+	Stdout  io.Writer
+	Stderr  io.Writer
+	WithPTY bool
+}
+
+func (s *SSHClient) NewSessionShellWithOpts(opts *SessOpts) (*ssh.Session, error) {
+	sess, err := s.NewSession()
+	if err != nil {
+		return nil, err
+	}
+	if opts.Stdin != nil {
+		sess.Stdin = opts.Stdin
+	}
+	if opts.Stdout != nil {
+		sess.Stdout = opts.Stdout
+	}
+	if opts.Stderr != nil {
+		sess.Stderr = opts.Stderr
+	}
+
+	if opts.WithPTY {
+		modes := ssh.TerminalModes{
+			ssh.ECHO:          1,     // disable echoing
+			ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+			ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+		}
+		if err := sess.RequestPty("xterm", 40, 80, modes); err != nil {
+			return nil, err
 		}
 	}
 
-	// The returned error is nil if the command runs, has no problems copying
-	// stdin, stdout, and stderr, and exits with a zero exit status.
-	// If the remote server does not send an exit status, an error of
-	// type *ExitMissingError is returned. If the command completes
-	// unsuccessfully or is interrupted by a signal, the error is of type
-	// *ExitError. Other error types may be returned for I/O problems.
-	// cast.LogInfo( "ssh> "+cmd)
-	cmd = inlineEnv + injecfuncs + " && " + cmd
-	runerr := session.Run(cmd)
-	// This freezes the execution of the command as we want. Do not use:
-	// if err := session.Wait(); err != nil {
-	// 	return err
-	// }
-	return runerr
+	if err := sess.Shell(); err != nil {
+		return nil, err
+	}
+
+	return sess, nil
 }
 
-// RunScriptFromLocalPath func. Run local script file sending it to the remote machine
-func (s *sshClient) RunScriptFromLocalPath(localPath string) error { // stdout, stderr, error
-	var stdin bytes.Buffer
-	file, err := os.Open(localPath) // #nosec G304 -- This is indeed an inclusion, but the user is fully responsible for this.
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	session, sesserr := s.clientConn.NewSession()
-	if sesserr != nil {
-		return sesserr
-	}
-	defer session.Close()
-	session.Stdin = &stdin
-	session.Stdout = s.Stdout
-	session.Stderr = s.Stderr
-	inlineEnv := ""
-	for n, v := range s.Env {
-		err := session.Setenv(n, v)
-		if err != nil {
-			// AcceptEnv should be enabled to accept envs from session.Setenv
-			// https://manpages.debian.org/unstable/openssh-server/sshd_config.5.en.html#AcceptEnv
-			// but this is commonly not allowed because:
-			// https://serverfault.com/questions/427522/why-is-acceptenv-considered-insecure
-			// so here the setenv err gets gracefully ignored and env var gets inserted inline
-			inlineEnv = inlineEnv + n + "=$( cat <<EOF\n" + v + "\nEOF\n)\n"
-		}
-	}
-	inlineEnv = inlineEnv + "\n" + injecfuncs + "\n"
-	envr := strings.NewReader(inlineEnv)
-	r := io.MultiReader(envr, file)
-
-	_, err = io.Copy(&stdin, r)
-	if err != nil {
-		return err
-	}
-
-	// The returned error is nil if the command runs, has no problems copying
-	// stdin, stdout, and stderr, and exits with a zero exit status.
-	// If the remote server does not send an exit status, an error of
-	// type *ExitMissingError is returned. If the command completes
-	// unsuccessfully or is interrupted by a signal, the error is of type
-	// *ExitError. Other error types may be returned for I/O problems.
-	// cast.LogInfo( "ssh> " + cmd)
-	// runerr := session.Run(cmd)
-	if err := session.Shell(); err != nil {
-		return err
-	}
-	if err := session.Wait(); err != nil {
-		return err
-	}
-	return nil
+func (s *SSHClient) NewSession() (*ssh.Session, error) {
+	return s.clientConn.NewSession()
 }
 
-// RunScriptFromText func
-func (s *sshClient) RunScriptFromText(txt *string) error {
-	var stdin bytes.Buffer
-	scriptTxt := *txt
+// // RunScriptFromText func
+// func (s *SSHClient) RunScriptFromText(txt *string) error {
+// 	// var stdin bytes.Buffer
+// 	scriptTxt := *txt
 
-	session, sesserr := s.clientConn.NewSession()
-	if sesserr != nil {
-		return sesserr
-	}
-	defer session.Close()
-	session.Stdin = &stdin
-	session.Stdout = s.Stdout
-	session.Stderr = s.Stderr
-	inlineEnv := ""
-	for n, v := range s.Env {
-		err := session.Setenv(n, v)
-		if err != nil {
-			// AcceptEnv should be enabled to accept envs from session.Setenv
-			// https://manpages.debian.org/unstable/openssh-server/sshd_config.5.en.html#AcceptEnv
-			// but this is commonly not allowed because:
-			// https://serverfault.com/questions/427522/why-is-acceptenv-considered-insecure
-			// so here the setenv err gets gracefully ignored and env var gets inserted inline
-			inlineEnv = inlineEnv + n + "=$( cat <<EOF\n" + v + "\nEOF\n)\n"
-		}
-	}
-	scriptTxt = inlineEnv + "\n" + injecfuncs + "\n" + scriptTxt
-	r := strings.NewReader(scriptTxt)
-	_, err := io.Copy(&stdin, r)
-	if err != nil {
-		return err
-	}
+// 	session, sesserr := s.clientConn.NewSession()
+// 	if sesserr != nil {
+// 		return sesserr
+// 	}
+// 	defer session.Close()
+// 	session.Stdin = s.Stdin
+// 	session.Stdout = s.Stdout
+// 	session.Stderr = s.Stderr
+// 	inlineEnv := ""
+// 	for n, v := range s.Env {
+// 		err := session.Setenv(n, v)
+// 		if err != nil {
+// 			// AcceptEnv should be enabled to accept envs from session.Setenv
+// 			// https://manpages.debian.org/unstable/openssh-server/sshd_config.5.en.html#AcceptEnv
+// 			// but this is commonly not allowed because:
+// 			// https://serverfault.com/questions/427522/why-is-acceptenv-considered-insecure
+// 			// so here the setenv err gets gracefully ignored and env var gets inserted inline
+// 			inlineEnv = inlineEnv + n + "=$( cat <<EOF\n" + v + "\nEOF\n)\n"
+// 		}
+// 	}
+// 	scriptTxt = inlineEnv + "\n" + injecfuncs + "\n" + scriptTxt
+// 	r := strings.NewReader(scriptTxt)
+// 	_, err := io.Copy(s.Stdin, r)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	if err := session.Shell(); err != nil {
-		return err
-	}
-	if err := session.Wait(); err != nil {
-		return err
-	}
-	return nil
-}
+// 	modes := ssh.TerminalModes{
+// 		ssh.ECHO:          1,     // disable echoing
+// 		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+// 		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+// 	}
 
-func (s *sshClient) NewSCPClientFromExistingSSH() (*scp.Client, error) {
+// 	if err := session.RequestPty("xterm", 40, 80, modes); err != nil {
+// 		return err
+// 	}
+
+// 	if err := session.Shell(); err != nil {
+// 		return err
+// 	}
+// 	if err := session.Wait(); err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
+
+func (s *SSHClient) NewSCPClientFromExistingSSH() (*scp.Client, error) {
 	if s.clientConn == nil {
 		return nil, fmt.Errorf("cannot get scp client: ssh not connected")
 	}

@@ -1,18 +1,24 @@
-// Nebulant
+// MIT License
+//
 // Copyright (C) 2020  Develatio Technologies S.L.
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 //
 // The code of this file was bassed on WebSocket Chat example from
 // gorilla websocket lib: https://github.com/gorilla/websocket/blob/master/examples/chat/client.go
@@ -24,6 +30,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -71,6 +78,18 @@ type Credential struct {
 	AuthToken *string `json:"auth_token"`
 	//
 	Denied bool `json:"denied"`
+}
+
+// ProfileOrganization struct
+type ProfileOrganization struct {
+	Name *string `json:"name"`
+	Slug string  `json:"slug" validate:"required"`
+}
+
+// Profile struct
+type Profile struct {
+	Name         string              `json:"name"`
+	Organization ProfileOrganization `json:"organization" validate:"required"`
 }
 
 func createEmptyCredentialsFile() (int, error) {
@@ -136,6 +155,17 @@ func ReadCredential(credentialName string) (*Credential, error) {
 	return nil, fmt.Errorf("Credential not found")
 }
 
+func GetJar() (*cookiejar.Jar, error) {
+	if cachedjar == nil {
+		_cj, err := cookiejar.New(nil)
+		if err != nil {
+			return nil, err
+		}
+		cachedjar = _cj
+	}
+	return cachedjar, nil
+}
+
 func Login(credential *Credential) (*cookiejar.Jar, error) {
 	// TODO: test expiration and re-login
 	if cachedjar != nil {
@@ -149,7 +179,7 @@ func Login(credential *Credential) (*cookiejar.Jar, error) {
 		IdleConnTimeout:    30 * time.Second,
 		DisableCompression: true,
 	}
-	jar, err := cookiejar.New(nil)
+	jar, err := GetJar()
 	if err != nil {
 		return nil, err
 	}
@@ -158,11 +188,14 @@ func Login(credential *Credential) (*cookiejar.Jar, error) {
 		Jar:       jar,
 	}
 	sso_login_url := url.URL{
-		Scheme: BackendProto,
-		Host:   BackendURLDomain,
-		Path:   "/apiv1/authx/sso/login/",
+		Scheme: BASE_SCHEME,
+		Host:   BACKEND_API_HOST,
+		Path:   BACKEND_SSO_LOGIN_PATH,
 	}
 
+	if credential.AuthToken == nil {
+		return nil, fmt.Errorf("cannot login: empty auth token")
+	}
 	pwd := strings.Split(*credential.AuthToken, ":")[0]
 	esecret, err := encrypt(credential, []byte(pwd))
 	if err != nil {
@@ -188,7 +221,51 @@ func Login(credential *Credential) (*cookiejar.Jar, error) {
 
 	cachedjar = jar
 
+	err = _fillProfile()
+	if err != nil {
+		return nil, err
+	}
+
 	return jar, nil
+}
+
+func _fillProfile() error {
+	url := url.URL{
+		Scheme: BASE_SCHEME,
+		Host:   BACKEND_API_HOST,
+		Path:   BACKEND_ME_PATH,
+	}
+	req, err := http.NewRequest("GET", url.String(), nil)
+	if err != nil {
+		return err
+	}
+	// assume that this func is called just after login and
+	// cachedjar is always valid
+	client := &http.Client{Jar: cachedjar}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	rawbody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode > 399 {
+		fmt.Println()
+		return fmt.Errorf("server error (%v): %s", resp.StatusCode, rawbody)
+	}
+
+	prf := &Profile{}
+	if err := util.UnmarshalValidJSON(rawbody, prf); err != nil {
+		return err
+	}
+	if prf.Organization.Slug == "" {
+		return fmt.Errorf("bad company in your profile")
+	}
+	PROFILE = prf
+
+	return nil
 }
 
 func RequestToken() error {
@@ -196,12 +273,16 @@ func RequestToken() error {
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
 		DisableCompression: true,
+		TLSClientConfig: &tls.Config{
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: true,
+		},
 	}
 	c := http.Client{Transport: tr}
 	sso_url := url.URL{
-		Scheme: BackendProto,
-		Host:   BackendURLDomain,
-		Path:   "/apiv1/authx/sso/",
+		Scheme: BASE_SCHEME,
+		Host:   BACKEND_API_HOST,
+		Path:   BACKEND_REQUEST_NEW_SSO_TOKEN_PATH,
 	}
 	body := []byte(`{
 		"description": "Nebulant CLI"
@@ -213,16 +294,21 @@ func RequestToken() error {
 	defer resp.Body.Close()
 	// r := bufio.NewReader(resp.Body)
 
+	token := resp.Header.Get("url-token")
+	if token == "" {
+		return fmt.Errorf("empty token received")
+	}
+
 	panel_url := url.URL{
-		Scheme: BackendProto,
-		Host:   PanelURLDomain,
-		Path:   "organization/tokens/sso/" + resp.Header.Get("url-token"),
+		Scheme: BASE_SCHEME,
+		Host:   PANEL_HOST,
+		Path:   fmt.Sprintf(PANEL_SSO_TOKEN_VALIDATION_PATH, resp.Header.Get("url-token")),
 	}
 
 	account_url := url.URL{
-		Scheme:   BackendProto,
-		Host:     AccountURLDomain,
-		Path:     "/to/",
+		Scheme:   BASE_SCHEME,
+		Host:     BACKEND_ACCOUNT_HOST,
+		Path:     BACKEND_ENTRY_POINT_PATH,
 		RawQuery: "path=" + panel_url.String(),
 	}
 	err = browser.OpenURL(account_url.String())
@@ -230,7 +316,6 @@ func RequestToken() error {
 		return err
 	}
 
-	// WIP
 	rawbody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err

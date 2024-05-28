@@ -1,18 +1,24 @@
-// Nebulant
+// MIT License
+//
 // Copyright (C) 2021  Develatio Technologies S.L.
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package actors
 
@@ -26,13 +32,13 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"os/user"
-	"runtime"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/ipc"
+	nebulant_term "github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/joho/godotenv"
 )
@@ -56,14 +62,17 @@ type runLocalParameters struct {
 	// PrivateKeyPath *string `json:"keyfile"`
 	// Password       *string `json:"password"`
 	// Port           *string `json:"port"`
-	Vars               map[string]string `json:"vars"`
-	DumpJSON           *bool             `json:"dump_json"`
-	ScriptText         *string           `json:"script"`
-	ScriptParameters   *string           `json:"scriptParameters"`
-	ScriptName         string            `json:"scriptName"`
-	Command            *string           `json:"command"`
-	CommandAsSingleArg bool              `json:"pass_to_entrypoint_as_single_param"`
-	Entrypoint         *string           `json:"entrypoint"`
+	Vars                map[string]string `json:"vars"`
+	DumpJSON            *bool             `json:"dump_json"`
+	ScriptText          *string           `json:"script"`
+	ScriptParameters    *string           `json:"scriptParameters"`
+	ScriptName          string            `json:"scriptName"`
+	Command             *string           `json:"command"`
+	CommandAsSingleArg  bool              `json:"pass_to_entrypoint_as_single_param"`
+	Entrypoint          *string           `json:"entrypoint"`
+	OpenDbgShellAfter   bool              `json:"open_dbg_shell_after"`
+	OpenDbgShellBefore  bool              `json:"open_dbg_shell_before"`
+	OpenDbgShellOnerror bool              `json:"open_dbg_shell_onerror"`
 }
 
 type readFileParameters struct {
@@ -77,6 +86,37 @@ type writeFileParameters struct {
 	Interpolate bool    `json:"interpolate"`
 }
 
+func newLocalDebugShell(ctx *ActionContext, failed *exec.Cmd) error {
+	shell, err := nebulant_term.DetermineOsShell()
+	if err != nil {
+		ctx.Logger.LogErr(err.Error())
+		return err
+	}
+
+	ctx.DebugInit()
+
+	mst := ctx.GetMustarFD()
+	defer mst.Close()
+	svu := ctx.GetSluvaFD() // bring sluva to tty
+
+	ctx.Logger.LogInfo(fmt.Sprintf("original exec: %s", strings.Join(failed.Args, " ")))
+
+	f, err := nebulant_term.GetOSPTY(&nebulant_term.OSPTYConf{Shell: shell, Env: failed.Env})
+	if err != nil {
+		return err
+	}
+
+	// copy sluva to os pty
+	go func() { _, _ = io.Copy(f, svu) }()
+
+	// copy os pty to sluva
+	_, err = io.Copy(svu, f)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // RunLocalScript func
 func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	var err error
@@ -88,6 +128,11 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	if ctx.Rehearsal {
 		return nil, nil
+	}
+
+	err = ctx.Store.DeepInterpolation(p)
+	if err != nil {
+		return nil, err
 	}
 
 	if p.ScriptText != nil {
@@ -128,61 +173,19 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	if p.Entrypoint == nil || p.Entrypoint != nil && len(strings.Replace(*p.Entrypoint, " ", "", -1)) <= 0 {
-		var shell string
-		switch runtime.GOOS {
-		case "windows":
-			shell = os.Getenv("COMSPEC")
-			if len(shell) <= 0 {
-				shell = "cmd.exe"
-			}
-		case "darwin":
-			user, err := user.Current()
-			if err != nil {
-				return nil, err
-			}
-			argv, err := util.CommandLineToArgv("dscl /Search -read \"/Users/" + user.Username + "\" UserShell")
-			if err != nil {
-				return nil, err
-			}
-			out, err := exec.Command(argv[0], argv[1:]...).Output() // #nosec G204 -- allowed here
-			if err != nil {
-				return nil, err
-			}
-			shell = string(out)
-			shell = strings.Replace(shell, "UserShell: ", "", 1)
-			shell = strings.Trim(shell, "\n")
-			if len(shell) <= 0 {
-				shell = "/bin/zsh"
-			}
-		case "linux", "openbsd", "freebsd":
-			user, err := user.Current()
-			if err != nil {
-				return nil, err
-			}
-			out, err := exec.Command("getent", "passwd", user.Uid).Output() // #nosec G204 -- allowed here
-			if err != nil {
-				return nil, err
-			}
-			parts := strings.SplitN(string(out), ":", 7)
-			if len(parts) < 7 || parts[0] == "" || parts[0][0] == '+' || parts[0][0] == '-' {
-				return nil, fmt.Errorf("cannot determine OS shell")
-			}
-			shell = parts[6]
-			shell = strings.Trim(shell, "\n")
-			if len(shell) <= 0 {
-				shell = "/bin/bash"
-			}
+		shellpath, err := nebulant_term.DetermineOsShell()
+		if err != nil {
+			return nil, err
 		}
-		ss := strings.Split(string(shell), string(os.PathSeparator))
-		rr := ss[len(ss)-1]
-		rr = strings.ToLower(rr)
-		switch rr {
-		case "zsh", "bash", "tcsh", "csh", "ksh", "ash", "rc", "bash.exe":
-			shell = shell + " -c"
-		case "cmd.exe":
-			shell = shell + " /c"
+
+		shellname := filepath.Base(shellpath)
+		if shellname == "cmd.exe" {
+			shellpath = shellpath + " /c"
+		} else {
+			shellpath = shellpath + " -c"
 		}
-		p.Entrypoint = &shell
+
+		p.Entrypoint = &shellpath
 		p.CommandAsSingleArg = true
 	}
 
@@ -267,6 +270,16 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 	})
 	cmd.Stdout = cmdOut
 	cmd.Stderr = cmdErr
+
+	if p.OpenDbgShellBefore {
+		ctx.Logger.LogInfo("opening before run cmd dbg...")
+		ctx.Logger.LogInfo("waiting for debug session to finish")
+		dbgErr := newLocalDebugShell(ctx, cmd)
+		if dbgErr != nil {
+			err = errors.Join(dbgErr, err)
+		}
+	}
+
 	cmdRunError := cmd.Run()
 	result.Stdout = result.RawStdout.String()
 	result.Stderr = result.RawStderr.String()
@@ -283,6 +296,22 @@ func RunLocalScript(ctx *ActionContext) (*base.ActionOutput, error) {
 		err = cmdRunError.(*net.OpError).Err
 	} else {
 		err = cmdRunError
+	}
+
+	if err != nil && p.OpenDbgShellOnerror {
+		ctx.Logger.LogErr(errors.Join(fmt.Errorf("exec fail"), err).Error())
+		ctx.Logger.LogInfo("waiting for debug session to finish")
+		dbgErr := newLocalDebugShell(ctx, cmd)
+		if dbgErr != nil {
+			err = errors.Join(dbgErr, err)
+		}
+	} else if p.OpenDbgShellAfter {
+		ctx.Logger.LogInfo("opening after run cmd dbg...")
+		ctx.Logger.LogInfo("waiting for debug session to finish")
+		dbgErr := newLocalDebugShell(ctx, cmd)
+		if dbgErr != nil {
+			err = errors.Join(dbgErr, err)
+		}
 	}
 
 	aout := base.NewActionOutput(ctx.Action, result, nil)
@@ -330,6 +359,11 @@ func ReadFile(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
+	err := ctx.Store.Interpolate(params.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
 	finfo, err := os.Stat(*params.FilePath)
 	if err != nil {
 		return nil, err
@@ -353,6 +387,7 @@ func ReadFile(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	aout := base.NewActionOutput(ctx.Action, scontent, nil)
+	aout.Records[0].Literal = true
 	return aout, nil
 }
 
@@ -374,7 +409,12 @@ func WriteFile(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
-	err := os.WriteFile(*params.FilePath, []byte(scontent), 0600)
+	err := ctx.Store.Interpolate(params.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.WriteFile(*params.FilePath, []byte(scontent), 0600)
 	if err != nil {
 		return nil, err
 	}

@@ -1,30 +1,36 @@
-// Nebulant
+// MIT License
+//
 // Copyright (C) 2020  Develatio Technologies S.L.
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package generic
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
 	hook_providers "github.com/develatio/nebulant-cli/hook/providers"
 	"github.com/develatio/nebulant-cli/providers/generic/actors"
+	"github.com/develatio/nebulant-cli/util"
 )
 
 func ActionValidator(action *blueprint.Action) error {
@@ -74,7 +80,8 @@ type Provider struct {
 func (p *Provider) DumpPrivateVars(freshStore base.IStore) {}
 
 // HandleAction func
-func (p *Provider) HandleAction(action *blueprint.Action) (*base.ActionOutput, error) {
+func (p *Provider) HandleAction(actx base.IActionContext) (*base.ActionOutput, error) {
+	action := actx.GetAction()
 	p.Logger.LogDebug("GENERIC: Received action " + action.ActionName)
 	if al, exists := actors.ActionFuncMap[action.ActionName]; exists {
 		l := p.Logger.Duplicate()
@@ -83,6 +90,7 @@ func (p *Provider) HandleAction(action *blueprint.Action) (*base.ActionOutput, e
 			Action: action,
 			Store:  p.store,
 			Logger: l,
+			Actx:   actx,
 		})
 	}
 	return nil, fmt.Errorf("GENERIC: Unknown action: " + action.ActionName)
@@ -100,7 +108,7 @@ func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Acti
 	}
 
 	// retry on net err, skip others
-	if _, ok := aout.Records[0].Error.(net.Error); ok {
+	if util.IsNetError(aout.Records[0].Error) {
 		phcontext := &hook_providers.ProviderHookContext{
 			Logger: p.Logger,
 			Store:  p.store,

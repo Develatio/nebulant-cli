@@ -1,18 +1,24 @@
-// Nebulant
+// MIT License
+//
 // Copyright (C) 2020  Develatio Technologies S.L.
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package storage
 
@@ -21,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
 	"regexp"
@@ -77,7 +84,9 @@ func NewStore() *Store {
 // Merge func
 func (s *Store) Merge(source base.IStore) {
 	ss := source.(*Store)
+
 	for k, v := range ss.recordsByRefName {
+		s.logger.LogDebug(fmt.Sprintf("mergin refname %s", v.RefName))
 		s.recordsByRefName[k] = v
 	}
 	for k, v := range ss.recordsByActionID {
@@ -86,9 +95,12 @@ func (s *Store) Merge(source base.IStore) {
 	for k, v := range ss.aoutByActionID {
 		s.aoutByActionID[k] = v
 	}
-	for k, v := range ss.providers {
-		s.providers[k] = v
-	}
+	// NOTE: on Store merge, skip copy providers, because there
+	// is an istance of store inside the provider, so the relation
+	// provider <-> store should not be altered
+	// for k, v := range ss.providers {
+	// 	s.providers[k] = v
+	// }
 	for k, v := range ss.private {
 		s.private[k] = v
 	}
@@ -315,6 +327,10 @@ func (s *Store) Interpolate(sourcetext *string) error {
 			if len(refpath) <= 0 {
 				return fmt.Errorf("environment var access with empty var name " + refname)
 			}
+			if strings.ToLower(strings.TrimSpace(refpath)) == "random" {
+				*sourcetext = strings.Replace(*sourcetext, match[0], fmt.Sprintf("%d", rand.Int()), 1)
+				continue
+			}
 			varval, exists := os.LookupEnv(strings.TrimSpace(refpath))
 			if !exists {
 				return fmt.Errorf("'" + refpath + "' environment var not found")
@@ -351,13 +367,17 @@ func (s *Store) Interpolate(sourcetext *string) error {
 
 		record, exists := s.recordsByRefName[refname]
 		if !exists {
-			return fmt.Errorf("var reference " + refname + " does not exists (ES1)")
+			return fmt.Errorf("var reference %s does not exists (ES1) (store:%p)", refname, s)
 		}
 
 		// refpath -> .foo.bar or [foo.bar] or empty if no path provided
 		refpath = strings.TrimPrefix(refpath, refname)
 		if len(refpath) <= 0 {
-			if reflect.ValueOf(record.Value).Kind() == reflect.String {
+			if len(record.ValueID) > 0 {
+				*sourcetext = strings.Replace(*sourcetext, match[0], record.ValueID, 1)
+			} else if !record.Literal {
+				return fmt.Errorf("cannot use %s as literal value", match[0])
+			} else if reflect.ValueOf(record.Value).Kind() == reflect.String {
 				if record.Value.(string) == "" {
 					s.logger.LogWarn("Interpolation results in an empty string replacement for " + match[0])
 				}
@@ -381,7 +401,10 @@ func (s *Store) Interpolate(sourcetext *string) error {
 			continue
 		}
 
-		var jpathTargetValue []byte = record.JSONValue
+		var jpathTargetValue []byte
+		if record.Literal {
+			jpathTargetValue = record.JSONValue
+		}
 		for _, jpathm := range jpaths {
 			jpath := jpathm[0]
 			if strings.ToLower(jpath) == "$.__haserror" {
@@ -415,7 +438,7 @@ func (s *Store) Interpolate(sourcetext *string) error {
 					jpathTargetValue = []byte(fmt.Sprintf("%v", attr.Value))
 				}
 			} else {
-				enc, err := jsonslice.Get(jpathTargetValue, strings.TrimSpace(jpath))
+				enc, err := jsonslice.Get(record.JSONValue, strings.TrimSpace(jpath))
 				if err != nil {
 					return fmt.Errorf("Invalid path " + jpath + " " + err.Error())
 				}
@@ -428,7 +451,7 @@ func (s *Store) Interpolate(sourcetext *string) error {
 					}
 					jpathTargetValue = []byte(str)
 				} else if len(enc) <= 0 {
-					// err?
+					s.logger.LogWarn(fmt.Sprintf("JSON Path result in empty value. Maybe you want to fix it, here is the raw json value: %s", record.JSONValue))
 				} else {
 					var prettyJSON bytes.Buffer
 					err = json.Indent(&prettyJSON, enc, "", "    ")
@@ -511,9 +534,42 @@ func (s *Store) recursiveInterpolation(v reflect.Value, il map[interface{}]bool)
 				return err
 			}
 		}
+	case reflect.Map:
+		for _, e := range v.MapKeys() {
+			vv := v.MapIndex(e)
+			switch vv.Interface().(type) {
+			case string:
+				ifce := vv.Interface()
+				strv := fmt.Sprintf("%s", ifce)
+				strva := fmt.Sprintf("%s", ifce)
+				err := s.Interpolate(&strv)
+				if err != nil {
+					return err
+				}
+				if strv == strva {
+					// prevent not needed interpolation
+					return nil
+				}
+				v.SetMapIndex(e, reflect.ValueOf(strv))
+			}
+		}
 	case reflect.String:
-		return fmt.Errorf("unhandled deep interpolation string")
-
+		ifce := v.Interface()
+		strv := fmt.Sprintf("%s", ifce)
+		strva := fmt.Sprintf("%s", ifce)
+		err := s.Interpolate(&strv)
+		if err != nil {
+			return err
+		}
+		if strv == strva {
+			// prevent not needed interpolation
+			return nil
+		}
+		// prevent panic
+		if !v.CanSet() {
+			return fmt.Errorf("unhandled deep interpolation string %v", strv)
+		}
+		v.SetString(strv)
 	}
 	return nil
 }

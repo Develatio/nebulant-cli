@@ -1,12 +1,6 @@
-# To contribute improvements to CI/CD templates, please follow the Development guide at:
-# https://docs.gitlab.com/ee/development/cicd/templates.html
-# This specific template is located at:
-# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Go.gitlab-ci.yml
-
 image: golang:1.21.1-alpine3.18
 
 variables:
-  # Please edit to your GitLab project
   REPO_NAME: github.com/develatio/nebulant-cli
   BUILD_BRANCH: "nightly"
   DEPLOY_BUCKET: "nightly"
@@ -53,35 +47,107 @@ before_script:
 #       when: on_success
 #     - when: never
 
-autotest:
-  stage: analysis
+# autotest:
+#   stage: analysis
+#   tags:
+#     - local
+#   script:
+#     - apk update && apk add make git
+#     - make builddebug
+#     - echo $BLUEPRINT >/tmp/blueprint.json
+#     - ./dist/nebulant-debug run -f /tmp/blueprint.json
+#   # coverage: '/Code coverage: \d+(?:\.\d+)?/'
+#   rules:
+#     - if: $CI_COMMIT_MESSAGE =~ /skip[-_]all/
+#       when: never
+#     - if: $CI_COMMIT_MESSAGE =~ /skip[-_]self/
+#       when: never
+#     - if: $CI_COMMIT_MESSAGE =~ /Merge tag \'[\w.]+\' into develop/
+#       when: never
+#     - if: '$CI_COMMIT_BRANCH == "develop"'
+#       when: on_success
+#     - if: '$CI_COMMIT_BRANCH == "master"'
+#       when: on_success
+#     - when: never
+
+
+deploy_bridge_develop:
+  stage: deploy
   tags:
     - local
   script:
-    - apk update && apk add make
-    - make builddebug
-    - echo $BLUEPRINT >/tmp/blueprint.json
-    - ./dist/nebulant-debug run /tmp/blueprint.json
-  # coverage: '/Code coverage: \d+(?:\.\d+)?/'
+    - apk update && apk add vault make git libcap curl
+    - setcap -r /usr/sbin/vault
+    - curl "https://releases.nebulant.dev/v0.3.0-beta-git-6acffbc/nebulant-linux-amd64" -o nebulant-linux-amd64
+    - GOOS=linux GOARCH=arm64 make buildbridge
+
+    - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
+
+    - export HETZNER_CLIENT_AUTH_TOKEN=$(vault kv get -field=HETZNER_CLIENT_AUTH_TOKEN "secret/Nebulant/Sysadmin/Hetzner/NebulantPRE")
+
+    - export SSH_KEY=$(vault kv get -field=nebulant.pem "secret/Nebulant/Sysadmin/certificates/SSH")
+    - echo "$SSH_KEY" | sed 's/\r/\n/g' > nebulant.pem
+    - chmod 400 nebulant.pem
+
+    - mkdir -p deploy_conf/nginx/certs
+    - export CF_PEM=$(vault kv get -field=PEM "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.dev")
+    - echo "$CF_PEM" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.dev-cloudflare.pem
+    - export CF_KEY=$(vault kv get -field=KEY "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.dev")
+    - echo "$CF_KEY" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.dev-cloudflare.key
+
+    - rm deploy_conf/nginx/sites/nebulant.app.conf
+
+    - export ENV=$(vault kv get -field=.env "secret/Nebulant/Dev/PRE")
+    - echo "$ENV" | sed 's/\r/\n/g' > dist/.env
+
+    - chmod +x ./nebulant-linux-amd64
+    - ./nebulant-linux-amd64 run -f ./deploy_nebulant_bridge.nbp
   rules:
-    - if: $CI_COMMIT_MESSAGE =~ /skip[-_]all/
-      when: never
-    - if: $CI_COMMIT_MESSAGE =~ /skip[-_]self/
-      when: never
-    - if: $CI_COMMIT_MESSAGE =~ /Merge tag \'[\w.]+\' into develop/
-      when: never
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      when: on_success
-    - if: '$CI_COMMIT_BRANCH == "master"'
-      when: on_success
-    - when: never
+    - if: $CI_COMMIT_BRANCH == "develop"
+      when: manual
+
+deploy_bridge_master:
+  stage: deploy
+  tags:
+    - local
+  script:
+    - apk update && apk add vault make git libcap curl
+    - setcap -r /usr/sbin/vault
+    # TODO: This should point at releases.nebulant.app and use a stable release
+    - curl "https://releases.nebulant.dev/v0.3.0-beta-git-6acffbc/nebulant-linux-amd64" -o nebulant-linux-amd64
+    - GOOS=linux GOARCH=arm64 make buildbridge
+
+    - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
+
+    - export HETZNER_CLIENT_AUTH_TOKEN=$(vault kv get -field=HETZNER_CLIENT_AUTH_TOKEN "secret/Nebulant/Sysadmin/Hetzner/NebulantPROD")
+
+    - export SSH_KEY=$(vault kv get -field=nebulant.pem "secret/Nebulant/Sysadmin/certificates/SSH")
+    - echo "$SSH_KEY" | sed 's/\r/\n/g' > nebulant.pem
+    - chmod 400 nebulant.pem
+
+    - mkdir -p deploy_conf/nginx/certs
+    - export CF_PEM=$(vault kv get -field=PEM "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.app")
+    - echo "$CF_PEM" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.app-cloudflare.pem
+    - export CF_KEY=$(vault kv get -field=KEY "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.app")
+    - echo "$CF_KEY" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.app-cloudflare.key
+
+    - rm deploy_conf/nginx/sites/nebulant.app.conf
+
+    - export ENV=$(vault kv get -field=.env "secret/Nebulant/Dev/PRO")
+    - echo "$ENV" | sed 's/\r/\n/g' > dist/.env
+
+    - chmod +x ./nebulant-linux-amd64
+    - ./nebulant-linux-amd64 run -f ./deploy_nebulant_bridge.nbp
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      when: manual
 
 dev_gobuild_and_r2upload:
   stage: deploy
   tags:
     - local
   script:
-    - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"  
+    - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"
     - apk update && apk add vault make git perl-utils libcap
     - make buildalldev
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
@@ -92,7 +158,7 @@ dev_gobuild_and_r2upload:
     - export CLOUDFLARE_SECRET_ACCESS_KEY=$(vault kv get -field="Builder assets generator secret access key" secret/Develatio/Dev/Cloudflare/API/api-tokens)
     - export VERSION_NUMBER=$(./nebulant -v | head -n 1)
     - export VERSION_DATE=$(git log -1 --date=format:'%Y/%m/%d' --format=%cd)
-    - ./nebulant -x run ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=releases.nebulant.dev
+    - ./nebulant run -f ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=releases.nebulant.dev
   rules:
     - if: $CI_COMMIT_TAG && $CI_COMMIT_BRANCH == "develop" && $CI_COMMIT_TAG =~ /v\d\.\d.\d-rc.$/
       variables:
@@ -109,7 +175,7 @@ prod_gobuild_and_r2upload:
   tags:
     - local
   script:
-    - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"  
+    - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"
     - apk update && apk add vault make git perl-utils libcap
     - make buildall
     - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
@@ -120,7 +186,7 @@ prod_gobuild_and_r2upload:
     - export CLOUDFLARE_SECRET_ACCESS_KEY=$(vault kv get -field="Builder assets generator secret access key" secret/Develatio/Dev/Cloudflare/API/api-tokens)
     - export VERSION_NUMBER=$(./nebulant -v | head -n 1)
     - export VERSION_DATE=$(git log -1 --date=format:'%Y/%m/%d' --format=%cd)
-    - ./nebulant -x run ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=releases.nebulant.io
+    - ./nebulant run -f ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=releases.nebulant.io
   rules:
     - if: $CI_COMMIT_BRANCH == "master"
       variables:
