@@ -1241,94 +1241,6 @@
           "z": 167
         },
         {
-          "position": {
-            "x": 2204,
-            "y": 2701
-          },
-          "type": "nebulant.rectangle.vertical.hetznerCloud.CreateServer",
-          "data": {
-            "id": "create-server",
-            "version": "1.0.0",
-            "provider": "hetznerCloud",
-            "settings": {
-              "outputs": {
-                "result": {
-                  "async": false,
-                  "waiters": [
-                    "success"
-                  ],
-                  "capabilities": [
-                    "ip"
-                  ],
-                  "type": "hetznerCloud:server",
-                  "value": "new_bridge"
-                }
-              },
-              "parameters": {
-                "Labels": [
-                  {
-                    "__uniq": 1715874220735,
-                    "name": "label",
-                    "value": [
-                      "bridge",
-                      "true"
-                    ]
-                  }
-                ],
-                "PublicNet": {
-                  "_autoAssignIPv6": true,
-                  "EnableIPv6": false,
-                  "IPv6": [],
-                  "_autoAssignIPv4": true,
-                  "EnableIPv4": false,
-                  "IPv4": []
-                },
-                "NetworkIds": [
-                  "{{network}}"
-                ],
-                "UserData": "#cloud-config\n",
-                "Locations": [
-                  "fsn1"
-                ],
-                "SshKeys": [
-                  "20340981"
-                ],
-                "ImageIds": [
-                  "{{debian}}"
-                ],
-                "ServerTypes": [
-                  "cax11"
-                ],
-                "Name": "{{ bridge-name }}",
-                "_activeTab": "general",
-                "_maxRetries": 5
-              },
-              "info": "Creamos el Backend"
-            }
-          },
-          "ports": {
-            "items": [
-              {
-                "group": "in",
-                "attrs": {},
-                "id": "8b46c13f-8835-4d21-8afe-c9faabcbf125"
-              },
-              {
-                "group": "out-ko",
-                "attrs": {},
-                "id": "ee940f85-3d7c-48ed-ab30-05044cdf7a0b"
-              },
-              {
-                "group": "out-ok",
-                "attrs": {},
-                "id": "5b7c9915-136d-4a74-8eb0-cf2b689264d4"
-              }
-            ]
-          },
-          "id": "e4f5a441-6329-4fbf-a128-ed35215726db",
-          "z": 191
-        },
-        {
           "type": "nebulant.link.Smart",
           "source": {
             "id": "7183510f-cb2d-4636-9d7d-c7870b7f5433",
@@ -2633,11 +2545,225 @@
           },
           "id": "24ee50c1-91a2-463f-b5aa-cddd41af5315",
           "z": 386
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "bf84b9ce-d1fe-4995-8aca-a2dd33bb13e6",
+            "magnet": "circle",
+            "port": "fa2d2539-32b3-449d-9285-7d481885111b"
+          },
+          "target": {
+            "id": "db482fa4-06e9-4dbc-b7b2-7b08c8e845f8",
+            "magnet": "circle",
+            "port": "6f705e0f-4c1a-47a8-847a-b8cb869f6582"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "de2f3603-8243-4bbd-978a-09079ad4a9a5",
+          "z": 388
+        },
+        {
+          "type": "nebulant.link.Smart",
+          "source": {
+            "id": "db482fa4-06e9-4dbc-b7b2-7b08c8e845f8",
+            "magnet": "circle",
+            "port": "a510c208-7adc-4072-a77b-c680b350045f"
+          },
+          "target": {
+            "id": "58ae9463-5dd7-44d8-b272-5a3e764580df",
+            "magnet": "circle",
+            "port": "5610b7a1-e6c8-4db8-b1c4-d2078213d9fc"
+          },
+          "router": {
+            "name": "manhattan",
+            "args": {
+              "maximumLoops": 10000,
+              "maxAllowedDirectionChange": 180,
+              "startDirections": [
+                "bottom"
+              ],
+              "endDirections": [
+                "top"
+              ],
+              "padding": 20
+            }
+          },
+          "connector": {
+            "name": "jumpover",
+            "args": {
+              "jump": "gap",
+              "radius": 10
+            }
+          },
+          "id": "dd5290bc-1fa7-4d66-9fa8-9e9b50af5813",
+          "z": 389
+        },
+        {
+          "position": {
+            "x": 2572,
+            "y": 1863
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.FindSshKey",
+          "data": {
+            "id": "find-ssh-key",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "waiters": [],
+                  "async": false,
+                  "capabilities": [],
+                  "type": "hetznerCloud:ssh_key",
+                  "value": "hcsshkey"
+                }
+              },
+              "parameters": {
+                "PerPage": 10,
+                "Page": 1,
+                "ids": [],
+                "Name": "nebulant.pub",
+                "_activeTab": "filters",
+                "Filters": [],
+                "_maxRetries": 5
+              },
+              "info": ""
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "6f705e0f-4c1a-47a8-847a-b8cb869f6582"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "6627cb97-08ce-4674-a566-63ff6b761f13"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "a510c208-7adc-4072-a77b-c680b350045f"
+              }
+            ]
+          },
+          "id": "db482fa4-06e9-4dbc-b7b2-7b08c8e845f8",
+          "z": 390
+        },
+        {
+          "position": {
+            "x": 2204,
+            "y": 2701
+          },
+          "type": "nebulant.rectangle.vertical.hetznerCloud.CreateServer",
+          "data": {
+            "id": "create-server",
+            "version": "1.0.0",
+            "provider": "hetznerCloud",
+            "settings": {
+              "outputs": {
+                "result": {
+                  "async": false,
+                  "waiters": [
+                    "success"
+                  ],
+                  "capabilities": [
+                    "ip"
+                  ],
+                  "type": "hetznerCloud:server",
+                  "value": "new_bridge"
+                }
+              },
+              "parameters": {
+                "Labels": [
+                  {
+                    "__uniq": 1715874220735,
+                    "name": "label",
+                    "value": [
+                      "bridge",
+                      "true"
+                    ]
+                  }
+                ],
+                "PublicNet": {
+                  "_autoAssignIPv6": true,
+                  "EnableIPv6": false,
+                  "IPv6": [],
+                  "_autoAssignIPv4": true,
+                  "EnableIPv4": false,
+                  "IPv4": []
+                },
+                "NetworkIds": [
+                  "{{network}}"
+                ],
+                "UserData": "#cloud-config\n",
+                "Locations": [
+                  "fsn1"
+                ],
+                "SshKeys": [
+                  "{{hcsshkey}}"
+                ],
+                "ImageIds": [
+                  "{{debian}}"
+                ],
+                "ServerTypes": [
+                  "cax11"
+                ],
+                "Name": "{{ bridge-name }}",
+                "_activeTab": "general",
+                "_maxRetries": 5
+              },
+              "info": "Creamos el Backend"
+            }
+          },
+          "ports": {
+            "items": [
+              {
+                "group": "in",
+                "attrs": {},
+                "id": "8b46c13f-8835-4d21-8afe-c9faabcbf125"
+              },
+              {
+                "group": "out-ko",
+                "attrs": {},
+                "id": "ee940f85-3d7c-48ed-ab30-05044cdf7a0b"
+              },
+              {
+                "group": "out-ok",
+                "attrs": {},
+                "id": "5b7c9915-136d-4a74-8eb0-cf2b689264d4"
+              }
+            ]
+          },
+          "id": "e4f5a441-6329-4fbf-a128-ed35215726db",
+          "z": 391
         }
       ],
       "zoom": 0.6190836023471881,
-      "x": 2421.32080078125,
-      "y": 2980.2113647460938
+      "x": 2366.40087890625,
+      "y": 2728.2260131835938
     },
     "diagram_version": "1.0.7",
     "n_warnings": 1,
@@ -2667,7 +2793,8 @@
             "b8018309-3e2d-4f45-acad-650ada992b7c",
             "8d9a629e-1386-44fe-8304-d8f7e4858803",
             "f42adb9a-a7c7-496c-aa33-0bcd8ba36f40",
-            "595e440d-dda5-4a50-b433-03f399cb3171"
+            "595e440d-dda5-4a50-b433-03f399cb3171",
+            "db482fa4-06e9-4dbc-b7b2-7b08c8e845f8"
           ]
         },
         "debug_network": true
@@ -2763,53 +2890,6 @@
         },
         "output": "HC_ACTION_2",
         "next_action": {},
-        "debug_network": true
-      },
-      {
-        "action_id": "e4f5a441-6329-4fbf-a128-ed35215726db",
-        "provider": "hetznerCloud",
-        "version": "1.0.0",
-        "action": "create_server",
-        "parameters": {
-          "Name": "{{ bridge-name }}",
-          "ServerType": {
-            "Name": "cax11"
-          },
-          "Image": {
-            "ID": "{{debian}}"
-          },
-          "SSHKeys": [
-            {
-              "ID": "20340981"
-            }
-          ],
-          "Location": {
-            "Name": "fsn1"
-          },
-          "UserData": "#cloud-config\n",
-          "PublicNet": {
-            "EnableIPv4": false,
-            "EnableIPv6": false
-          },
-          "Networks": [
-            {
-              "ID": "{{network}}"
-            }
-          ],
-          "Labels": {
-            "bridge": "true"
-          },
-          "_waiters": [
-            "success"
-          ],
-          "max_retries": 5
-        },
-        "output": "new_bridge",
-        "next_action": {
-          "ok": [
-            "7f1d2e32-b555-43f0-83fb-3ad3c63b87f7"
-          ]
-        },
         "debug_network": true
       },
       {
@@ -3227,6 +3307,70 @@
           ],
           "ko": [
             "158528a8-d2d1-443d-b0ac-b29d3bf4ae16"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "db482fa4-06e9-4dbc-b7b2-7b08c8e845f8",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "findone_ssh_key",
+        "parameters": {
+          "max_retries": 5,
+          "Name": "nebulant.pub"
+        },
+        "output": "hcsshkey",
+        "next_action": {
+          "ok": [
+            "58ae9463-5dd7-44d8-b272-5a3e764580df"
+          ]
+        },
+        "debug_network": true
+      },
+      {
+        "action_id": "e4f5a441-6329-4fbf-a128-ed35215726db",
+        "provider": "hetznerCloud",
+        "version": "1.0.0",
+        "action": "create_server",
+        "parameters": {
+          "Name": "{{ bridge-name }}",
+          "ServerType": {
+            "Name": "cax11"
+          },
+          "Image": {
+            "ID": "{{debian}}"
+          },
+          "SSHKeys": [
+            {
+              "ID": "{{hcsshkey}}"
+            }
+          ],
+          "Location": {
+            "Name": "fsn1"
+          },
+          "UserData": "#cloud-config\n",
+          "PublicNet": {
+            "EnableIPv4": false,
+            "EnableIPv6": false
+          },
+          "Networks": [
+            {
+              "ID": "{{network}}"
+            }
+          ],
+          "Labels": {
+            "bridge": "true"
+          },
+          "_waiters": [
+            "success"
+          ],
+          "max_retries": 5
+        },
+        "output": "new_bridge",
+        "next_action": {
+          "ok": [
+            "7f1d2e32-b555-43f0-83fb-3ad3c63b87f7"
           ]
         },
         "debug_network": true
