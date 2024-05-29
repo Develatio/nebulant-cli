@@ -39,42 +39,61 @@ import (
 	"github.com/develatio/nebulant-cli/nsterm"
 )
 
+type activeAction struct {
+	ctxs  []base.IActionContext
+	count int
+}
+
 type activeActionsID struct {
 	mu sync.Mutex
-	a  map[string]int
+	a  map[string]*activeAction
 }
 
-func (a *activeActionsID) More(id string) {
+// func (a *activeActionsID) _pdbg() {
+// 	prnt := "\n*********\n"
+// 	for _, active := range a.a {
+// 		prnt = prnt + fmt.Sprintf("[%s]->%v\n", active.ctxs[0].GetAction().ActionName, active.count)
+// 	}
+// 	prnt = prnt + "\n*********\n"
+// 	fmt.Print(prnt)
+// }
+
+func (a *activeActionsID) More(actx base.IActionContext) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	id := actx.GetAction().ActionID
 	if _, exists := a.a[id]; !exists {
-		a.a[id] = 0
+		a.a[id] = &activeAction{
+			count: 0,
+			ctxs:  []base.IActionContext{actx},
+		}
 	}
-	a.a[id]++
+	a.a[id].count++
 }
 
-func (a *activeActionsID) Less(id string) {
+func (a *activeActionsID) Less(actx base.IActionContext) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	id := actx.GetAction().ActionID
 	if _, exists := a.a[id]; !exists {
 		return
 	}
-	a.a[id]--
+	a.a[id].count--
 }
 
 func (a *activeActionsID) Exists(id string) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	many, exists := a.a[id]
-	return exists && many > 0
+	activ, exists := a.a[id]
+	return exists && activ.count > 0
 }
 
 func (a *activeActionsID) ExistsAny(ids map[string]bool) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	for id := range ids {
-		if howMany, exists := a.a[id]; exists {
-			if howMany > 0 {
+		if activ, exists := a.a[id]; exists {
+			if activ.count > 0 {
 				return true
 			}
 			continue
@@ -87,8 +106,8 @@ func (a *activeActionsID) Slice() []string {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	var cc []string
-	for actnID, howMany := range a.a {
-		if howMany > 0 {
+	for actnID, activ := range a.a {
+		if activ.count > 0 {
 			cc = append(cc, actnID)
 		}
 	}
@@ -160,7 +179,7 @@ func NewRuntime(irb *blueprint.IRBlueprint, serverMode bool) *Runtime {
 		serverMode:         serverMode,
 		actionContextStack: make([]base.IActionContext, 0, 1),
 		activeActionsID: &activeActionsID{
-			a: make(map[string]int),
+			a: make(map[string]*activeAction),
 		},
 		cjoiner: &contextJoiner{
 			pt: map[string]*contextJoinerPoint{},
@@ -696,6 +715,7 @@ func (t *Thread) _runCurrent() {
 		if tt == nil {
 			// destroy this thread, there is already
 			// a thread handling the join point
+			t.runtime._deactivateContext(actx)
 			return
 		}
 
@@ -782,8 +802,12 @@ func (t *Thread) close() {
 	t.state = base.RuntimeStateEnding
 
 	if t.current != nil {
+		// deactivate current action id
 		t.runtime._deactivateContext(t.current)
 		t.current.Cancel(nil)
+	} else if len(t.done) > 0 {
+		// deactivate the last action id
+		t.runtime._deactivateContext(t.done[len(t.done)-1])
 	}
 
 	// remove thread t
@@ -1224,8 +1248,7 @@ func (r *Runtime) _activateContext(actx base.IActionContext) {
 		r.setDebugInitFunc(actx)
 	}
 
-	action := actx.GetAction()
-	r.activeActionsID.More(action.ActionID)
+	r.activeActionsID.More(actx)
 }
 
 // _deactivateContext
@@ -1239,8 +1262,7 @@ func (r *Runtime) _deactivateContext(actx base.IActionContext) {
 	el := actx.EventListener()
 	r.evDispatcher.DestroyEventListener(el)
 
-	action := actx.GetAction()
-	r.activeActionsID.Less(action.ActionID)
+	r.activeActionsID.Less(actx)
 }
 
 // NewActionContext func creates a new base.IActionContext
