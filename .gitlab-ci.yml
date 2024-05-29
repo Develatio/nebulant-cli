@@ -131,7 +131,7 @@ deploy_bridge_master:
     - export CF_KEY=$(vault kv get -field=KEY "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.app")
     - echo "$CF_KEY" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.app-cloudflare.key
 
-    - rm deploy_conf/nginx/sites/nebulant.app.conf
+    - rm deploy_conf/nginx/sites/nebulant.dev.conf
 
     - export ENV=$(vault kv get -field=.env "secret/Nebulant/Dev/PRO")
     - echo "$ENV" | sed 's/\r/\n/g' > dist/.env
