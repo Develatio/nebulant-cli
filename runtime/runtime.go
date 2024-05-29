@@ -39,6 +39,133 @@ import (
 	"github.com/develatio/nebulant-cli/nsterm"
 )
 
+type activeAction struct {
+	ctxs  []base.IActionContext
+	count int
+}
+
+type activeActionsID struct {
+	mu sync.Mutex
+	a  map[string]*activeAction
+}
+
+// func (a *activeActionsID) _pdbg() {
+// 	prnt := "\n*********\n"
+// 	for _, active := range a.a {
+// 		prnt = prnt + fmt.Sprintf("[%s]->%v\n", active.ctxs[0].GetAction().ActionName, active.count)
+// 	}
+// 	prnt = prnt + "\n*********\n"
+// 	fmt.Print(prnt)
+// }
+
+func (a *activeActionsID) More(actx base.IActionContext) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	id := actx.GetAction().ActionID
+	if _, exists := a.a[id]; !exists {
+		a.a[id] = &activeAction{
+			count: 0,
+			ctxs:  []base.IActionContext{actx},
+		}
+	}
+	a.a[id].count++
+}
+
+func (a *activeActionsID) Less(actx base.IActionContext) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	id := actx.GetAction().ActionID
+	if _, exists := a.a[id]; !exists {
+		return
+	}
+	a.a[id].count--
+}
+
+func (a *activeActionsID) Exists(id string) bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	activ, exists := a.a[id]
+	return exists && activ.count > 0
+}
+
+func (a *activeActionsID) ExistsAny(ids map[string]bool) bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for id := range ids {
+		if activ, exists := a.a[id]; exists {
+			if activ.count > 0 {
+				return true
+			}
+			continue
+		}
+	}
+	return false
+}
+
+func (a *activeActionsID) Slice() []string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	var cc []string
+	for actnID, activ := range a.a {
+		if activ.count > 0 {
+			cc = append(cc, actnID)
+		}
+	}
+	return cc
+}
+
+type contextJoinerPoint struct {
+	t chan struct{}
+	p base.IActionContext
+}
+
+type contextJoiner struct {
+	mu sync.Mutex
+	pt map[string]*contextJoinerPoint
+}
+
+func (j *contextJoiner) Lock() {
+	j.mu.Lock()
+}
+
+func (j *contextJoiner) Unlock() {
+	j.mu.Unlock()
+}
+
+func (j *contextJoiner) Join(actx base.IActionContext) chan struct{} {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	action := actx.GetAction()
+	if jpoint, exists := j.pt[action.ActionID]; exists {
+		// jpctx := jpoint.p
+		// If all goes ok, actx should has one or zero parents
+		// because the merge should be done here
+		// TODO: unit test for this behavior
+		prs := actx.Parents()
+		if len(prs) > 1 {
+			panic("hey dev, this is your fault :*")
+		}
+		jpoint.p.GetStore().Merge(actx.GetStore())
+		return nil
+	}
+	ticker := make(chan struct{})
+	j.pt[action.ActionID] = &contextJoinerPoint{
+		t: ticker,
+		p: actx,
+	}
+	return ticker
+}
+
+func (j *contextJoiner) Destroy(actx base.IActionContext) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	action := actx.GetAction()
+	if _, exists := j.pt[action.ActionID]; exists {
+		close(j.pt[action.ActionID].t)
+		delete(j.pt, action.ActionID)
+	}
+}
+
 type runtimeEvent struct {
 	ecode base.EventCode
 }
@@ -51,9 +178,12 @@ func NewRuntime(irb *blueprint.IRBlueprint, serverMode bool) *Runtime {
 		irb:                irb,
 		serverMode:         serverMode,
 		actionContextStack: make([]base.IActionContext, 0, 1),
-		activeActionIDs:    make(map[string]int),
-		activeJoinPoints:   make(map[string]base.IActionContext),
-		// activeBreakPoints:  make(map[*breakPoint]bool),
+		activeActionsID: &activeActionsID{
+			a: make(map[string]*activeAction),
+		},
+		cjoiner: &contextJoiner{
+			pt: map[string]*contextJoinerPoint{},
+		},
 		activeThreads: make(map[*Thread]bool),
 		evDispatcher:  base.NewEventDispatcher(),
 		exitCode:      0,
@@ -152,6 +282,7 @@ type threadPointContext struct {
 	parent    base.IActionContext
 	children  []base.IActionContext
 	elistener *base.EventListener
+	a         *blueprint.Action
 }
 
 func (t *threadPointContext) SetStore(s base.IStore) {}
@@ -191,10 +322,13 @@ func (t *threadPointContext) IsThreadPoint() bool    { return true }
 func (t *threadPointContext) IsJoinPoint() bool      { return false }
 
 func (t *threadPointContext) GetAction() *blueprint.Action {
-	return &blueprint.Action{
-		ActionName: "forky",
-		ActionID:   "no-id-just-fork",
+	if t.a == nil {
+		t.a = &blueprint.Action{
+			ActionName: "forky",
+			ActionID:   fmt.Sprintf("%d", rand.Int()), // #nosec G404 -- Weak random is OK here
+		}
 	}
+	return t.a
 }
 
 func (t *threadPointContext) WithRunFunc(f func() (*base.ActionOutput, error)) {}
@@ -532,7 +666,24 @@ func (t *Thread) _loadNext() bool {
 	return true
 }
 
+// func (t *Thread) _pdbg() {
+// 	prnt := fmt.Sprintf("\n****%p*****\n", t)
+// 	for _, actx := range t.done {
+// 		prnt = prnt + fmt.Sprintf("[%s]->", actx.GetAction().ActionName)
+// 	}
+// 	if t.current != nil {
+// 		prnt = prnt + fmt.Sprintf("[%s]<-", t.current.GetAction().ActionName)
+// 	}
+// 	if t.state == base.RuntimeStateEnd {
+// 		prnt = prnt + "END"
+// 	}
+// 	prnt = prnt + "\n*********\n"
+// 	fmt.Print(prnt)
+// }
+
 func (t *Thread) _runCurrent() {
+	// t._pdbg()
+	// defer t._pdbg()
 	if t.current == nil {
 		panic("hey dev, this is your fault")
 	}
@@ -541,36 +692,48 @@ func (t *Thread) _runCurrent() {
 	var nexts []*blueprint.Action
 
 	if actx.IsThreadPoint() {
-		t.runtime.activateContext(actx)
+		t.runtime.switchContext(actx)
 		for _, fkactx := range actx.Children() {
 			t.runtime.NewThread(fkactx)
 		}
-		t.runtime.deactivateContext(actx)
+		// t.runtime.deactivateContext(actx)
 		t.done = append(t.done, actx)
 		// stop exec, no more actx stored in queue
 		// so this should be the last actx
 		return
 	}
 
+	t.runtime.switchContext(actx) // deactivate parent, activate self (actx)
+
+	t.ThreadStep = ThreadIntoAction
+	defer func() {
+		t.ThreadStep = ThreadAfterAction
+	}()
+
 	if action.JoinThreadsPoint {
-		t.runtime.activateContext(actx)
-		if t.runtime.IsRunningParentsOf(actx) {
-			// here the thread should end. Other threads
-			// will reexec this action at thread finish.
-			// Once there is no running parents, the last
-			// thread is reused to continue the run of
-			// actions connected to join point.
+		tt := t.runtime.cjoiner.Join(actx)
+		if tt == nil {
+			// destroy this thread, there is already
+			// a thread handling the join point
+			t.runtime._deactivateContext(actx)
 			return
 		}
-		t.runtime.deactivateContext(actx)
+
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+		for {
+			<-ticker.C
+			if t.state == base.RuntimeStateEnding || t.state == base.RuntimeStateEnd {
+				break
+			}
+			if t.runtime.hasRunningParents(actx) {
+				continue
+			}
+			break
+		}
 	}
 
-	t.runtime.activateContext(actx)
-	t.ThreadStep = ThreadIntoAction
 	aout, aerr := actx.RunAction()
-	t.runtime.deactivateContext(actx)
-
-	t.ThreadStep = ThreadAfterAction
 
 	// recopilate nexts
 	if aerr != nil {
@@ -616,6 +779,8 @@ func (t *Thread) _runCurrent() {
 		}
 		t.ExitCode = 0
 		t.ExitErr = nil
+		// NewAContext will create the JoinThreadContext,
+		// right before the run of that context
 		nactx := t.runtime.NewAContext(actx, nexts[0])
 		t.done = append(t.done, actx)
 		// put new actx at first to prevent fails on t.Back()
@@ -637,7 +802,12 @@ func (t *Thread) close() {
 	t.state = base.RuntimeStateEnding
 
 	if t.current != nil {
+		// deactivate current action id
+		t.runtime._deactivateContext(t.current)
 		t.current.Cancel(nil)
+	} else if len(t.done) > 0 {
+		// deactivate the last action id
+		t.runtime._deactivateContext(t.done[len(t.done)-1])
 	}
 
 	// remove thread t
@@ -659,6 +829,7 @@ func (t *Thread) Init() {
 	var waitcount int
 	defer func() {
 		t.close()
+		// t._pdbg()
 	}()
 
 	// define uninitialized (nil) "confirm" chan
@@ -770,8 +941,8 @@ func (t *Thread) Init() {
 }
 
 type Runtime struct {
-	mu            sync.Mutex
-	ru            sync.Mutex
+	mu sync.Mutex
+	// ru            sync.Mutex
 	serverMode    bool
 	state         base.RuntimeState
 	activeThreads map[*Thread]bool
@@ -779,13 +950,19 @@ type Runtime struct {
 	evDispatcher       *base.EventDispatcher
 	irb                *blueprint.IRBlueprint
 	actionContextStack []base.IActionContext
-	activeActionIDs    map[string]int
+	activeActionsID    *activeActionsID
 	// join points
-	activeJoinPoints map[string]base.IActionContext
-	exitCode         int
-	exitErrs         []error // uncaught err
+	cjoiner  *contextJoiner
+	exitCode int
+	exitErrs []error // uncaught err
 	//
 	savedActionOutputs []*base.ActionOutput
+}
+
+func (r *Runtime) hasRunningParents(actx base.IActionContext) bool {
+	r.cjoiner.Lock()
+	defer r.cjoiner.Unlock()
+	return r.activeActionsID.ExistsAny(actx.GetAction().KnowParentIDs)
 }
 
 func (r *Runtime) GetStack() []base.IActionContext {
@@ -827,8 +1004,8 @@ func (r *Runtime) NewThread(actx base.IActionContext) {
 		return
 	}
 	cast.LogDebug("Stat new thread", r.irb.ExecutionUUID)
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	// r.mu.Lock()
+	// defer r.mu.Unlock()
 	el := r.evDispatcher.NewEventListener()
 	th := &Thread{
 		runtime:   r,
@@ -914,23 +1091,6 @@ func (r *Runtime) Stop() {
 
 func (r *Runtime) GetThreads() map[*Thread]bool {
 	return r.activeThreads
-}
-
-func (r *Runtime) IsRunningParentsOf(actx base.IActionContext) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	action := actx.GetAction()
-	if action == nil {
-		panic("Hey dev, this is your fault. There is an actionContext without action :S")
-	}
-	for aid := range action.KnowParentIDs {
-		if _, exists := r.activeActionIDs[aid]; exists {
-			if r.activeActionIDs[aid] > 0 {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func (r *Runtime) _setRunDebugFunc(actx base.IActionContext) {
@@ -1057,31 +1217,30 @@ func (r *Runtime) pushActionContext(actx base.IActionContext) {
 		r.actionContextStack = newStack
 	}
 	r.actionContextStack = append(r.actionContextStack, actx)
-	if actx.Type() == base.ContextTypeJoin {
-		action := actx.GetAction()
-		r.activeJoinPoints[action.ActionID] = actx
-	}
-}
-
-func (r *Runtime) GetActiveActionIds() []string {
-	var cc []string
-	for actnID, howMany := range r.activeActionIDs {
-		if howMany > 0 {
-			cc = append(cc, actnID)
-		}
-	}
-	return cc
 }
 
 func (r *Runtime) DispatchCurrentActiveIdsEvent() {
-	cast.PushState(r.GetActiveActionIds(), cast.EventRuntimeStarted, r.irb.ExecutionUUID)
+	cast.PushState(r.activeActionsID.Slice(), cast.EventRuntimeStarted, r.irb.ExecutionUUID)
 }
 
-func (r *Runtime) activateContext(actx base.IActionContext) {
+// switchContext activates actx and deactivates his parents
+func (r *Runtime) switchContext(actx base.IActionContext) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	defer r.DispatchCurrentActiveIdsEvent()
+	todeactivate := actx.Parents()
+	r._activateContext(actx)
+	for _, dactx := range todeactivate {
+		r._deactivateContext(dactx)
+	}
+}
 
+// _activateContext
+//   - put actx into active actions registry
+//   - initialize actx event listener
+//   - if this action is join point, add
+//     to active join points
+func (r *Runtime) _activateContext(actx base.IActionContext) {
+	defer r.DispatchCurrentActiveIdsEvent()
 	ev := r.evDispatcher.NewEventListener()
 	actx.WithEventListener(ev)
 	if actx.Type() == base.ContextTypeRegular {
@@ -1089,40 +1248,21 @@ func (r *Runtime) activateContext(actx base.IActionContext) {
 		r.setDebugInitFunc(actx)
 	}
 
-	action := actx.GetAction()
-	// already active join action, skip
-	if actx.Type() == base.ContextTypeJoin {
-		if _, exists := r.activeJoinPoints[action.ActionID]; exists {
-			return
-		}
-		r.activeJoinPoints[action.ActionID] = actx
-	}
-
-	if _, exists := r.activeActionIDs[action.ActionID]; !exists {
-		r.activeActionIDs[action.ActionID] = 0
-	}
-	r.activeActionIDs[action.ActionID]++
+	r.activeActionsID.More(actx)
 }
 
-func (r *Runtime) deactivateContext(actx base.IActionContext) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+// _deactivateContext
+//   - rm actx from active actions registry
+//   - destroy event listener of the actx
+//   - if this actx is a join point, rm from
+//     active join points
+func (r *Runtime) _deactivateContext(actx base.IActionContext) {
 	defer r.DispatchCurrentActiveIdsEvent()
 
 	el := actx.EventListener()
 	r.evDispatcher.DestroyEventListener(el)
 
-	action := actx.GetAction()
-	if _, exists := r.activeActionIDs[action.ActionID]; exists {
-		r.activeActionIDs[action.ActionID]--
-	}
-	if actx.Type() == base.ContextTypeJoin {
-		delete(r.activeJoinPoints, action.ActionID)
-	}
-}
-
-func (r *Runtime) GetActiveJoinPoints() map[string]base.IActionContext {
-	return r.activeJoinPoints
+	r.activeActionsID.Less(actx)
 }
 
 // NewActionContext func creates a new base.IActionContext
@@ -1175,26 +1315,17 @@ func (r *Runtime) NewAContextThread(parent base.IActionContext, actions []*bluep
 }
 
 func (r *Runtime) NewAContextJoin(parent base.IActionContext, action *blueprint.Action) base.IActionContext {
-	r.ru.Lock()
-	defer r.ru.Unlock()
-	if _, exists := r.activeJoinPoints[action.ActionID]; exists {
-		jpoint := r.activeJoinPoints[action.ActionID]
-		// add new parent to join point
-		jpoint.Parent(parent)
-		// merge the store of the new parent
-		store := jpoint.GetStore()
-		store.Merge(parent.GetStore())
-		jpoint.SetStore(store)
-		return jpoint
+	st := parent.GetStore()
+	if st == nil {
+		panic("asdf")
 	}
 	jpoint := &joinPointContext{
 		_dbgname: "joinPointContext",
 		action:   action,
 		parents:  make([]base.IActionContext, 1),
-		store:    parent.GetStore(),
+		store:    parent.GetStore(), // TODO: dupe instead copy?
 	}
-	jpoint.parents[0] = parent
+	jpoint.parents[0] = parent // this is a new jpoint and has no parents yet
 	r.pushActionContext(jpoint)
 	return jpoint
-
 }
