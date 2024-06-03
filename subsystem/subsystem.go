@@ -213,6 +213,14 @@ func ConfArgs(fflag *flag.FlagSet, arguments []string) error {
 		fmt.Fprint(fflag.Output(), "\n\ndeprecated flag. Use 'serve' command instead: ./nebulant serve\n")
 		return fmt.Errorf("deprecated flag err")
 	}
+
+	// egg :)
+	switch fflag.Arg(0) {
+	case "h", "hh", "ayuda", "ajuda", "jelp", "jalp", "aiuda", "?":
+		fflag.Usage()
+		return nil
+	}
+
 	return nil
 }
 
@@ -225,20 +233,6 @@ func Run(sc string) (int, error) {
 		}
 		// finally run command
 		return cmd.Run(flag.CommandLine)
-	} else {
-		// try to run a bp by default
-		cmd := NBLCommands["run"]
-		err := PrepareCmd(cmd)
-		if err != nil {
-			return 1, err
-		}
-		cmdline := flag.NewFlagSet("run", flag.ContinueOnError)
-		args := []string{"run"}
-		if config.ForceFile != nil && *config.ForceFile {
-			args = append(args, "-f")
-		}
-		args = append(args, flag.CommandLine.Args()...)
-		cmdline.Parse(args)
-		return cmd.Run(cmdline)
 	}
+	return 1, fmt.Errorf("unknown command: %s", sc)
 }

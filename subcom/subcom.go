@@ -96,6 +96,17 @@ func RegisterSubcommands() {
 			Sec:           subsystem.SecMain,
 			Call:          AuthCmd,
 		},
+		"help": {
+			UpgradeTerm:   true,
+			WelcomeMsg:    true,
+			InitProviders: false,
+			Help:          "  help\t\t\t" + term.EmojiSet["Ambulance"] + " shows this help msg\n",
+			Sec:           subsystem.SecMain,
+			Call: func(nblc *subsystem.NBLcommand) (int, error) {
+				nblc.CommandLine().Usage()
+				return 0, nil
+			},
+		},
 		"debugterm": {
 			UpgradeTerm:   true,
 			WelcomeMsg:    true,

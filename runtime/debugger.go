@@ -697,7 +697,7 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 	switch string(fs.Arg(0)) {
 	case "nebu!":
 		fmt.Fprintf(clientFD, "lant!\n")
-	case "h", "help", "hh", "ayuda", "ajuda", "jelp", "jalp", "aiuda", "aiudapremo", "?":
+	case "h", "help", "hh", "ayuda", "ajuda", "jelp", "jalp", "aiuda", "?":
 		fmt.Fprintf(clientFD, `
 	h - This help txt ;)
 	j - Jump to another thread
