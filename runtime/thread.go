@@ -31,7 +31,6 @@ import (
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
-	"github.com/develatio/nebulant-cli/config"
 )
 
 type ThreadStep int
@@ -278,9 +277,18 @@ func (t *Thread) _runCurrent() {
 		}
 	}
 
+	cast.PushMixedLogEventBusData(&cast.BusData{
+		EventID:       cast.EP(cast.EventActionInit),
+		ActionID:      &action.ActionID,
+		ActionName:    &action.ActionName,
+		LogLevel:      cast.EP(cast.InfoLevel),
+		ThreadID:      cast.SEP(fmt.Sprintf("%p", t)),
+		ExecutionUUID: t.runtime.irb.ExecutionUUID,
+		Timestamp:     time.Now().UTC().UnixMicro(),
+	})
 	aout, aerr := actx.RunAction()
 
-	// recopilate nexts
+	// recopilate nexts and ExitCode
 	if aerr != nil {
 		provider, err := actx.GetStore().GetProvider(action.Provider)
 		if err != nil {
@@ -308,20 +316,49 @@ func (t *Thread) _runCurrent() {
 		nexts = action.NextAction.NextOk
 	}
 
+	// determine KO/OK action event
+	if t.ExitCode > 0 {
+		lvl := cast.ErrorLevel
+		ev := cast.EventActionUnCaughtKO // un-handled KO
+		if len(nexts) > 0 {              // handled KO
+			lvl = cast.WarningLevel
+			ev = cast.EventActionKO
+		}
+		cast.PushMixedLogEventBusData(&cast.BusData{
+			EventID:       &ev,
+			LogLevel:      &lvl,
+			M:             cast.SEP(t.ExitErr.Error()),
+			ActionID:      &action.ActionID,
+			ActionName:    &action.ActionName,
+			ThreadID:      cast.SEP(fmt.Sprintf("%p", t)),
+			ExecutionUUID: t.runtime.irb.ExecutionUUID,
+			Timestamp:     time.Now().UTC().UnixMicro(),
+		})
+	} else {
+		ev := cast.EventActionUnCaughtOK // un-handled OK
+		if len(nexts) > 0 {              // handled OK
+			ev = cast.EventActionOK
+		}
+		cast.PushMixedLogEventBusData(&cast.BusData{
+			EventID:       &ev,
+			ActionID:      &action.ActionID,
+			LogLevel:      cast.EP(cast.InfoLevel),
+			ActionName:    &action.ActionName,
+			ThreadID:      cast.SEP(fmt.Sprintf("%p", t)),
+			ExecutionUUID: t.runtime.irb.ExecutionUUID,
+			Timestamp:     time.Now().UTC().UnixMicro(),
+		})
+	}
+
+	// load nexts
 	switch len(nexts) {
 	case 0:
 		// no more actions, errs and exit code
 		// keep as setted before
 		t.done = append(t.done, actx)
-		if t.ExitCode > 0 {
-			cast.LogErr(t.ExitErr.Error(), t.runtime.irb.ExecutionUUID)
-		}
 		return
 	case 1:
 		// reset exit code and err if exists
-		if t.ExitCode > 0 && config.DEBUG {
-			cast.LogWarn(t.ExitErr.Error(), t.runtime.irb.ExecutionUUID)
-		}
 		t.ExitCode = 0
 		t.ExitErr = nil
 		// NewAContext will create the JoinThreadContext,

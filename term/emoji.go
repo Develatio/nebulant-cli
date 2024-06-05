@@ -20,6 +20,10 @@ var EmojiSet map[string]string = map[string]string{
 	"FaceWithMonocle":            "🧐",
 	"Ambulance":                  "🚑",
 	"Dizzy":                      "💫",
+	"Sparkles":                   "✨",
+	"CheckMarkButton":            "✅",
+	"CrossMarkButton":            "❎",
+	"CrossMark":                  "❌",
 }
 
 var noEmojiSupportSet map[string]string = map[string]string{
@@ -41,5 +45,9 @@ var noEmojiSupportSet map[string]string = map[string]string{
 	"Key":                        "  ",
 	"FaceWithMonocle":            "  ",
 	"Ambulance":                  "  ",
-	"Dizzy":                      "  ",
+	"Dizzy":                      "･ﾟ✧",
+	"Sparkles":                   "*:",
+	"CheckMarkButton":            "VV",
+	"CrossMarkButton":            "--",
+	"CrossMark":                  "XX",
 }

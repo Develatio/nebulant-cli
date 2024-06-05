@@ -45,6 +45,7 @@ type ActionContext struct {
 var NewActionContext = func(awsSess *session.Session, action *blueprint.Action, store base.IStore, logger base.ILogger) *ActionContext {
 	l := logger.Duplicate()
 	l.SetActionID(action.ActionID)
+	l.SetActionName(action.ActionName)
 	return &ActionContext{
 		AwsSess: awsSess,
 		Action:  action,

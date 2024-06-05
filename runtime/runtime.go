@@ -26,8 +26,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
@@ -123,6 +123,15 @@ func (r *Runtime) NewThread(actx base.IActionContext) {
 		elistener: el,
 		step:      make(chan *threadStackCtrl),
 	}
+	thid := fmt.Sprintf("%p", th)
+	cast.PushBusData(&cast.BusData{
+		TypeID:        cast.BusDataTypeEvent,
+		EventID:       cast.EP(cast.EventNewThread),
+		ThreadID:      &thid,
+		ExecutionUUID: r.irb.ExecutionUUID,
+		Timestamp:     time.Now().UTC().UnixMicro(),
+	})
+	actx.GetStore().GetLogger().SetThreadID(thid)
 	th.queue = append(th.queue, actx)
 	r.activeThreads[th] = true
 
@@ -419,7 +428,7 @@ func (r *Runtime) NewAContextThread(parent base.IActionContext, actions []*bluep
 			parent:   threadctx,
 			store:    parent.GetStore().Duplicate(),
 		}
-		newchild.store.GetLogger().SetThreadID(fmt.Sprintf("%d", rand.Int()))
+		newchild.store.GetLogger().SetThreadID("no-th-id")
 		threadctx.Child(newchild)
 		r.pushActionContext(newchild)
 		newcontexts[i] = newchild

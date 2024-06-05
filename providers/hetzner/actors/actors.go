@@ -152,6 +152,7 @@ func UnmarshallHCloudToSchema(response *hcloud.Response, v interface{}) error {
 var NewActionContext = func(client *hcloud.Client, action *blueprint.Action, store base.IStore, logger base.ILogger) *ActionContext {
 	l := logger.Duplicate()
 	l.SetActionID(action.ActionID)
+	l.SetActionName(action.ActionName)
 	return &ActionContext{
 		HClient: client,
 		Action:  action,

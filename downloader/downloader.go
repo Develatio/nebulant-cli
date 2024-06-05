@@ -37,6 +37,10 @@ func GetHttpClient() *http.Client {
 }
 
 func DownloadFileWithProgressBar(url string, outfilepath string, msg string) error {
+	// TODO
+	fmt.Println("HEY YOU, FIX ME!")
+	return nil // this is here because we r implementing new TUI and this need to be adapted
+
 	startTime := time.Now()
 	cast.LogDebug("Downloading "+url, nil)
 	client := GetHttpClient()

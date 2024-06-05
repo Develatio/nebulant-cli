@@ -111,6 +111,7 @@ func (n *noBellStdout) Close() error {
 var NoBellStdout = &noBellStdout{}
 
 func isTerminal() bool {
+	return true
 	if config.ForceTerm != nil && *config.ForceTerm {
 		return true
 	}
@@ -129,6 +130,7 @@ func Selectable(prompt string, options []string) (int, error) {
 }
 
 func openMultilineStdout() {
+	return
 	if mls == nil {
 		mls = &MultilineStdout{}
 		mls.SetMainStdout(Stdout)
@@ -229,17 +231,18 @@ func ConfigColors() {
 // UpgradeTerm func sets advanced ANSI supoprt, colors and
 // multiline StdOut
 func UpgradeTerm() error {
+	return nil
 	var err error
 	if !config.DEBUG {
 		log.SetFlags(0)
 	}
 
-	if isTerminal() {
-		err = configEmojiSupport()
-		if err != nil {
-			return errors.Join(fmt.Errorf("cannot configure emoji support"), err)
-		}
-	}
+	// if isTerminal() {
+	// 	err = configEmojiSupport()
+	// 	if err != nil {
+	// 		return errors.Join(fmt.Errorf("cannot configure emoji support"), err)
+	// 	}
+	// }
 	err = EnableColorSupport()
 	if err != nil {
 		return errors.Join(fmt.Errorf("cannot enable colors"), err)

@@ -86,6 +86,7 @@ func (p *Provider) HandleAction(actx base.IActionContext) (*base.ActionOutput, e
 	if al, exists := actors.ActionFuncMap[action.ActionName]; exists {
 		l := p.Logger.Duplicate()
 		l.SetActionID(action.ActionID)
+		l.SetActionName(action.ActionName)
 		return al.F(&actors.ActionContext{
 			Action: action,
 			Store:  p.store,
