@@ -462,7 +462,7 @@ func downloadIndex(remotedef *AssetRemoteDescription, localdef *AssetDefinition)
 }
 
 func makeIndex(assetdef *AssetDefinition) (int, error) {
-	cast.LogInfo("Building Asset index "+assetdef.Name, nil)
+	cast.LogInfo("Building asset index "+assetdef.Name, nil)
 	n, err := makeMainIndex(assetdef)
 	if err != nil {
 		return n, err
@@ -671,7 +671,7 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 	searchres := &SearchResult{Count: 0}
 	term := strings.ToLower(sr.SearchTerm)
 	if len(term) <= 1 {
-		return nil, fmt.Errorf("cannot lookup by requested term. Min char needed: 2")
+		return nil, fmt.Errorf("Cannot lookup the requested term. Min char needed: 2")
 	}
 	subidx := &indexList{}
 	subIdxFile, _ := os.Open(assetdef.SubIndexPath)
@@ -781,7 +781,7 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 	}
 
 	if e <= 0 {
-		return nil, fmt.Errorf("not enough alphanumeric characters. Min char needed: 2")
+		return nil, fmt.Errorf("Not enough alphanumeric characters. Min char needed: 2")
 	}
 
 	cast.LogDebug("found "+strconv.Itoa(len(idxpositions))+" idx positions", nil)
@@ -1079,7 +1079,7 @@ func updateDescriptor(descpath string) error {
 		return err
 	}
 	cast.LogDebug("Downloading "+config.AssetDescriptorURL, nil)
-	return downloader.DownloadFileWithProgressBar(config.AssetDescriptorURL, descpath, "Updating asset descriptor...")
+	return downloader.DownloadFileWithProgressBar(config.AssetDescriptorURL, descpath, "Updating assets descriptor...")
 }
 
 func GenerateIndexFromFile(term string) error {
@@ -1251,16 +1251,16 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			err = nil
 			if !skipdownload {
 				cast.LogDebug("Downloading "+desc.URL, nil)
-				cast.LogInfo("Downloading "+asset_id+" asset index in bg...", nil)
+				cast.LogInfo("Downloading "+asset_id+" asset index in background...", nil)
 				err = downloadIndex(desc, def)
 			}
 			if err != nil {
 				cast.LogWarn("Cannot download "+asset_id+" index: ("+err.Error()+")", nil)
-				cast.LogWarn(asset_id+": Since the index could not be downloaded, it will be built locally. This process is long and expensive.", nil)
+				cast.LogWarn(asset_id+": Since the index could not be downloaded, it will be built locally. This process may take some time.", nil)
 			}
 			if err != nil || skipdownload {
 				cast.LogDebug("Building "+desc.URL, nil)
-				cast.LogInfo("Building "+asset_id+" index in bg...", nil)
+				cast.LogInfo("Building "+asset_id+" index in background...", nil)
 				_, err := makeIndex(def)
 				if err != nil {
 					State.setUpgradeState(UpgradeStateInProgressWithErr)
@@ -1276,7 +1276,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 	}
 
 	if State.CurrentUpgradeState == UpgradeStateInProgressWithErr {
-		err := fmt.Errorf("asset process done. Some problems found")
+		err := fmt.Errorf("Assets processing finished. Some problems were found")
 		cast.LogErr(err.Error(), nil)
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		err2 := State.saveState()
@@ -1284,7 +1284,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			return errors.Join(err, err2)
 		}
 	} else if State.CurrentUpgradeState == UpgradeStateInProgress {
-		cast.LogInfo("Asset process done. All is up to date", nil)
+		cast.LogInfo("Assets processing finished. All assets are up to date", nil)
 		State.setUpgradeState(UpgradeStateEndOK)
 		err := State.saveState()
 		if err != nil {
