@@ -100,7 +100,7 @@ func RegisterSubcommands() {
 			UpgradeTerm:   true,
 			WelcomeMsg:    true,
 			InitProviders: false,
-			Help:          "  help\t\t\t" + term.EmojiSet["Ambulance"] + " shows this help msg\n",
+			Help:          "  help\t\t\t" + term.EmojiSet["WhiteQuestionMark"] + " shows this help msg\n",
 			Sec:           subsystem.SecMain,
 			Call: func(nblc *subsystem.NBLcommand) (int, error) {
 				nblc.CommandLine().Usage()
@@ -119,7 +119,7 @@ func RegisterSubcommands() {
 			UpgradeTerm:   true,
 			WelcomeMsg:    true,
 			InitProviders: false,
-			Help:          "  update\t\t" + term.EmojiSet["Squid"] + " Update the cli to the latest version\n",
+			Help:          "  update\t\t" + term.EmojiSet["CounterclockwiseArrowsButton"] + " Update the cli to the latest version\n",
 			Sec:           subsystem.SecMain,
 			Call:          UpdateCmd,
 		},
