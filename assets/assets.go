@@ -671,7 +671,7 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 	searchres := &SearchResult{Count: 0}
 	term := strings.ToLower(sr.SearchTerm)
 	if len(term) <= 1 {
-		return nil, fmt.Errorf("Cannot lookup the requested term. Min char needed: 2")
+		return nil, fmt.Errorf("cannot lookup the requested term. Min char needed: 2")
 	}
 	subidx := &indexList{}
 	subIdxFile, _ := os.Open(assetdef.SubIndexPath)
@@ -781,7 +781,7 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 	}
 
 	if e <= 0 {
-		return nil, fmt.Errorf("Not enough alphanumeric characters. Min char needed: 2")
+		return nil, fmt.Errorf("not enough alphanumeric characters. Min char needed: 2")
 	}
 
 	cast.LogDebug("found "+strconv.Itoa(len(idxpositions))+" idx positions", nil)
@@ -1276,7 +1276,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 	}
 
 	if State.CurrentUpgradeState == UpgradeStateInProgressWithErr {
-		err := fmt.Errorf("Assets processing finished. Some problems were found")
+		err := fmt.Errorf("assets processing finished. Some problems were found")
 		cast.LogErr(err.Error(), nil)
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		err2 := State.saveState()
