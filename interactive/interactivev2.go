@@ -48,7 +48,7 @@ L:
 						huh.NewOption("Serve\tStart server mode at "+net.JoinHostPort(config.SERVER_ADDR, config.SERVER_PORT), "serve"),
 						huh.NewOption("Build\tOpen builder app and start server mode", "build"),
 						huh.NewOption("Path\tManually indicates the path to a blueprint", "path"),
-						huh.NewOption("Browse\tBrwose and run the blueprints stored in your account", "browse"),
+						huh.NewOption("Browse\tBrowse and run the blueprints stored in your account", "browse"),
 						huh.NewOption("Exit\tExit Nebulant CLI", "exit"),
 						// huh.NewOption("Brazil", "BR"),
 						// huh.NewOption("Canada", "CA"),
