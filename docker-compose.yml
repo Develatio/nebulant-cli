@@ -12,7 +12,7 @@ services:
       - nebulant-private
       - nebulant-lan
   # cli:
-  #   container_name: nebulant_cli
+  #   container_name: develatio/nebulant_cli
   #   build:
   #     context: .
   #     dockerfile: Dockerfile
