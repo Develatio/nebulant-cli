@@ -125,7 +125,7 @@ var UpdateDescriptorURL string = "https://releases.nebulant.app/version.json"
 
 var BACKEND_REQUEST_NEW_SSO_TOKEN_PATH = "/v1/sso/"
 var PANEL_SSO_TOKEN_VALIDATION_PATH = "/sso/%s"
-var BACKEND_ENTRY_POINT_PATH = "/to/"
+var BACKEND_ENTRY_POINT_PATH = "/"
 var BACKEND_ME_PATH = "/v1/me/"
 var BACKEND_SSO_LOGIN_PATH = "/v1/sso/login/"
 var BACKEND_GET_BLUEPRINT_PATH = "/v1/blueprint/%s/%s/content/"           // coll-slug/bp-slug
