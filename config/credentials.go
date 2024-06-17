@@ -309,7 +309,7 @@ func RequestToken() error {
 		Scheme:   BASE_SCHEME,
 		Host:     BACKEND_ACCOUNT_HOST,
 		Path:     BACKEND_ENTRY_POINT_PATH,
-		RawQuery: "path=" + panel_url.String(),
+		RawQuery: "next=" + panel_url.String(),
 	}
 	err = browser.OpenURL(account_url.String())
 	if err != nil {
