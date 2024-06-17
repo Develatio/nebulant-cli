@@ -149,6 +149,10 @@ const (
 	EventNewThread
 	// ThreadDestroyed const 22
 	EventThreadDestroyed
+	//
+	EventProgressStart
+	EventProgressTick
+	EventProgressEnd
 )
 
 // BusData struct
@@ -156,11 +160,14 @@ type BusData struct {
 	Timestamp int64 `json:"timestamp"`
 	//
 	// Type of data
-	TypeID     BusDataType `json:"type_id"`
-	ActionID   *string     `json:"action_id,omitempty"`
-	ActionName *string     `json:"action_name,omitempty"`
-	// Msg data in bytes
+	TypeID BusDataType `json:"type_id"`
+	// id of the action sending the data
+	ActionID *string `json:"action_id,omitempty"`
+	// name of the action sending the data
+	ActionName *string `json:"action_name,omitempty"`
+	// id of the thread sending the data
 	ThreadID *string `json:"thread_id,omitempty"`
+	// Msg data in bytes
 	M        *string `json:"message,omitempty"`
 	LogLevel *int    `json:"log_level,omitempty"`
 	EOF      bool    `json:"EOF,omitempty"`
@@ -183,10 +190,17 @@ type BusData struct {
 // BusConsumerLink struct.
 // Used to connect consumer with BusData dispatcher
 type BusConsumerLink struct {
-	Name            string
-	ClientUUID      string
-	LogChan         chan *BusData
-	CommonChan      chan *BusData
+	Name       string
+	ClientUUID string
+	LogChan    chan *BusData
+	CommonChan chan *BusData
+	// tells a busreader that should stop read. This
+	// is usefull to switch readers using the same
+	// link
+	Off chan struct{}
+	// EOF msg received, so this link should not used
+	// to read any more logs
+	Degraded        bool
 	AllowEventData  bool
 	AllowStatusData bool
 }

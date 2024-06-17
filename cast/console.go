@@ -23,6 +23,7 @@
 package cast
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -41,28 +42,43 @@ var prefxmap map[int]string = map[int]string{
 	NotsetLevel:   "",
 }
 
+var threadcolor map[string]string
+
 // ConsoleLogger struct
 type ConsoleLogger struct {
 	fLink *BusConsumerLink
 }
 
 func FormatConsoleLogMsg(fback *BusData) string {
+	color := ""
+	if fback.ThreadID != nil {
+		if _, exists := threadcolor[*fback.ThreadID]; !exists {
+			threadcolor[*fback.ThreadID] = term.GetNewColor()
+		}
+		color = threadcolor[*fback.ThreadID]
+	}
+
+	format := "%s %s"
+	aname := ""
+	if fback.ActionName != nil {
+		aname = *fback.ActionName
+		format = fmt.Sprintf("%s %s\t |%s %%s %%s", color, aname, term.Reset)
+	}
+
 	if fback.EventID != nil {
 		switch *fback.EventID {
 		case EventActionInit:
-			return fmt.Sprintf(" %s %s (%s in thread %s)", term.EmojiSet["Sparkles"]+term.EmojiSet["Dizzy"], *fback.ActionName, *fback.ActionID, *fback.ThreadID)
+			return fmt.Sprintf(format, prefxmap[*fback.LogLevel], "start")
 		case EventActionKO:
-			a := fmt.Sprintf(" %s %s (%s in thread %s)", term.EmojiSet["CrossMarkButton"], *fback.ActionName, *fback.ActionID, *fback.ThreadID)
-			b := fmt.Sprintf(" %s %s %s", prefxmap[*fback.LogLevel], *fback.M, term.Reset)
-			return a + b
+			return fmt.Sprintf(format, prefxmap[*fback.LogLevel], *fback.M)
 		case EventActionUnCaughtKO:
-			a := fmt.Sprintf(" ERROR | %s (%s in thread %s)", *fback.ActionName, *fback.ActionID, *fback.ThreadID)
-			b := fmt.Sprintf(" %s %s %s", prefxmap[*fback.LogLevel], *fback.M, term.Reset)
-			return a + b
+			return fmt.Sprintf(format, prefxmap[*fback.LogLevel], *fback.M)
 		case EventActionOK:
-			return fmt.Sprintf(" %s %s (%s in thread %s)", term.EmojiSet["CheckMarkButton"], *fback.ActionName, *fback.ActionID, *fback.ThreadID)
+			return fmt.Sprintf(format, prefxmap[*fback.LogLevel], "done")
 		case EventActionUnCaughtOK:
-			return fmt.Sprintf(" %s %s (%s in thread %s)", term.EmojiSet["CheckMarkButton"], *fback.ActionName, *fback.ActionID, *fback.ThreadID)
+			return fmt.Sprintf(format, prefxmap[*fback.LogLevel], "done")
+		case EventThreadDestroyed:
+			delete(threadcolor, *fback.ThreadID)
 		default:
 			return ""
 		}
@@ -75,22 +91,15 @@ func FormatConsoleLogMsg(fback *BusData) string {
 			return term.Reset
 		}
 	} else {
-		aname := ""
-		if fback.ActionName != nil {
-			aname = fmt.Sprintf("[%s]", *fback.ActionName)
-		}
 		if fback.M != nil {
 			if config.DEBUG {
 				counter++
-				// log.Println(prefxmap[*fback.LogLevel] + " " + fmt.Sprintf("[%v] %v", counter, *fback.M) + term.Reset)
-				return fmt.Sprintf(" %s %s [%v] %s%s", prefxmap[*fback.LogLevel], aname, counter, *fback.M, term.Reset)
+				return fmt.Sprintf(format, prefxmap[*fback.LogLevel], fmt.Sprintf("[%v] %v", counter, *fback.M))
 			} else {
-				// log.Println(prefxmap[*fback.LogLevel] + " " + *fback.M + term.Reset)
-				return fmt.Sprintf(" %s %s %s %s", prefxmap[*fback.LogLevel], aname, *fback.M, term.Reset)
+				return fmt.Sprintf(format, prefxmap[*fback.LogLevel], *fback.M)
 			}
 		} else {
-			// log.Println(prefxmap[*fback.LogLevel] + "" + term.Reset)
-			return fmt.Sprintf("%s%s", prefxmap[*fback.LogLevel], term.Reset)
+			return fmt.Sprintf(format, prefxmap[*fback.LogLevel], "")
 		}
 	}
 }
@@ -110,18 +119,6 @@ func (c *ConsoleLogger) printMessage(fback *BusData) bool {
 		}
 	} else {
 		log.Println(msg)
-		// if fback.M != nil {
-		// 	// log will use term.Output
-		// 	// because log.SetOutput(Stdout)
-		// 	if config.DEBUG {
-		// 		counter++
-		// 		log.Println(prefxmap[*fback.LogLevel] + " " + fmt.Sprintf("[%v] %v", counter, *fback.M) + term.Reset)
-		// 	} else {
-		// 		log.Println(prefxmap[*fback.LogLevel] + " " + *fback.M + term.Reset)
-		// 	}
-		// } else {
-		// 	log.Println(prefxmap[*fback.LogLevel] + "" + term.Reset)
-		// }
 	}
 	return false
 }
@@ -160,10 +157,12 @@ func (c *ConsoleLogger) setDefaultTheme() {
 
 // InitConsoleLogger func
 func InitConsoleLogger() {
+	threadcolor = make(map[string]string)
 	fLink := &BusConsumerLink{
 		Name:           "Console",
 		LogChan:        make(chan *BusData, 100),
 		CommonChan:     make(chan *BusData, 100),
+		Off:            make(chan struct{}),
 		AllowEventData: true,
 	}
 	clogger := &ConsoleLogger{fLink: fLink}
@@ -174,5 +173,16 @@ func InitConsoleLogger() {
 	// TODO: if interactive/no term
 	// go clogger.readCastBus()
 
-	StartUI(fLink)
+	go func() {
+		_, err := StartUI(fLink)
+		if err != nil {
+			LogErr(errors.Join(fmt.Errorf("a problem in TUI ocurred. Downgroading to non-interactive console mode"), err).Error(), nil)
+		}
+		// on TUI exit (gracefully or with err, start basic logger to print last shutdown msgs)
+		if !fLink.Degraded {
+			clogger.readCastBus()
+		} else {
+			SBus.castWaiter.Done()
+		}
+	}()
 }

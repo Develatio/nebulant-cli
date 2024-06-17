@@ -112,7 +112,7 @@ func PrepareCmd(cmd *NBLcommand) error {
 			// os.Exit(1)
 			return errors.Join(fmt.Errorf("cannot init term :("), err)
 		}
-		term.ConfigColors()
+		// term.ConfigColors()
 	}
 
 	if config.DEBUG {

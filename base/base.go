@@ -21,3 +21,15 @@
 // SOFTWARE.
 
 package base
+
+import (
+	"os"
+	"os/signal"
+	"syscall"
+)
+
+var InterruptSignalChannel chan os.Signal = make(chan os.Signal, 10)
+
+func init() {
+	signal.Notify(InterruptSignalChannel, os.Interrupt, syscall.SIGTERM)
+}

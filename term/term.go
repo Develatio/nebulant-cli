@@ -82,6 +82,26 @@ var IdentifyDevice string = "\033Z"
 
 var mls *MultilineStdout = nil
 
+var colors = []string{
+	White,
+	Red,
+	Green,
+	Yellow,
+	Blue,
+	Cyan,
+	Magenta, // 5
+}
+var current_color = -1
+
+func GetNewColor() string {
+	current_color++
+	if current_color < len(colors) {
+		return colors[current_color]
+	}
+	current_color = 0
+	return colors[current_color]
+}
+
 type OSPTY interface {
 	Close() error
 	Read(p []byte) (n int, err error)
@@ -111,13 +131,13 @@ func (n *noBellStdout) Close() error {
 var NoBellStdout = &noBellStdout{}
 
 func isTerminal() bool {
-	return true
-	if config.ForceTerm != nil && *config.ForceTerm {
-		return true
-	}
-	if config.ForceNoTerm {
-		return false
-	}
+	// return true
+	// if config.ForceTerm != nil && *config.ForceTerm {
+	// 	return true
+	// }
+	// if config.ForceNoTerm {
+	// 	return false
+	// }
 	return term.IsTerminal(int(os.Stdout.Fd()))
 }
 
@@ -129,15 +149,15 @@ func Selectable(prompt string, options []string) (int, error) {
 	return mls.SelectTest(prompt, options)
 }
 
-func openMultilineStdout() {
-	return
-	if mls == nil {
-		mls = &MultilineStdout{}
-		mls.SetMainStdout(Stdout)
-		mls.Init()
-		log.SetOutput(mls)
-	}
-}
+// func openMultilineStdout() {
+// 	return
+// 	// if mls == nil {
+// 	// 	mls = &MultilineStdout{}
+// 	// 	mls.SetMainStdout(Stdout)
+// 	// 	mls.Init()
+// 	// 	log.SetOutput(mls)
+// 	// }
+// }
 
 // PrintInfo func
 func PrintInfo(s string) {
@@ -204,34 +224,34 @@ func configEmojiSupport() error {
 }
 
 func ConfigColors() {
-	if config.DisableColorFlag != nil && *config.DisableColorFlag {
-		Stdout = os.Stdout
-		Stderr = os.Stderr
-		// Reset = ""
-		Red = ""
-		BGRed = ""
-		BGBrightRed = ""
-		Green = ""
-		BGBrightGreen = ""
-		Yellow = ""
-		BGYellow = ""
-		BGBrightYellow = ""
-		Blue = ""
-		Black = ""
-		BGBlack = ""
-		Magenta = ""
-		BGBrightMagenta = ""
-		Cyan = ""
-		Gray = ""
-		White = ""
-		Bold = ""
-	}
+	// if config.DisableColorFlag != nil && *config.DisableColorFlag {
+	// 	Stdout = os.Stdout
+	// 	Stderr = os.Stderr
+	// 	// Reset = ""
+	// 	Red = ""
+	// 	BGRed = ""
+	// 	BGBrightRed = ""
+	// 	Green = ""
+	// 	BGBrightGreen = ""
+	// 	Yellow = ""
+	// 	BGYellow = ""
+	// 	BGBrightYellow = ""
+	// 	Blue = ""
+	// 	Black = ""
+	// 	BGBlack = ""
+	// 	Magenta = ""
+	// 	BGBrightMagenta = ""
+	// 	Cyan = ""
+	// 	Gray = ""
+	// 	White = ""
+	// 	Bold = ""
+	// }
 }
 
 // UpgradeTerm func sets advanced ANSI supoprt, colors and
 // multiline StdOut
 func UpgradeTerm() error {
-	return nil
+	// return nil
 	var err error
 	if !config.DEBUG {
 		log.SetFlags(0)
@@ -247,7 +267,7 @@ func UpgradeTerm() error {
 	if err != nil {
 		return errors.Join(fmt.Errorf("cannot enable colors"), err)
 	}
-	ConfigColors()
+	// ConfigColors()
 	log.SetOutput(Stdout)
 	//
 	// uses Stdout (term.Stdout in os.go)
@@ -255,6 +275,6 @@ func UpgradeTerm() error {
 	// as default, or can be os.Stdout if
 	// os cannot support colors or if has
 	// been disabled manually.
-	openMultilineStdout()
+	// openMultilineStdout()
 	return nil
 }

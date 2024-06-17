@@ -24,134 +24,83 @@ package cast
 
 import (
 	"fmt"
-	"log"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/timer"
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/config"
-	"github.com/develatio/nebulant-cli/term"
 )
-
-/*
-This example assumes an existing understanding of commands and messages. If you
-haven't already read our tutorials on the basics of Bubble Tea and working
-with commands, we recommend reading those first.
-
-Find them at:
-https://github.com/charmbracelet/bubbletea/tree/master/tutorials/commands
-https://github.com/charmbracelet/bubbletea/tree/master/tutorials/basics
-*/
 
 // sessionState is used to track which model is focused
 type sessionState uint
-type fillbuff struct {
-	bd []*BusData
-}
 
 const (
 	defaultTime              = time.Minute
-	tableView   sessionState = iota
-	loggerView
+	mainView    sessionState = iota
+	quitView
 )
 
 var (
-	// Available spinners
-	spinners = []spinner.Spinner{
-		spinner.Line,
-		spinner.Dot,
-		spinner.MiniDot,
-		spinner.Jump,
-		spinner.Pulse,
-		spinner.Points,
-		spinner.Globe,
-		spinner.Moon,
-		spinner.Monkey,
-	}
-	titleStyle = func() lipgloss.Style {
-		b := lipgloss.RoundedBorder()
-		b.Right = "├"
-		return lipgloss.NewStyle().BorderStyle(b).Padding(0, 1)
-	}()
-	tableStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("240"))
-	modelStyle = lipgloss.NewStyle().
-			Width(25).
-			Align(lipgloss.Center, lipgloss.Center).
-			BorderStyle(lipgloss.HiddenBorder())
-	focusedModelStyle = lipgloss.NewStyle().
-				Width(25).
-				Align(lipgloss.Center, lipgloss.Center).
-				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("69"))
-	spinnerStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
-	helpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+	progressMsg   = lipgloss.NewStyle().Foreground(lipgloss.Color("211"))
+	helpStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("170"))
+	choiceStyle   = lipgloss.NewStyle().PaddingLeft(1).Foreground(lipgloss.Color("222"))
+	quitViewStyle = lipgloss.NewStyle().Padding(1).Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("170"))
 )
 
+type progressInfo struct {
+	info     string
+	size     int64
+	writed   int64
+	progress progress.Model
+}
+
 type mainModel struct {
-	state    sessionState
-	timer    timer.Model
-	table    table.Model
+	state sessionState
+	timer timer.Model
+	// table   table.Model
+	progress     map[string]*progressInfo
+	progessslice []*progressInfo // same as above, but for iterate in order
+	// available spinners:
+	// spinner.Line,
+	// spinner.Dot,
+	// spinner.MiniDot,
+	// spinner.Jump,
+	// spinner.Pulse,
+	// spinner.Points,
+	// spinner.Globe,
+	// spinner.Moon,
+	// spinner.Monkey,
 	spinner  spinner.Model
-	viewport viewport.Model
-	// messages []string
-	thmsg    map[string][]string
+	width    int
+	height   int
+	threads  map[string]bool
 	thfilter string
 	lk       *BusConsumerLink
-	index    int
+	dbglevel int
 }
 
 func frontUIModel(timeout time.Duration, l *BusConsumerLink) mainModel {
 	m := mainModel{
-		state:    tableView,
+		state:    mainView,
 		lk:       l,
-		thmsg:    make(map[string][]string),
+		threads:  make(map[string]bool),
 		thfilter: "all",
+		progress: make(map[string]*progressInfo),
+		dbglevel: 6,
 	}
-	m.timer = timer.New(timeout)
-	// m.spinner = spinner.New()
-
-	vp := viewport.New(30, 5)
-	vp.SetContent(`Welcome to Nebulant CLI UI`)
-	m.viewport = vp
-
-	columns := []table.Column{
-		{Title: "ThID", Width: 15},
-		{Title: "S", Width: 2},
-	}
-
-	rows := []table.Row{
-		//{"all", ""},
-	}
-
-	t := table.New(
-		table.WithColumns(columns),
-		table.WithRows(rows),
-		table.WithFocused(true),
-		table.WithHeight(7),
-	)
-
-	s := table.DefaultStyles()
-	s.Header = s.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		BorderBottom(true).
-		Bold(false)
-	s.Selected = s.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(false)
-	t.SetStyles(s)
-	m.table = t
-
+	s := spinner.New()
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
+	m.spinner = s
 	return m
 }
+
+type YesQuitMsg struct{}
 
 func (m mainModel) Init() tea.Cmd {
 	// start the timer and spinner on program start
@@ -167,79 +116,122 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		headerHeight := lipgloss.Height(m.headerView())
-		m.viewport.Width = msg.Width
-		m.viewport.Height = msg.Height - headerHeight
+		m.width, m.height = msg.Width, msg.Height
 	case *BusData:
 		cmds = append(cmds, readCastBusCmd(m.lk))
 		switch msg.TypeID {
 		case BusDataTypeLog:
 			s := FormatConsoleLogMsg(msg)
 			if s != "" {
-				m.thmsg["all"] = append(m.thmsg["all"], s)
-				if msg.ThreadID != nil {
-					m.thmsg[*msg.ThreadID] = append(m.thmsg[*msg.ThreadID], s)
-				}
-				// TODO: set content of the selected thread id or all msgs
-				// if none selected
-				m.viewport.SetContent(strings.Join(m.thmsg[m.thfilter], "\n"))
-				m.viewport.GotoBottom()
+				cmds = append(cmds, tea.Printf(s))
 			}
 		case BusDataTypeEOF:
-			return m, tea.Quit
+			select {
+			case m.lk.Off <- struct{}{}:
+				// ok
+			default:
+				fmt.Println("warn: cannot stop TUI logger :O")
+			}
+			m.lk.Degraded = true
+			cmds = append(cmds, shutdownUI())
 		case BusDataTypeEvent:
 			// a nil pointer err here is a dev fail
 			// never send event type without event id
 			switch *msg.EventID {
 			case EventNewThread:
-				if _, exists := m.thmsg[*msg.ThreadID]; !exists {
-					m.thmsg[*msg.ThreadID] = make([]string, 0)
+				m.threads[*msg.ThreadID] = true
+				mm := FormatConsoleLogMsg(msg)
+				if mm != "" {
+					cmds = append(cmds, tea.Printf(mm))
 				}
-				rows := []table.Row{}
-				for thid, _ := range m.thmsg {
-					rows = append(rows, table.Row{thid, term.EmojiSet["Rocket"]})
+			case EventProgressStart:
+				npr := &progressInfo{
+					progress: progress.New(
+						progress.WithDefaultGradient(),
+						progress.WithWidth(40),
+						// progress.WithoutPercentage(),
+					),
+					size: msg.Extra["size"].(int64),
+					info: msg.Extra["info"].(string),
 				}
-				m.table.SetRows(rows)
+				m.progress[msg.Extra["progressid"].(string)] = npr
+				m.progessslice = append(m.progessslice, npr)
+				cmds = append(cmds, npr.progress.SetPercent(0))
+			case EventProgressTick:
+				size := msg.Extra["size"].(int64)
+				writed := msg.Extra["writed"].(int64)
+				pid := msg.Extra["progressid"].(string)
+				pinfo := m.progress[pid]
+				if writed <= 0 {
+					cmds = append(cmds, pinfo.progress.SetPercent(0.0))
+				} else {
+					cmds = append(cmds, pinfo.progress.SetPercent(float64(writed)/float64(size)))
+				}
+			case EventProgressEnd:
+				// TODO: add cmd?
+				pid := msg.Extra["progressid"].(string)
+				npr := m.progress[pid]
+				for ii, _npr := range m.progessslice {
+					if npr == _npr {
+						// index found
+						m.progessslice = append(m.progessslice[:ii], m.progessslice[ii+1:]...)
+					}
+				}
+				delete(m.progress, pid)
 			}
-			// mm := FormatConsoleLogMsg(msg)
-			// if mm != "" {
-			// 	m.messages = append(m.messages, mm)
-			// }
-			// m.viewport.SetContent(strings.Join(m.messages, "\n"))
-			// m.viewport.GotoBottom()
 		}
 		// TODO: do things with cmd chann
+	case tea.QuitMsg:
+		return m, tea.Quit
+	case YesQuitMsg:
+		select {
+		case m.lk.Off <- struct{}{}:
+			// ok
+		default:
+			fmt.Println("warn: cannot stop TUI logger :O")
+		}
+		select {
+		case base.InterruptSignalChannel <- os.Interrupt:
+			// ok
+		default:
+			fmt.Println("warn: cannot send interrupt signal :O")
+		}
+		cmds = append(cmds, shutdownUI())
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-		case "tab":
-			if m.state == tableView {
-				m.state = loggerView
-			} else {
-				m.state = tableView
+		case "y":
+			if m.state == quitView {
+				return m, confirmQuit()
 			}
+		case "n":
+			if m.state == quitView {
+				m.state = mainView
+			}
+		case "ctrl+c", "q":
+			m.state = quitView
 		case "6":
 			config.DEBUG = true
 		case "enter":
-			if m.state == tableView {
-				m.thfilter = m.table.SelectedRow()[0]
-			}
-			m.viewport.SetContent(strings.Join(m.thmsg[m.thfilter], "\n"))
-			m.viewport.GotoBottom()
+			// nothing yet
 		}
-		switch m.state {
-		// update whichever model is focused
-		case loggerView:
-			m.viewport, cmd = m.viewport.Update(msg)
-			cmds = append(cmds, cmd)
-		default:
-			m.table, cmd = m.table.Update(msg)
-			cmds = append(cmds, cmd)
-		}
+		// switch m.state?
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		cmds = append(cmds, cmd)
 	case timer.TickMsg:
 		m.timer, cmd = m.timer.Update(msg)
 		cmds = append(cmds, cmd)
+	case progress.FrameMsg:
+		for _, pinf := range m.progress {
+			newModel, cmd := pinf.progress.Update(msg)
+			if newModel, ok := newModel.(progress.Model); ok {
+				pinf.progress = newModel
+			}
+			cmds = append(cmds, cmd)
+		}
+		return m, cmd
+
 	}
 
 	return m, tea.Batch(cmds...)
@@ -253,57 +245,54 @@ func readCastBusCmd(cc *BusConsumerLink) tea.Cmd {
 			return ff
 		case ff := <-cc.LogChan:
 			return ff
+		case <-cc.Off:
+			return nil
 		}
 	}
+}
+
+func confirmQuit() tea.Cmd {
+	return func() tea.Msg {
+		return YesQuitMsg{}
+	}
+}
+
+func shutdownUI() tea.Cmd {
+	return tea.Quit
 }
 
 func (m mainModel) View() string {
+	vv := ""
+	for _, pinf := range m.progessslice {
+		spin := m.spinner.View() + " "
+		prog := pinf.progress.View()
+		cellsAvail := max(0, m.width-lipgloss.Width(spin+prog))
+		prgInfo := progressMsg.Render(pinf.info)
+		info := lipgloss.NewStyle().MaxWidth(cellsAvail).Render(prgInfo)
+		cellsRemaining := max(0, m.width-lipgloss.Width(spin+info+prog))
+		gap := strings.Repeat(" ", cellsRemaining)
+		vv = vv + spin + info + gap + prog + "\n"
+	}
+
 	var s string
-	// model := m.currentFocusedModel()
-	if m.state == tableView {
-		s += lipgloss.JoinHorizontal(lipgloss.Top, focusedModelStyle.Render(fmt.Sprintf("%4s", tableStyle.Render(m.table.View()))), m.viewport.View())
-	} else {
-		s += lipgloss.JoinHorizontal(lipgloss.Top, modelStyle.Render(fmt.Sprintf("%4s", tableStyle.Render(m.table.View()))), m.viewport.View())
+	switch m.state {
+	case mainView:
+		s = helpStyle.Render("\nb: open builder • p: open pannel • l: switch log level • q: exit\n")
+	case quitView:
+		text := lipgloss.JoinHorizontal(lipgloss.Top, "Are you sure you want to leave Nebulant CLI?", choiceStyle.Render("[yn]"))
+		s = quitViewStyle.Render(text)
 	}
 
-	s += helpStyle.Render("\ntab: focus next • 6: debug • q: exit\n")
-	return s
+	return vv + s
 }
 
-func (m mainModel) headerView() string {
-	title := titleStyle.Render("Nebulant UI :)")
-	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(title)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
-}
-
-func (m mainModel) currentFocusedModel() string {
-	if m.state == tableView {
-		return "timer"
-	}
-	return "spinner"
-}
-
-func (m *mainModel) Next() {
-	if m.index == len(spinners)-1 {
-		m.index = 0
-	} else {
-		m.index++
-	}
-}
-
-func (m *mainModel) resetSpinner() {
-	m.spinner = spinner.New()
-	m.spinner.Style = spinnerStyle
-	m.spinner.Spinner = spinners[m.index]
-}
-
-func StartUI(lk *BusConsumerLink) tea.Model {
+func StartUI(lk *BusConsumerLink) (tea.Model, error) {
 	m := frontUIModel(defaultTime, lk)
 	p := tea.NewProgram(m)
-	go func() {
-		if _, err := p.Run(); err != nil {
-			log.Fatal(err)
-		}
-	}()
-	return m
+	if _, err := p.Run(); err != nil {
+		// stop cli?
+		return m, err
+	}
+	// stop cli?
+	return m, nil
 }

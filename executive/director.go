@@ -96,6 +96,18 @@ L:
 	for { // Infine loop until break L
 		select { // Loop until a case ocurrs.
 		case instr := <-d.ExecInstruction:
+			if instr.Instruction == ExecShutdown {
+				d.serverMode = false
+				if len(d.managers) > 0 {
+					for manager := range d.managers {
+						manager.Runtime.Stop()
+					}
+					continue
+				} else {
+					d.serverMode = false
+					break L
+				}
+			}
 			cast.LogInfo("[Director] Received instruction with id "+*instr.ExecutionUUID, nil)
 			if len(d.managers) <= 0 {
 				cast.LogInfo("[Director] No managers available", nil)

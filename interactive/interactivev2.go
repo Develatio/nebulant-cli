@@ -25,7 +25,9 @@
 package interactive
 
 import (
+	"errors"
 	"net"
+	"net/http"
 
 	"github.com/charmbracelet/huh"
 	"github.com/develatio/nebulant-cli/config"
@@ -74,7 +76,9 @@ L:
 			errc := executive.InitServerMode()
 			err = <-errc
 			if err != nil {
-				term.PrintErr(err.Error() + "\n")
+				if !errors.Is(err, http.ErrServerClosed) {
+					term.PrintErr(err.Error() + "\n")
+				}
 				continue
 			}
 			executive.MDirector.Wait()
@@ -99,7 +103,9 @@ L:
 			errc := executive.InitServerMode()
 			err = <-errc
 			if err != nil {
-				term.PrintErr(err.Error() + "\n")
+				if !errors.Is(err, http.ErrServerClosed) {
+					term.PrintErr(err.Error() + "\n")
+				}
 				continue
 			}
 			executive.MDirector.Wait()

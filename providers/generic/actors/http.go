@@ -52,6 +52,7 @@ import (
 	"golang.org/x/net/html/charset"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 )
@@ -396,7 +397,7 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	lin := term.AppendLine()
 	defer lin.Close()
-	bar, err := lin.GetProgressBar(resp.ContentLength, path.Base(u.Path), true)
+	bar := cast.NewProgress(resp.ContentLength, path.Base(u.Path), "", "", "", "")
 	if err != nil {
 		return nil, err
 	}

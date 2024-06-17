@@ -11,8 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/develatio/nebulant-cli/config"
-	"github.com/schollz/progressbar/v3"
 	"golang.org/x/term"
 )
 
@@ -154,41 +152,41 @@ func (o *oneLineWriteCloser) Close() error {
 	return nil
 }
 
-func (o *oneLineWriteCloser) GetProgressBar(max int64, description string, showbytes bool) (*progressbar.ProgressBar, error) {
-	description = " " + description
-	if !isTerminal() {
-		arwc := &alwaysReturnWrapWritCloser{
-			stdout: o,
-		}
-		_, err := arwc.Write([]byte(description))
-		if err != nil {
-			return nil, err
-		}
+// func (o *oneLineWriteCloser) GetProgressBar(max int64, description string, showbytes bool) (*progressbar.ProgressBar, error) {
+// 	description = " " + description
+// 	if !isTerminal() {
+// 		arwc := &alwaysReturnWrapWritCloser{
+// 			stdout: o,
+// 		}
+// 		_, err := arwc.Write([]byte(description))
+// 		if err != nil {
+// 			return nil, err
+// 		}
 
-		return progressbar.NewOptions64(max,
-			progressbar.OptionSetDescription(description),
-			progressbar.OptionSetWriter(arwc),
-			progressbar.OptionShowBytes(showbytes),
-			progressbar.OptionSetWidth(20),
-			progressbar.OptionThrottle(30*time.Second),
-			progressbar.OptionShowCount(),
-			progressbar.OptionSpinnerCustom([]string{}),
-		), nil
-	}
+// 		return progressbar.NewOptions64(max,
+// 			progressbar.OptionSetDescription(description),
+// 			progressbar.OptionSetWriter(arwc),
+// 			progressbar.OptionShowBytes(showbytes),
+// 			progressbar.OptionSetWidth(20),
+// 			progressbar.OptionThrottle(30*time.Second),
+// 			progressbar.OptionShowCount(),
+// 			progressbar.OptionSpinnerCustom([]string{}),
+// 		), nil
+// 	}
 
-	return progressbar.NewOptions64(max,
-		progressbar.OptionSetDescription(description),
-		progressbar.OptionSetWriter(o),
-		progressbar.OptionShowBytes(showbytes),
-		progressbar.OptionEnableColorCodes(!*config.DisableColorFlag),
-		progressbar.OptionSetWidth(20),
-		progressbar.OptionThrottle(65*time.Millisecond),
-		progressbar.OptionShowCount(),
-		progressbar.OptionSpinnerType(14),
-		progressbar.OptionSetRenderBlankState(true),
-		progressbar.OptionClearOnFinish(),
-	), nil
-}
+// 	return progressbar.NewOptions64(max,
+// 		progressbar.OptionSetDescription(description),
+// 		progressbar.OptionSetWriter(o),
+// 		progressbar.OptionShowBytes(showbytes),
+// 		progressbar.OptionEnableColorCodes(!*config.DisableColorFlag),
+// 		progressbar.OptionSetWidth(20),
+// 		progressbar.OptionThrottle(65*time.Millisecond),
+// 		progressbar.OptionShowCount(),
+// 		progressbar.OptionSpinnerType(14),
+// 		progressbar.OptionSetRenderBlankState(true),
+// 		progressbar.OptionClearOnFinish(),
+// 	), nil
+// }
 
 func (o *oneLineWriteCloser) Print(s string) {
 	if !isTerminal() {

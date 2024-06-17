@@ -33,9 +33,11 @@ import (
 	// _ "net/http/pprof"
 	// grmon "github.com/bcicen/grmon/agent"
 
+	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/cli"
 	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/nhttpd"
 	"github.com/develatio/nebulant-cli/util"
 )
 
@@ -80,6 +82,25 @@ func main() {
 		executive.RemoveDirector()
 		cast.SBus.Close().Wait()
 		os.Exit(exitCode)
+	}()
+
+	go func() {
+		count := 0
+		for {
+			<-base.InterruptSignalChannel
+			if count > 0 {
+				fmt.Println(" Force quit")
+				os.Exit(1)
+			}
+			count++
+			select {
+			case executive.MDirector.ExecInstruction <- &executive.ExecCtrlInstruction{Instruction: executive.ExecShutdown}:
+				cast.LogInfo("gracefully shutdown started...", nil)
+				nhttpd.GetServer().Shutdown()
+			default:
+				cast.LogErr("cannot gracefully shutdown cli", nil)
+			}
+		}
 	}()
 
 	exitCode = cli.Start()
