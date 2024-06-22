@@ -30,10 +30,10 @@ import (
 
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/timer"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/cast/uimenu"
 	"github.com/develatio/nebulant-cli/config"
 )
 
@@ -42,8 +42,9 @@ type sessionState uint
 
 const (
 	defaultTime              = time.Minute
-	mainView    sessionState = iota
-	quitView
+	logState    sessionState = iota
+	menuState
+	quitState
 )
 
 var (
@@ -54,15 +55,15 @@ var (
 )
 
 type progressInfo struct {
-	info     string
-	size     int64
-	writed   int64
+	info string
+	size int64
+	// writed   int64
 	progress progress.Model
 }
 
 type mainModel struct {
 	state sessionState
-	timer timer.Model
+	// timer timer.Model
 	// table   table.Model
 	progress     map[string]*progressInfo
 	progessslice []*progressInfo // same as above, but for iterate in order
@@ -76,7 +77,9 @@ type mainModel struct {
 	// spinner.Globe,
 	// spinner.Moon,
 	// spinner.Monkey,
-	spinner  spinner.Model
+	spinner spinner.Model
+	uimenu  *uimenu.Menu
+	//
 	width    int
 	height   int
 	threads  map[string]bool
@@ -87,16 +90,22 @@ type mainModel struct {
 
 func frontUIModel(timeout time.Duration, l *BusConsumerLink) mainModel {
 	m := mainModel{
-		state:    mainView,
+		state:    menuState,
 		lk:       l,
 		threads:  make(map[string]bool),
 		thfilter: "all",
 		progress: make(map[string]*progressInfo),
 		dbglevel: 6,
+		uimenu:   uimenu.New(),
 	}
+
+	// spinner
 	s := spinner.New()
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
 	m.spinner = s
+
+	// form
+
 	return m
 }
 
@@ -104,7 +113,41 @@ type YesQuitMsg struct{}
 
 func (m mainModel) Init() tea.Cmd {
 	// start the timer and spinner on program start
-	return tea.Batch(m.timer.Init(), m.spinner.Tick, readCastBusCmd(m.lk))
+	return tea.Batch(m.spinner.Tick, readCastBusCmd(m.lk))
+}
+
+func (m mainModel) updateQuitView(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
+	switch msg := msg.(type) {
+	case YesQuitMsg:
+		select {
+		case m.lk.Off <- struct{}{}:
+			// ok
+		default:
+			fmt.Println("warn: cannot stop TUI logger :O")
+		}
+		select {
+		case base.InterruptSignalChannel <- os.Interrupt:
+			// ok
+		default:
+			fmt.Println("warn: cannot send interrupt signal :O")
+		}
+		cmds = append(cmds, shutdownUI())
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "y":
+			if m.state == quitState {
+				return m, confirmQuit()
+			}
+		case "n":
+			if m.state == quitState {
+				m.state = logState
+			}
+		}
+	}
+
+	return m, tea.Batch(cmds...)
 }
 
 func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -183,45 +226,25 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// TODO: do things with cmd chann
 	case tea.QuitMsg:
 		return m, tea.Quit
-	case YesQuitMsg:
-		select {
-		case m.lk.Off <- struct{}{}:
-			// ok
-		default:
-			fmt.Println("warn: cannot stop TUI logger :O")
-		}
-		select {
-		case base.InterruptSignalChannel <- os.Interrupt:
-			// ok
-		default:
-			fmt.Println("warn: cannot send interrupt signal :O")
-		}
-		cmds = append(cmds, shutdownUI())
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "y":
-			if m.state == quitView {
-				return m, confirmQuit()
+		if m.state == logState {
+			switch msg.String() {
+			case "ctrl+c", "q":
+				m.state = quitState
+			case "6":
+				config.DEBUG = true
+			case "enter":
+				// nothing yet
 			}
-		case "n":
-			if m.state == quitView {
-				m.state = mainView
-			}
-		case "ctrl+c", "q":
-			m.state = quitView
-		case "6":
-			config.DEBUG = true
-		case "enter":
-			// nothing yet
 		}
 		// switch m.state?
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		cmds = append(cmds, cmd)
-	case timer.TickMsg:
-		m.timer, cmd = m.timer.Update(msg)
-		cmds = append(cmds, cmd)
+	// case timer.TickMsg:
+	// 	m.timer, cmd = m.timer.Update(msg)
+	// 	cmds = append(cmds, cmd)
 	case progress.FrameMsg:
 		for _, pinf := range m.progress {
 			newModel, cmd := pinf.progress.Update(msg)
@@ -232,6 +255,17 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, cmd
 
+	}
+
+	switch m.state {
+	case menuState:
+		_, cmdss := m.uimenu.Update(msg)
+		cmds = append(cmds, cmdss)
+	case quitState:
+		_, cmdss := m.updateQuitView(msg)
+		cmds = append(cmds, cmdss)
+	case logState:
+		//
 	}
 
 	return m, tea.Batch(cmds...)
@@ -261,7 +295,21 @@ func shutdownUI() tea.Cmd {
 	return tea.Quit
 }
 
+func renderHelp() string {
+	return helpStyle.Render("\nb: open builder • p: open pannel • l: switch log level • q: exit\n")
+}
+
+func (m mainModel) quitView() string {
+	text := lipgloss.JoinHorizontal(lipgloss.Top, "Are you sure you want to leave Nebulant CLI?", choiceStyle.Render("[yn]"))
+	return quitViewStyle.Render(text)
+}
+
+func (m mainModel) logView() string {
+	return renderHelp()
+}
+
 func (m mainModel) View() string {
+	// progress will always be rendered
 	vv := ""
 	for _, pinf := range m.progessslice {
 		spin := m.spinner.View() + " "
@@ -274,13 +322,15 @@ func (m mainModel) View() string {
 		vv = vv + spin + info + gap + prog + "\n"
 	}
 
+	// render specific-state-view
 	var s string
 	switch m.state {
-	case mainView:
-		s = helpStyle.Render("\nb: open builder • p: open pannel • l: switch log level • q: exit\n")
-	case quitView:
-		text := lipgloss.JoinHorizontal(lipgloss.Top, "Are you sure you want to leave Nebulant CLI?", choiceStyle.Render("[yn]"))
-		s = quitViewStyle.Render(text)
+	case menuState:
+		s = m.uimenu.View()
+	case logState:
+		s = m.logView()
+	case quitState:
+		s = m.quitView()
 	}
 
 	return vv + s

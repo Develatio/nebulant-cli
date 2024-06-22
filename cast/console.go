@@ -180,8 +180,10 @@ func InitConsoleLogger() {
 		}
 		// on TUI exit (gracefully or with err, start basic logger to print last shutdown msgs)
 		if !fLink.Degraded {
+			// fmt.Println("not degraded")
 			clogger.readCastBus()
 		} else {
+			// fmt.Println("degraded")
 			SBus.castWaiter.Done()
 		}
 	}()
