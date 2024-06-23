@@ -23,12 +23,16 @@ define exactly how and when each action should be done.
 
 For more information, see the [website](https://nebulant.app) of the Nebulant.
 
+<br />
+
 📖 Documentation
 --------------------------------------------------------------------------------
 
 Find information about how to use the CLI, showcases, supported cloud providers
 and much more at
 [our docs website](https://nebulant.app/docs/cli/index/).
+
+<br />
 
 🏁 Quick Start
 --------------------------------------------------------------------------------
@@ -51,7 +55,7 @@ AMIs)
 
 In order to execute this mode, run the CLI tool with the `serve` command:
 
-```
+```shell
 $ ./nebulant serve
 ```
 
@@ -70,13 +74,13 @@ it. You'll most probably want to do this in any of the following situations:
 
 Executing a blueprint is as simple as:
 
-```
+```shell
 $ ./nebulant run -f your_blueprint.nbp
 ```
 
 You can also fetch and run blueprints directly from the marketplace:
 
-```
+```shell
 $ ./nebulant run organization/collection/blueprint
 ```
 
@@ -84,13 +88,15 @@ Or from your own private organization, which requires you to sign up and create
 a token from the [Nebulant Panel](https://builder.nebulant.app) (check the
 `Nebulant CLI configuration` section for more info):
 
-```
+```shell
 $ export NEBULANT_TOKEN_ID=...
 $ export NEBULANT_TOKEN_SECRET=...
 $ ./nebulant run organization/collection/blueprint
 ```
 
 TODO: <^ PUT HERE A SHORT VIDEO OF THE ABOVE ^>
+
+<br />
 
 ⚙️ Building locally
 --------------------------------------------------------------------------------
@@ -99,17 +105,23 @@ If you want to compile the source code yourself, you can follow these steps:
 
 Using Docker:
 
-1. `docker compose -f docker-compose.yml build`
-2. `docker compose -f docker-compose.yml run buildenv all`
+```shell
+$ docker compose -f docker-compose.yml build
+$ docker compose -f docker-compose.yml run buildenv all
+```
 
 This will build the source code for all supported OSs and architectures.
 
 You can build the code for a specific combination of OS and architecture by
 replacing `all` with the desired target in the second command. Example:
 
-2. `docker compose -f docker-compose.yml run buildenv linux-amd64`
+```shell
+$ docker compose -f docker-compose.yml run buildenv linux-amd64
+```
 
 Check the table of supported OSs and architectures.
+
+<br />
 
 🖥️ Supported OSs and architectures:
 --------------------------------------------------------------------------------
@@ -121,6 +133,8 @@ Check the table of supported OSs and architectures.
 | openbsd | ✅  |  ✅   | ✅  | ✅   |
 | windows | ✅  |  ✅   | ✅  | ✅   |
 | darwin  | N/A |  ✅   | N/A | ✅   |
+
+<br />
 
 🧰 Reproducible Build
 --------------------------------------------------------------------------------
@@ -153,13 +167,14 @@ binaries.
 
 Removing the signature is as easy as:
 
-```
+```shell
 $ codesign --remove-signature nebulant-darwin-arm64
 $ xxd nebulant-darwin-arm64 > unsigned-nebulant-darwin-arm64
 ```
 
 Now you should be able to follow the 4th step and get no differences.
 
+<br />
 
 Nebulant CLI Configuration
 --------------------------------------------------------------------------------
@@ -180,31 +195,35 @@ multiple organizations.
 You can switch to a profile by either setting the following environment
 variable:
 
-```
+```shell
 $ export NEBULANT_CONF_PROFILE=my_profile
 ```
 
 Or by interactivelly selecting the desired profile:
 
-```
+```shell
 $ ./nebulant auth profiles <- ?????
 ```
 
 Alternatively, if you don't want to use profiles you can set the following
 environment variables:
 
-```
+```shell
 $ export NEBULANT_TOKEN_ID=...
 $ export NEBULANT_TOKEN_SECRET=...
 ```
 
 Note that environment variables will take precedence over config files.
 
+<br />
+
 🫡 Contributing
 --------------------------------------------------------------------------------
 
 If you find an issue, please report it on the
 [issue tracker](https://github.com/develatio/nebulant-cli/issues/new).
+
+<br />
 
 📑 License
 --------------------------------------------------------------------------------
