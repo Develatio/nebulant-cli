@@ -93,12 +93,14 @@ func main() {
 				os.Exit(1)
 			}
 			count++
-			select {
-			case executive.MDirector.ExecInstruction <- &executive.ExecCtrlInstruction{Instruction: executive.ExecShutdown}:
-				cast.LogInfo("gracefully shutdown started...", nil)
-				nhttpd.GetServer().Shutdown()
-			default:
-				cast.LogErr("cannot gracefully shutdown cli", nil)
+			if executive.MDirector != nil {
+				select {
+				case executive.MDirector.ExecInstruction <- &executive.ExecCtrlInstruction{Instruction: executive.ExecShutdown}:
+					cast.LogInfo("gracefully shutdown started...", nil)
+					nhttpd.GetServer().Shutdown()
+				default:
+					cast.LogErr("cannot gracefully shutdown cli", nil)
+				}
 			}
 		}
 	}()

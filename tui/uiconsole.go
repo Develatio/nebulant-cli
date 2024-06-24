@@ -20,12 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package cast
+package tui
 
 import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
@@ -33,9 +34,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/cast/uimenu"
+	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/tui/uimenu"
+	"github.com/develatio/nebulant-cli/tuicmd"
 )
+
+var waiter *sync.WaitGroup
 
 // sessionState is used to track which model is focused
 type sessionState uint
@@ -44,6 +49,7 @@ const (
 	defaultTime              = time.Minute
 	logState    sessionState = iota
 	menuState
+	emptyState
 	quitState
 )
 
@@ -84,13 +90,13 @@ type mainModel struct {
 	height   int
 	threads  map[string]bool
 	thfilter string
-	lk       *BusConsumerLink
+	lk       *cast.BusConsumerLink
 	dbglevel int
 }
 
-func frontUIModel(timeout time.Duration, l *BusConsumerLink) mainModel {
+func frontUIModel(timeout time.Duration, l *cast.BusConsumerLink) mainModel {
 	m := mainModel{
-		state:    menuState,
+		state:    logState,
 		lk:       l,
 		threads:  make(map[string]bool),
 		thfilter: "all",
@@ -133,6 +139,7 @@ func (m mainModel) updateQuitView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			fmt.Println("warn: cannot send interrupt signal :O")
 		}
+		m.state = emptyState
 		cmds = append(cmds, shutdownUI())
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -160,15 +167,15 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-	case *BusData:
+	case *cast.BusData:
 		cmds = append(cmds, readCastBusCmd(m.lk))
 		switch msg.TypeID {
-		case BusDataTypeLog:
-			s := FormatConsoleLogMsg(msg)
+		case cast.BusDataTypeLog:
+			s := cast.FormatConsoleLogMsg(msg)
 			if s != "" {
 				cmds = append(cmds, tea.Printf(s))
 			}
-		case BusDataTypeEOF:
+		case cast.BusDataTypeEOF:
 			select {
 			case m.lk.Off <- struct{}{}:
 				// ok
@@ -177,17 +184,17 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.lk.Degraded = true
 			cmds = append(cmds, shutdownUI())
-		case BusDataTypeEvent:
+		case cast.BusDataTypeEvent:
 			// a nil pointer err here is a dev fail
 			// never send event type without event id
 			switch *msg.EventID {
-			case EventNewThread:
+			case cast.EventNewThread:
 				m.threads[*msg.ThreadID] = true
-				mm := FormatConsoleLogMsg(msg)
+				mm := cast.FormatConsoleLogMsg(msg)
 				if mm != "" {
 					cmds = append(cmds, tea.Printf(mm))
 				}
-			case EventProgressStart:
+			case cast.EventProgressStart:
 				npr := &progressInfo{
 					progress: progress.New(
 						progress.WithDefaultGradient(),
@@ -200,7 +207,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.progress[msg.Extra["progressid"].(string)] = npr
 				m.progessslice = append(m.progessslice, npr)
 				cmds = append(cmds, npr.progress.SetPercent(0))
-			case EventProgressTick:
+			case cast.EventProgressTick:
 				size := msg.Extra["size"].(int64)
 				writed := msg.Extra["writed"].(int64)
 				pid := msg.Extra["progressid"].(string)
@@ -210,7 +217,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				} else {
 					cmds = append(cmds, pinfo.progress.SetPercent(float64(writed)/float64(size)))
 				}
-			case EventProgressEnd:
+			case cast.EventProgressEnd:
 				// TODO: add cmd?
 				pid := msg.Extra["progressid"].(string)
 				npr := m.progress[pid]
@@ -221,16 +228,23 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 				delete(m.progress, pid)
+			case cast.EventInteractiveMenuStart:
+				m.state = menuState
 			}
 		}
 		// TODO: do things with cmd chann
+	case uimenu.QuitMenuMsg:
+		m.state = logState
 	case tea.QuitMsg:
+		m.state = emptyState
 		return m, tea.Quit
 	case tea.KeyMsg:
 		if m.state == logState {
 			switch msg.String() {
 			case "ctrl+c", "q":
 				m.state = quitState
+			case "b":
+				cmds = append(cmds, tuicmd.OpenBuilderCmd())
 			case "6":
 				config.DEBUG = true
 			case "enter":
@@ -272,7 +286,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // waitForActivity
-func readCastBusCmd(cc *BusConsumerLink) tea.Cmd {
+func readCastBusCmd(cc *cast.BusConsumerLink) tea.Cmd {
 	return func() tea.Msg {
 		select {
 		case ff := <-cc.CommonChan:
@@ -325,6 +339,8 @@ func (m mainModel) View() string {
 	// render specific-state-view
 	var s string
 	switch m.state {
+	case emptyState:
+		s = ""
 	case menuState:
 		s = m.uimenu.View()
 	case logState:
@@ -336,7 +352,10 @@ func (m mainModel) View() string {
 	return vv + s
 }
 
-func StartUI(lk *BusConsumerLink) (tea.Model, error) {
+func StartUI(lk *cast.BusConsumerLink) (tea.Model, error) {
+	waiter.Add(1)
+	defer waiter.Done()
+	defer waiter.Done()
 	m := frontUIModel(defaultTime, lk)
 	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
@@ -345,4 +364,13 @@ func StartUI(lk *BusConsumerLink) (tea.Model, error) {
 	}
 	// stop cli?
 	return m, nil
+}
+
+func Wait() {
+	waiter.Wait()
+}
+
+func init() {
+	waiter = &sync.WaitGroup{}
+	waiter.Add(1)
 }

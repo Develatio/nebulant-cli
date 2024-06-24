@@ -23,11 +23,12 @@
 package subcom
 
 import (
-	"fmt"
+	"time"
 
-	"github.com/develatio/nebulant-cli/interactive"
+	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/term"
+	"github.com/develatio/nebulant-cli/tui"
 )
 
 func RegisterSubcommands() {
@@ -63,29 +64,17 @@ func RegisterSubcommands() {
 			Help:          "  interactive\t\t" + term.EmojiSet["Television"] + " Start interactive menu\n",
 			Sec:           subsystem.SecMain,
 			Call: func(nblc *subsystem.NBLcommand) (int, error) {
-				// Interactive mode
-				err := interactive.LoopV2(nblc)
-				if err != nil {
-					if err == term.ErrInterrupt {
-						fmt.Println("^C")
-						// cast.SBus.Close().Wait()
-						return 0, nil
-						// os.Exit(0)
-					}
-					if err == term.ErrEOF {
-						fmt.Println("^D")
-						// cast.SBus.Close().Wait()
-						return 0, nil
-						// os.Exit(0)
-					}
-					return 1, err
-					// exitCode := 1
-					// cast.LogErr(err.Error(), nil)
-					// os.Exit(exitCode)
-				}
-				// cast.SBus.Close().Wait()
+				cast.PushMixedLogEventBusData(&cast.BusData{
+					EventID:       cast.EP(cast.EventInteractiveMenuStart),
+					ActionID:      nil,
+					ActionName:    nil,
+					LogLevel:      cast.EP(cast.InfoLevel),
+					ThreadID:      nil,
+					ExecutionUUID: nil,
+					Timestamp:     time.Now().UTC().UnixMicro(),
+				})
+				tui.Wait()
 				return 0, nil
-				// os.Exit(0)
 			},
 		},
 		"auth": {

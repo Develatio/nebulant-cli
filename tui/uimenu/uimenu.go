@@ -23,12 +23,17 @@
 package uimenu
 
 import (
+	"errors"
 	"net"
+	"net/http"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/tuicmd"
 )
 
 type sessionState uint
@@ -40,9 +45,16 @@ const (
 	quitState
 )
 
+type QuitMenuMsg struct{}
+
 type Menu struct {
 	state    sessionState
 	mainForm *huh.Form
+}
+
+func emptyForm() *huh.Form {
+	return huh.NewForm(
+		huh.NewGroup(huh.NewNote()))
 }
 
 func rootForm() *huh.Form {
@@ -53,7 +65,8 @@ func rootForm() *huh.Form {
 				Title("Main menu. What do you want to do?").
 				Options(
 					huh.NewOption("Serve\tStart server mode at "+net.JoinHostPort(config.SERVER_ADDR, config.SERVER_PORT), "serve-cmd"),
-					huh.NewOption("Build\tOpen builder app and start server mode", "build-cmd"),
+					huh.NewOption("Build\tOpen builder app into the web browser", "build-cmd"),
+					huh.NewOption("Panel\tOpen panel app into the web browser", "panel-cmd"),
 					huh.NewOption("Path\tManually indicates the path to a blueprint", "filepicker-form"),
 					huh.NewOption("Browse\tBrowse and run the blueprints stored in your account", "browser-form"),
 					huh.NewOption("Exit\tExit Nebulant CLI", "exit-cmd"),
@@ -67,7 +80,7 @@ func filepickerForm() *huh.Form {
 			huh.NewFilePicker().
 				Key("value").
 				Title("File Picker").
-				Description("Select blueprint file"),
+				Description("Select blueprint file").Picking(true).CurrentDirectory("/").ShowHidden(true),
 		).WithShowHelp(true),
 	).WithHeight(25)
 	fp.Init()
@@ -96,21 +109,70 @@ func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if f.State == huh.StateCompleted {
 			kl := f.GetString("value")
 			cmds = append(cmds, tea.Println(kl))
-
 			switch kl {
 			case "":
 				cmds = append(cmds, tea.Println("none select, come back?"))
+			case "panel-cmd":
+				cmds = append(cmds, tuicmd.OpenPannelCmd())
+				m.mainForm = rootForm()
+			case "build-cmd":
+				cmds = append(cmds, tuicmd.OpenBuilderCmd())
+				m.mainForm = rootForm()
+			case "serve-cmd":
+				// cmds = append(cmds, tui.StartBuilderCmd())
+				cmds = append(cmds, startServerModeCmd(), QuitMenuCmd())
+				m.mainForm = emptyForm()
 			case "filepicker-form":
 				m.mainForm = filepickerForm()
+			case "exit-cmd":
+				cmds = append(cmds, QuitMenuCmd(), tea.Quit)
+				m.mainForm = emptyForm()
 			default:
 				m.mainForm = rootForm()
 			}
 			// m.mainForm = rootForm()
+		} else if f.State == huh.StateAborted {
+			// maybe return to uiconsole or launch tea.quit?
+			m.mainForm = rootForm()
 		} else {
 			m.mainForm = f
+			// switch msg := msg.(type) {
+			// case tea.KeyMsg:
+			// 	switch msg.String() {
+			// 	case "esc":
+			// 		fmt.Println("asdf")
+
+			// 		if fp, ok := form.(*huh.FilePicker); ok {
+			// 			fmt.Println("asdf2")
+			// 			// zoom appears to return f.picking of filepicker
+			// 			if !fp.Zoom() {
+			// 				m.mainForm = rootForm()
+			// 			}
+			// 		}
+			// 	case "h":
+			// 		m.mainForm = f
+			// 		// TOOD: show help¿
+			// 	default:
+			// 		m.mainForm = f
+			// 	}
+			// }
 		}
 		// f.State = huh.StateNormal
 	}
+
+	// switch msg := msg.(type) {
+	// case tea.KeyMsg:
+	// 	switch msg.String() {
+	// 	case "esc":
+	// 		if m.state == quitState {
+	// 			return m, confirmQuit()
+	// 		}
+	// 	case "n":
+	// 		if m.state == quitState {
+	// 			m.state = logState
+	// 		}
+	// 	}
+	// }
 
 	return m, tea.Batch(cmds...)
 }
@@ -129,6 +191,32 @@ func (m *Menu) View() string {
 	// // footer := m.mainForm.Help().ShortHelpView(m.mainForm.KeyBinds())
 
 	// return body + "\n\n" + footer
+}
+
+func startServerModeCmd() tea.Cmd {
+	return func() tea.Msg {
+		// TODO starting server mode cannot go back to menu
+		// so we dont need uimenu anymore, exit from uimenu :)
+		// err := executive.InitDirector(true, true) // Server mode
+		// if err != nil {
+		// 	cast.LogErr(err.Error(), nil)
+		// }
+		errc := executive.InitServerMode()
+		err := <-errc
+		if err != nil {
+			if !errors.Is(err, http.ErrServerClosed) {
+				cast.LogErr(err.Error(), nil)
+			}
+		}
+		executive.MDirector.Wait()
+		return nil // TODO: return servermode stopped msg?
+	}
+}
+
+func QuitMenuCmd() tea.Cmd {
+	return func() tea.Msg {
+		return QuitMenuMsg{}
+	}
 }
 
 func (m *Menu) Init() tea.Cmd {

@@ -153,6 +153,7 @@ const (
 	EventProgressStart
 	EventProgressTick
 	EventProgressEnd
+	EventInteractiveMenuStart
 )
 
 // BusData struct

@@ -156,7 +156,7 @@ func (c *ConsoleLogger) setDefaultTheme() {
 }
 
 // InitConsoleLogger func
-func InitConsoleLogger() {
+func InitConsoleLogger(upgrader func(*BusConsumerLink) error) {
 	threadcolor = make(map[string]string)
 	fLink := &BusConsumerLink{
 		Name:           "Console",
@@ -174,16 +174,17 @@ func InitConsoleLogger() {
 	// go clogger.readCastBus()
 
 	go func() {
-		_, err := StartUI(fLink)
-		if err != nil {
-			LogErr(errors.Join(fmt.Errorf("a problem in TUI ocurred. Downgroading to non-interactive console mode"), err).Error(), nil)
+		if upgrader != nil {
+			err := upgrader(fLink)
+			if err != nil {
+				LogErr(errors.Join(fmt.Errorf("a problem in TUI ocurred. Downgroading to non-interactive console mode"), err).Error(), nil)
+			}
 		}
+
 		// on TUI exit (gracefully or with err, start basic logger to print last shutdown msgs)
 		if !fLink.Degraded {
-			// fmt.Println("not degraded")
 			clogger.readCastBus()
 		} else {
-			// fmt.Println("degraded")
 			SBus.castWaiter.Done()
 		}
 	}()
