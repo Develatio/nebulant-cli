@@ -89,7 +89,7 @@ type ProfileOrganization struct {
 // Profile struct
 type Profile struct {
 	Name         string              `json:"name"`
-	Organization ProfileOrganization `json:"organization" validate:"required"`
+	Organization ProfileOrganization `json:"current_organization" validate:"required"`
 }
 
 func createEmptyCredentialsFile() (int, error) {
