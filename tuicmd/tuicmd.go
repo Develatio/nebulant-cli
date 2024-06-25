@@ -23,13 +23,25 @@
 package tuicmd
 
 import (
+	"fmt"
 	"net/url"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/executive"
 	"github.com/develatio/nebulant-cli/util"
 )
+
+// run remote bp has end
+type RunRemoteBPCmdENDMsg struct{ Err error }
+
+// run remote bp has start
+type RunRemoteBPCmdStartMsg struct{}
+
+// quit process request
+type QuitStateMsg struct{}
 
 func OpenBuilderCmd() tea.Cmd {
 	return func() tea.Msg {
@@ -53,5 +65,37 @@ func OpenPannelCmd() tea.Cmd {
 			cast.LogWarn(err.Error(), nil)
 		}
 		return nil
+	}
+}
+
+// RunRemoteBPCmd run a remote bp, returns RunRemoteBPCmdENDMsg wich has
+// Err attr to feedback if any error ocurrs
+func RunRemoteBPCmd(orgSlug, collSlug, bpSlug, bpVersion string) tea.Cmd {
+	return func() tea.Msg {
+		cast.LogInfo("Obtaining blueprint "+bpSlug+"...", nil)
+		nbPath := fmt.Sprintf("%s/%s/%s:%s", orgSlug, collSlug, bpSlug, bpVersion)
+		bpUrl, err := blueprint.ParseURL(nbPath)
+		if err != nil {
+			return RunRemoteBPCmdENDMsg{Err: err}
+		}
+		irb, err := blueprint.NewIRBFromAny(bpUrl, &blueprint.IRBGenConfig{})
+		if err != nil {
+			return RunRemoteBPCmdENDMsg{Err: err}
+		}
+		err = executive.InitDirector(false, true)
+		if err != nil {
+			return RunRemoteBPCmdENDMsg{Err: err}
+		}
+		executive.MDirector.HandleIRB <- &executive.HandleIRBConfig{IRB: irb}
+		executive.MDirector.Wait()
+		executive.RemoveDirector()
+		return RunRemoteBPCmdENDMsg{}
+	}
+}
+
+// return the QuitStateMsg to inform the program to start the quit process
+func StartQuitState() tea.Cmd {
+	return func() tea.Msg {
+		return QuitStateMsg{}
 	}
 }

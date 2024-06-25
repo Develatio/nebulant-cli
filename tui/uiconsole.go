@@ -69,6 +69,9 @@ type progressInfo struct {
 
 type mainModel struct {
 	state sessionState
+	// state before the quitState: the state that should
+	// be restored after quit "n" answer
+	quitRejectState sessionState
 	// timer timer.Model
 	// table   table.Model
 	progress     map[string]*progressInfo
@@ -96,13 +99,14 @@ type mainModel struct {
 
 func frontUIModel(timeout time.Duration, l *cast.BusConsumerLink) mainModel {
 	m := mainModel{
-		state:    logState,
-		lk:       l,
-		threads:  make(map[string]bool),
-		thfilter: "all",
-		progress: make(map[string]*progressInfo),
-		dbglevel: 6,
-		uimenu:   uimenu.New(),
+		state:           logState,
+		quitRejectState: logState,
+		lk:              l,
+		threads:         make(map[string]bool),
+		thfilter:        "all",
+		progress:        make(map[string]*progressInfo),
+		dbglevel:        6,
+		uimenu:          uimenu.New(),
 	}
 
 	// spinner
@@ -144,13 +148,12 @@ func (m mainModel) updateQuitView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "y":
-			if m.state == quitState {
-				return m, confirmQuit()
-			}
+			return m, confirmQuit()
 		case "n":
-			if m.state == quitState {
-				m.state = logState
-			}
+			fmt.Println(m.state, m.quitRejectState)
+			m.state = m.quitRejectState
+		default:
+			tea.Println(msg)
 		}
 	}
 
@@ -235,13 +238,21 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// TODO: do things with cmd chann
 	case uimenu.QuitMenuMsg:
 		m.state = logState
+	case tuicmd.RunRemoteBPCmdStartMsg:
+		m.state = logState
+	case tuicmd.RunRemoteBPCmdENDMsg:
+		m.state = menuState
 	case tea.QuitMsg:
 		m.state = emptyState
 		return m, tea.Quit
+	case tuicmd.QuitStateMsg:
+		m.quitRejectState = m.state
+		m.state = quitState
 	case tea.KeyMsg:
 		if m.state == logState {
 			switch msg.String() {
 			case "ctrl+c", "q":
+				m.quitRejectState = m.state
 				m.state = quitState
 			case "b":
 				cmds = append(cmds, tuicmd.OpenBuilderCmd())
@@ -276,7 +287,8 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		_, cmdss := m.uimenu.Update(msg)
 		cmds = append(cmds, cmdss)
 	case quitState:
-		_, cmdss := m.updateQuitView(msg)
+		_m, cmdss := m.updateQuitView(msg)
+		m = _m.(mainModel)
 		cmds = append(cmds, cmdss)
 	case logState:
 		//

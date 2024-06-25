@@ -33,31 +33,33 @@ import (
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/tui/uibrowser"
 	"github.com/develatio/nebulant-cli/tuicmd"
 )
 
-type sessionState uint
+type formState uint
 
 const (
-	defaultTime              = time.Minute
-	rootState   sessionState = iota
-	menuState
-	quitState
+	defaultTime           = time.Minute
+	rootState   formState = iota
+	filepickerState
+	browserState
+	emptyState
 )
 
 type QuitMenuMsg struct{}
 
 type Menu struct {
-	state    sessionState
-	mainForm *huh.Form
+	state    formState
+	mainForm tea.Model
 }
 
-func emptyForm() *huh.Form {
+func emptyForm() (*huh.Form, formState) {
 	return huh.NewForm(
-		huh.NewGroup(huh.NewNote()))
+		huh.NewGroup(huh.NewNote())), emptyState
 }
 
-func rootForm() *huh.Form {
+func rootForm() (*huh.Form, formState) {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[string]().
@@ -71,10 +73,10 @@ func rootForm() *huh.Form {
 					huh.NewOption("Browse\tBrowse and run the blueprints stored in your account", "browser-form"),
 					huh.NewOption("Exit\tExit Nebulant CLI", "exit-cmd"),
 				),
-		))
+		)), rootState
 }
 
-func filepickerForm() *huh.Form {
+func filepickerForm() (*huh.Form, formState) {
 	fp := huh.NewForm(
 		huh.NewGroup(
 			huh.NewFilePicker().
@@ -84,13 +86,22 @@ func filepickerForm() *huh.Form {
 		).WithShowHelp(true),
 	).WithHeight(25)
 	fp.Init()
-	return fp
+	return fp, filepickerState
+}
+
+func BrowserForm() (*uibrowser.BrowserForm, formState, error) {
+	br, err := uibrowser.New()
+	if err != nil {
+		return nil, emptyState, err
+	}
+	return br, browserState, nil
 }
 
 func newModel() Menu {
+	f, s := rootForm()
 	return Menu{
-		state:    menuState,
-		mainForm: rootForm(),
+		state:    s,
+		mainForm: f,
 	}
 }
 
@@ -108,56 +119,64 @@ func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if f, ok := form.(*huh.Form); ok {
 		if f.State == huh.StateCompleted {
 			kl := f.GetString("value")
-			cmds = append(cmds, tea.Println(kl))
 			switch kl {
 			case "":
 				cmds = append(cmds, tea.Println("none select, come back?"))
 			case "panel-cmd":
 				cmds = append(cmds, tuicmd.OpenPannelCmd())
-				m.mainForm = rootForm()
+				m.mainForm, m.state = rootForm()
 			case "build-cmd":
 				cmds = append(cmds, tuicmd.OpenBuilderCmd())
-				m.mainForm = rootForm()
+				m.mainForm, m.state = rootForm()
 			case "serve-cmd":
 				// cmds = append(cmds, tui.StartBuilderCmd())
 				cmds = append(cmds, startServerModeCmd(), QuitMenuCmd())
-				m.mainForm = emptyForm()
+				m.mainForm, m.state = emptyForm()
 			case "filepicker-form":
-				m.mainForm = filepickerForm()
+				m.mainForm, m.state = filepickerForm()
+			case "browser-form":
+				var err error
+				m.mainForm, m.state, err = BrowserForm()
+				if err != nil {
+					cast.LogErr(err.Error(), nil)
+					m.mainForm, m.state = rootForm()
+				}
 			case "exit-cmd":
-				cmds = append(cmds, QuitMenuCmd(), tea.Quit)
-				m.mainForm = emptyForm()
+				cmds = append(cmds, tuicmd.StartQuitState())
+				m.mainForm, m.state = rootForm()
 			default:
-				m.mainForm = rootForm()
+				m.mainForm, m.state = rootForm()
 			}
-			// m.mainForm = rootForm()
+			// m.mainForm, m.state = rootForm()
 		} else if f.State == huh.StateAborted {
 			// maybe return to uiconsole or launch tea.quit?
-			m.mainForm = rootForm()
+			m.mainForm, m.state = rootForm()
 		} else {
-			m.mainForm = f
-			// switch msg := msg.(type) {
-			// case tea.KeyMsg:
-			// 	switch msg.String() {
-			// 	case "esc":
-			// 		fmt.Println("asdf")
-
-			// 		if fp, ok := form.(*huh.FilePicker); ok {
-			// 			fmt.Println("asdf2")
-			// 			// zoom appears to return f.picking of filepicker
-			// 			if !fp.Zoom() {
-			// 				m.mainForm = rootForm()
-			// 			}
-			// 		}
-			// 	case "h":
-			// 		m.mainForm = f
-			// 		// TOOD: show help¿
-			// 	default:
-			// 		m.mainForm = f
-			// 	}
-			// }
+			switch msg := msg.(type) {
+			case tea.KeyMsg:
+				switch msg.String() {
+				case "esc":
+					if m.state == filepickerState {
+						m.mainForm, m.state = rootForm()
+					}
+				case "h":
+					m.mainForm = f
+					// TOOD: show help¿
+				default:
+					m.mainForm = f
+				}
+			default:
+				m.mainForm = f
+			}
 		}
 		// f.State = huh.StateNormal
+	} else {
+		// non-form, here is the browser model
+	}
+
+	switch msg.(type) {
+	case uibrowser.QuitBrowserMsg:
+		m.mainForm, m.state = rootForm()
 	}
 
 	// switch msg := msg.(type) {
