@@ -33,6 +33,7 @@ import (
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/tui/uiauth"
 	"github.com/develatio/nebulant-cli/tui/uibrowser"
 	"github.com/develatio/nebulant-cli/tuicmd"
 )
@@ -44,6 +45,7 @@ const (
 	rootState   formState = iota
 	filepickerState
 	browserState
+	authState
 	emptyState
 )
 
@@ -70,6 +72,7 @@ func rootForm() (*huh.Form, formState) {
 					huh.NewOption("Build\tOpen builder app into the web browser", "build-cmd"),
 					huh.NewOption("Panel\tOpen panel app into the web browser", "panel-cmd"),
 					huh.NewOption("Path\tManually indicates the path to a blueprint", "filepicker-form"),
+					huh.NewOption("Auth\tManage tokens", "auth-cmd"),
 					huh.NewOption("Browse\tBrowse and run the blueprints stored in your account", "browser-form"),
 					huh.NewOption("Exit\tExit Nebulant CLI", "exit-cmd"),
 				),
@@ -97,6 +100,14 @@ func BrowserForm() (*uibrowser.BrowserForm, formState, error) {
 	return br, browserState, nil
 }
 
+func AuthForm() (*uiauth.AuthForm, formState, error) {
+	br, err := uiauth.New()
+	if err != nil {
+		return nil, emptyState, err
+	}
+	return br, authState, nil
+}
+
 func newModel() Menu {
 	f, s := rootForm()
 	return Menu{
@@ -104,13 +115,6 @@ func newModel() Menu {
 		mainForm: f,
 	}
 }
-
-// type YesQuitMsg struct{}
-
-// func (m *Menu) Init() tea.Cmd {
-// 	// start the timer and spinner on program start
-// 	return tea.Batch(m.spinner.Tick, readCastBusCmd(m.lk))
-// }
 
 func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
@@ -121,7 +125,8 @@ func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			kl := f.GetString("value")
 			switch kl {
 			case "":
-				cmds = append(cmds, tea.Println("none select, come back?"))
+				cast.LogErr("Unknown cmd", nil)
+				m.mainForm, m.state = rootForm()
 			case "panel-cmd":
 				cmds = append(cmds, tuicmd.OpenPannelCmd())
 				m.mainForm, m.state = rootForm()
@@ -137,6 +142,13 @@ func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "browser-form":
 				var err error
 				m.mainForm, m.state, err = BrowserForm()
+				if err != nil {
+					cast.LogErr(err.Error(), nil)
+					m.mainForm, m.state = rootForm()
+				}
+			case "auth-cmd":
+				var err error
+				m.mainForm, m.state, err = AuthForm()
 				if err != nil {
 					cast.LogErr(err.Error(), nil)
 					m.mainForm, m.state = rootForm()
@@ -177,6 +189,8 @@ func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
 	case uibrowser.QuitBrowserMsg:
 		m.mainForm, m.state = rootForm()
+	case uiauth.QuitAuthMsg:
+		m.mainForm, m.state = rootForm()
 	}
 
 	// switch msg := msg.(type) {
@@ -197,19 +211,7 @@ func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Menu) View() string {
-
-	// return lipgloss.NewStyle().
-	// 	SetString("What’s for lunch?").
-	// 	Height(32).
-	// 	Foreground(lipgloss.Color("63")).Render(m.mainForm.View())
-
 	return m.mainForm.View()
-
-	// body := lipgloss.JoinHorizontal(lipgloss.Top, m.mainForm.View())
-	// return body
-	// // footer := m.mainForm.Help().ShortHelpView(m.mainForm.KeyBinds())
-
-	// return body + "\n\n" + footer
 }
 
 func startServerModeCmd() tea.Cmd {

@@ -147,7 +147,7 @@ func (m mainModel) updateQuitView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, shutdownUI())
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "y":
+		case "y", "enter":
 			return m, confirmQuit()
 		case "n":
 			fmt.Println(m.state, m.quitRejectState)
@@ -326,7 +326,7 @@ func renderHelp() string {
 }
 
 func (m mainModel) quitView() string {
-	text := lipgloss.JoinHorizontal(lipgloss.Top, "Are you sure you want to leave Nebulant CLI?", choiceStyle.Render("[yn]"))
+	text := lipgloss.JoinHorizontal(lipgloss.Top, "Are you sure you want to leave Nebulant CLI?", choiceStyle.Render("[Yn]"))
 	return quitViewStyle.Render(text)
 }
 

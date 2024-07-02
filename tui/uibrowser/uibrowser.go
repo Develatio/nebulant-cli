@@ -347,40 +347,8 @@ func msgRunRemoteStartCmd() tea.Cmd {
 }
 
 func (m *BrowserForm) View() string {
-
-	// return lipgloss.NewStyle().
-	// 	SetString("What’s for lunch?").
-	// 	Height(32).
-	// 	Foreground(lipgloss.Color("63")).Render(m.mainForm.View())
-
 	return m.mainForm.View()
-
-	// body := lipgloss.JoinHorizontal(lipgloss.Top, m.mainForm.View())
-	// return body
-	// // footer := m.mainForm.Help().ShortHelpView(m.mainForm.KeyBinds())
-
-	// return body + "\n\n" + footer
 }
-
-// func startServerModeCmd() tea.Cmd {
-// 	return func() tea.Msg {
-// 		// TODO starting server mode cannot go back to menu
-// 		// so we dont need uimenu anymore, exit from uimenu :)
-// 		// err := executive.InitDirector(true, true) // Server mode
-// 		// if err != nil {
-// 		// 	cast.LogErr(err.Error(), nil)
-// 		// }
-// 		errc := executive.InitServerMode()
-// 		err := <-errc
-// 		if err != nil {
-// 			if !errors.Is(err, http.ErrServerClosed) {
-// 				cast.LogErr(err.Error(), nil)
-// 			}
-// 		}
-// 		executive.MDirector.Wait()
-// 		return nil // TODO: return servermode stopped msg?
-// 	}
-// }
 
 func QuitBrowserCmd() tea.Cmd {
 	return func() tea.Msg {
