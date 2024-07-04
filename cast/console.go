@@ -170,22 +170,23 @@ func InitConsoleLogger(upgrader func(*BusConsumerLink) error) {
 	SBus.connect <- fLink
 	SBus.castWaiter.Add(1)
 
-	// TODO: if interactive/no term
-	// go clogger.readCastBus()
-
-	go func() {
-		if upgrader != nil {
-			err := upgrader(fLink)
-			if err != nil {
-				LogErr(errors.Join(fmt.Errorf("a problem in TUI ocurred. Downgroading to non-interactive console mode"), err).Error(), nil)
+	if !term.IsTerminal() {
+		go clogger.readCastBus()
+	} else {
+		go func() {
+			if upgrader != nil {
+				err := upgrader(fLink)
+				if err != nil {
+					LogErr(errors.Join(fmt.Errorf("a problem in TUI ocurred. Downgroading to non-interactive console mode"), err).Error(), nil)
+				}
 			}
-		}
 
-		// on TUI exit (gracefully or with err, start basic logger to print last shutdown msgs)
-		if !fLink.Degraded {
-			clogger.readCastBus()
-		} else {
-			SBus.castWaiter.Done()
-		}
-	}()
+			// on TUI exit (gracefully or with err, start basic logger to print last shutdown msgs)
+			if !fLink.Degraded {
+				clogger.readCastBus()
+			} else {
+				SBus.castWaiter.Done()
+			}
+		}()
+	}
 }

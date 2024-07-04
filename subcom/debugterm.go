@@ -152,17 +152,12 @@ func testScanln() (int, error) {
 	}()
 
 	counter2 := 0
-	lin := term.AppendLine()
-	defer lin.Close()
+	// lin := term.AppendLine()
+	// defer lin.Close()
 L:
 	for {
 		counter2++
-
-		var vv string
-		_, err := lin.Scanln("Nebulant "+strconv.Itoa(counter2)+"> ", nil, &vv)
-		if err != nil {
-			return 1, err
-		}
+		vv := <-cast.PromptInput("> ", "")
 		switch vv {
 		case "exit":
 			break L

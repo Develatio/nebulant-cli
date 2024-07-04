@@ -80,7 +80,7 @@ var EraseDisplay string = "\033[2J"
 
 var IdentifyDevice string = "\033Z"
 
-var mls *MultilineStdout = nil
+// var mls *MultilineStdout = nil
 
 var colors = []string{
 	White,
@@ -130,7 +130,7 @@ func (n *noBellStdout) Close() error {
 
 var NoBellStdout = &noBellStdout{}
 
-func isTerminal() bool {
+func IsTerminal() bool {
 	// return true
 	// if config.ForceTerm != nil && *config.ForceTerm {
 	// 	return true
@@ -141,13 +141,13 @@ func isTerminal() bool {
 	return term.IsTerminal(int(os.Stdout.Fd()))
 }
 
-func AppendLine() *oneLineWriteCloser {
-	return mls.AppendLine()
-}
+// func AppendLine() *oneLineWriteCloser {
+// 	return mls.AppendLine()
+// }
 
-func Selectable(prompt string, options []string) (int, error) {
-	return mls.SelectTest(prompt, options)
-}
+// func Selectable(prompt string, options []string) (int, error) {
+// 	return mls.SelectTest(prompt, options)
+// }
 
 // func openMultilineStdout() {
 // 	return
@@ -180,47 +180,6 @@ func Println(a ...interface{}) (n int, err error) {
 
 func Print(a ...interface{}) (n int, err error) {
 	return fmt.Fprint(Stdout, a...)
-}
-
-// I know, this is too intrusive
-// way to check emoji support
-func configEmojiSupport() error {
-	width, _, err := term.GetSize(int(os.Stdout.Fd()))
-	if err != nil {
-		return err
-	}
-	fmt.Print("🔧")
-	fmt.Print("\b")
-	fmt.Print("🔧")
-	count := width - 3
-	for i := 0; i < count; i++ {
-		fmt.Print("*")
-	}
-	cpos, _, err := getCursorPosition()
-	if err != nil {
-		return err
-	}
-	if cpos == 0 {
-		EmojiSet = noEmojiSupportSet
-		_, err := Print(CursorUp)
-		if err != nil {
-			return err
-		}
-	}
-	fmt.Print("\b\b\b")
-	_, err = Print(EraseEntireLine)
-	if err != nil {
-		return err
-	}
-	_, err = Print("\n")
-	if err != nil {
-		return err
-	}
-	_, err = Print(CursorUp)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func ConfigColors() {
@@ -257,12 +216,6 @@ func UpgradeTerm() error {
 		log.SetFlags(0)
 	}
 
-	// if isTerminal() {
-	// 	err = configEmojiSupport()
-	// 	if err != nil {
-	// 		return errors.Join(fmt.Errorf("cannot configure emoji support"), err)
-	// 	}
-	// }
 	err = EnableColorSupport()
 	if err != nil {
 		return errors.Join(fmt.Errorf("cannot enable colors"), err)

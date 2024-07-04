@@ -154,7 +154,34 @@ const (
 	EventProgressTick
 	EventProgressEnd
 	EventInteractiveMenuStart
+	EventPrompt
 )
+
+// EventPromptType int
+type EventPromptType int
+
+const (
+	EventPromptTypeInput EventPromptType = iota
+	EventPromptTypeSelect
+	EventPromptTypeBool
+)
+
+type EventPromptOptsValidateOpts struct {
+	ValueType  string // int, string ...
+	AllowNull  bool
+	AllowEmpty bool
+}
+
+type EventPromptOpts struct {
+	Type         EventPromptType   `json:"type"`
+	PromptTitle  string            `json:"prompt_title"`
+	DefaultValue string            `json:"default_value"`
+	Options      map[string]string `json:"options"` // for select
+	// for responses
+	Value chan string
+	//
+	Validate *EventPromptOptsValidateOpts `json:"validate"`
+}
 
 // BusData struct
 type BusData struct {
@@ -185,7 +212,8 @@ type BusData struct {
 	// Filtered feedback, sent only to client with this UUID
 	ClientUUIDFilter *string `json:"-"`
 	// Raw data
-	Raw bool `json:"raw,omitempty"`
+	Raw bool             `json:"raw,omitempty"`
+	EPO *EventPromptOpts `json:"epo,omitempty"`
 }
 
 // BusConsumerLink struct.
@@ -773,4 +801,87 @@ func (b *BusInfo) GetLoad() float64 {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.Load
+}
+
+func PromptInput(title string, def string) chan string {
+	bdata := &BusData{
+		TypeID:    BusDataTypeEvent,
+		EventID:   EP(EventPrompt),
+		Timestamp: time.Now().UTC().UnixMicro(),
+		EPO: &EventPromptOpts{
+			Type:         EventPromptTypeInput,
+			PromptTitle:  title,
+			DefaultValue: def,
+			Value:        make(chan string, 1),
+			Validate: &EventPromptOptsValidateOpts{
+				ValueType:  "string",
+				AllowNull:  false,
+				AllowEmpty: false,
+			},
+		},
+	}
+	PushBusData(bdata)
+	return bdata.EPO.Value
+}
+
+func PromptInt(title string, def string) chan string {
+	bdata := &BusData{
+		TypeID:    BusDataTypeEvent,
+		EventID:   EP(EventPrompt),
+		Timestamp: time.Now().UTC().UnixMicro(),
+		EPO: &EventPromptOpts{
+			Type:         EventPromptTypeInput,
+			PromptTitle:  title,
+			DefaultValue: def,
+			Value:        make(chan string, 1),
+			Validate: &EventPromptOptsValidateOpts{
+				ValueType:  "int",
+				AllowNull:  false,
+				AllowEmpty: false,
+			},
+		},
+	}
+	PushBusData(bdata)
+	return bdata.EPO.Value
+}
+
+func PromptSelect(title string, options map[string]string) chan string {
+	bdata := &BusData{
+		TypeID:    BusDataTypeEvent,
+		EventID:   EP(EventPrompt),
+		Timestamp: time.Now().UTC().UnixMicro(),
+		EPO: &EventPromptOpts{
+			Type:        EventPromptTypeSelect,
+			PromptTitle: title,
+			Options:     options,
+			Value:       make(chan string, 1),
+			Validate: &EventPromptOptsValidateOpts{
+				ValueType:  "string",
+				AllowNull:  false,
+				AllowEmpty: false,
+			},
+		},
+	}
+	PushBusData(bdata)
+	return bdata.EPO.Value
+}
+
+func PromptBool(title string) chan string {
+	bdata := &BusData{
+		TypeID:    BusDataTypeEvent,
+		EventID:   EP(EventPrompt),
+		Timestamp: time.Now().UTC().UnixMicro(),
+		EPO: &EventPromptOpts{
+			Type:        EventPromptTypeBool,
+			PromptTitle: title,
+			Value:       make(chan string, 1),
+			Validate: &EventPromptOptsValidateOpts{
+				ValueType:  "bool",
+				AllowNull:  false,
+				AllowEmpty: false,
+			},
+		},
+	}
+	PushBusData(bdata)
+	return bdata.EPO.Value
 }

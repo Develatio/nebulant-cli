@@ -53,7 +53,6 @@ import (
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/cast"
-	"github.com/develatio/nebulant-cli/term"
 	"github.com/develatio/nebulant-cli/util"
 )
 
@@ -395,8 +394,6 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	ctx.Logger.LogDebug("Storing http response into tmp file " + f.Name())
 
-	lin := term.AppendLine()
-	defer lin.Close()
 	bar := cast.NewProgress(resp.ContentLength, path.Base(u.Path), "", "", "", "")
 	if err != nil {
 		return nil, err

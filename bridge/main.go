@@ -40,7 +40,7 @@ var exitCode = 0
 
 func main() {
 	cast.InitSystemBus()
-	cast.InitConsoleLogger()
+	cast.InitConsoleLogger(nil)
 	defer func() {
 		if r := recover(); r != nil {
 			exitCode = 1
