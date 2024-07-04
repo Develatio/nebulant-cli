@@ -25,6 +25,7 @@ package tui
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -151,20 +152,24 @@ func newPrompt(b *cast.BusData) (*huh.Form, tea.Cmd) {
 		inp := huh.NewInput().
 			Key("value").
 			Title(b.EPO.PromptTitle)
+		v := func(val string) error {
+			if b.EPO.Validate.ValueType == "int" {
+				_, err := strconv.Atoi(val)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+			// assume type string below this line
+			if !b.EPO.Validate.AllowEmpty && val == "" {
+				return fmt.Errorf("empty value not allowed")
+			}
+			return nil
+		}
+		inp.Validate(v)
 		cmd = inp.Focus()
 		f = huh.NewForm(
 			huh.NewGroup(inp))
-		// p.m = huh.NewInput().
-		// Title(p.b.EPO.PromptTitle).
-		// Key("value").
-		// Validating fields is easy. The form will mark erroneous fields
-		// and display error messages accordingly.
-		// Validate(func(str string) error {
-		// 	if str == "Frank" {
-		// 		return errors.New("Sorry, we don’t serve customers named Frank.")
-		// 	}
-		// 	return nil
-		// }),
 	case cast.EventPromptTypeSelect:
 		var options []huh.Option[string]
 		for v, l := range b.EPO.Options {
