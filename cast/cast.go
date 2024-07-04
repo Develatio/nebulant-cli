@@ -170,7 +170,6 @@ const (
 
 type EventPromptOptsValidateOpts struct {
 	ValueType  string // int, string ...
-	AllowNull  bool
 	AllowEmpty bool
 }
 
@@ -806,7 +805,7 @@ func (b *BusInfo) GetLoad() float64 {
 	return b.Load
 }
 
-func PromptInput(title string, def string) (chan string, error) {
+func PromptInput(title string, required bool, def string) (chan string, error) {
 	uid7, err := uuid.NewV7()
 	if err != nil {
 		return nil, err
@@ -823,8 +822,7 @@ func PromptInput(title string, def string) (chan string, error) {
 			value:        make(chan string, 1),
 			Validate: &EventPromptOptsValidateOpts{
 				ValueType:  "string",
-				AllowNull:  false,
-				AllowEmpty: false,
+				AllowEmpty: !required,
 			},
 		},
 	}
@@ -832,7 +830,7 @@ func PromptInput(title string, def string) (chan string, error) {
 	return bdata.EPO.value, nil
 }
 
-func PromptInt(title string, def string) (chan string, error) {
+func PromptInt(title string, required bool, def string) (chan string, error) {
 	uid7, err := uuid.NewV7()
 	if err != nil {
 		return nil, err
@@ -849,8 +847,7 @@ func PromptInt(title string, def string) (chan string, error) {
 			value:        make(chan string, 1),
 			Validate: &EventPromptOptsValidateOpts{
 				ValueType:  "int",
-				AllowNull:  false,
-				AllowEmpty: false,
+				AllowEmpty: !required,
 			},
 		},
 	}
@@ -858,7 +855,7 @@ func PromptInt(title string, def string) (chan string, error) {
 	return bdata.EPO.value, nil
 }
 
-func PromptSelect(title string, options map[string]string) (chan string, error) {
+func PromptSelect(title string, required bool, options map[string]string) (chan string, error) {
 	uid7, err := uuid.NewV7()
 	if err != nil {
 		return nil, err
@@ -875,8 +872,7 @@ func PromptSelect(title string, options map[string]string) (chan string, error) 
 			value:       make(chan string, 1),
 			Validate: &EventPromptOptsValidateOpts{
 				ValueType:  "string",
-				AllowNull:  false,
-				AllowEmpty: false,
+				AllowEmpty: !required,
 			},
 		},
 	}
@@ -884,7 +880,9 @@ func PromptSelect(title string, options map[string]string) (chan string, error) 
 	return bdata.EPO.value, nil
 }
 
-func PromptBool(title string) (chan string, error) {
+// PromptBool
+// def is true or false string
+func PromptBool(title string, required bool, def string) (chan string, error) {
 	uid7, err := uuid.NewV7()
 	if err != nil {
 		return nil, err
@@ -894,14 +892,14 @@ func PromptBool(title string) (chan string, error) {
 		EventID:   EP(EventPrompt),
 		Timestamp: time.Now().UTC().UnixMicro(),
 		EPO: &EventPromptOpts{
-			UUID:        uid7.String(),
-			Type:        EventPromptTypeBool,
-			PromptTitle: title,
-			value:       make(chan string, 1),
+			UUID:         uid7.String(),
+			Type:         EventPromptTypeBool,
+			PromptTitle:  title,
+			DefaultValue: def,
+			value:        make(chan string, 1),
 			Validate: &EventPromptOptsValidateOpts{
 				ValueType:  "bool",
-				AllowNull:  false,
-				AllowEmpty: false,
+				AllowEmpty: !required,
 			},
 		},
 	}

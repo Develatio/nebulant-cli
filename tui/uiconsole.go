@@ -140,18 +140,25 @@ func newPrompt(b *cast.BusData) (*huh.Form, tea.Cmd) {
 	var cmd tea.Cmd
 	switch b.EPO.Type {
 	case cast.EventPromptTypeBool:
+		def := false
+		if b.EPO.DefaultValue == "true" {
+			def = true
+		}
 		cnf := huh.NewConfirm().
 			Key("value").
 			Title(b.EPO.PromptTitle).
 			Affirmative("true").
-			Negative("false")
+			Negative("false").
+			Value(&def)
 		cmd = cnf.Focus()
 		f = huh.NewForm(
 			huh.NewGroup(cnf))
 	case cast.EventPromptTypeInput:
+		def := b.EPO.DefaultValue
 		inp := huh.NewInput().
 			Key("value").
-			Title(b.EPO.PromptTitle)
+			Title(b.EPO.PromptTitle).
+			Value(&def)
 		v := func(val string) error {
 			if b.EPO.Validate.ValueType == "int" {
 				_, err := strconv.Atoi(val)
@@ -180,6 +187,14 @@ func newPrompt(b *cast.BusData) (*huh.Form, tea.Cmd) {
 			Key("value").
 			Title(b.EPO.PromptTitle).
 			Options(options...)
+
+		v := func(val string) error {
+			if !b.EPO.Validate.AllowEmpty && val == "" {
+				return fmt.Errorf("empty value not allowed")
+			}
+			return nil
+		}
+		sel.Validate(v)
 		cmd = sel.Focus()
 		f = huh.NewForm(
 			huh.NewGroup(sel)).WithShowHelp(true)
@@ -395,6 +410,13 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.prompt.m = f
 			if f.State == huh.StateCompleted {
 				kl := f.GetString("value")
+				if m.prompt.b.EPO.Type == cast.EventPromptTypeBool {
+					kb := f.GetBool("value")
+					kl = "false"
+					if kb {
+						kl = "true"
+					}
+				}
 				cast.AnswerPrompt(m.prompt.b, kl)
 				cmds = append(cmds, nextPromptCmd())
 			} else if f.State == huh.StateAborted {

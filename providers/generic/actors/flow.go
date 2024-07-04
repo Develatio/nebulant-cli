@@ -75,7 +75,7 @@ func (d *defineVarsParametersVar) askForValue() error {
 			if !isEmpty && !isNotValid {
 				def = d.Value.(string)
 			}
-			vcn, err := cast.PromptInput("Please, enter value for "+d.Key, def)
+			vcn, err := cast.PromptInput("Please, enter value for "+d.Key, d.Required, def)
 			if err != nil {
 				return err
 			}
@@ -86,7 +86,7 @@ func (d *defineVarsParametersVar) askForValue() error {
 			if !isEmpty && !isNotValid {
 				vv = d.Value.(int)
 			}
-			vcn, err := cast.PromptInt("Please, enter value for "+d.Key, string(vv))
+			vcn, err := cast.PromptInt("Please, enter value for "+d.Key, d.Required, string(vv))
 			if err != nil {
 				return err
 			}
@@ -104,18 +104,21 @@ func (d *defineVarsParametersVar) askForValue() error {
 			for _, obj := range d.Options {
 				options[obj.Value] = obj.Label
 			}
-			vcn, err := cast.PromptSelect("Please, enter value for "+d.Key, options)
+			vcn, err := cast.PromptSelect("Please, enter value for "+d.Key, d.Required, options)
 			if err != nil {
 				return err
 			}
 			val := <-vcn
 			d.Value = val
 		case VarTypeBool:
-			// var def string
-			// if !isEmpty && !isNotValid {
-			// 	def = d.Value.(string)
-			// }
-			vcn, err := cast.PromptBool("Please, enter value for " + d.Key)
+			def := "false"
+			if !isEmpty && !isNotValid {
+				vv := d.Value.(bool)
+				if vv {
+					def = "true"
+				}
+			}
+			vcn, err := cast.PromptBool("Please, enter value for "+d.Key, d.Required, def)
 			if err != nil {
 				return err
 			}

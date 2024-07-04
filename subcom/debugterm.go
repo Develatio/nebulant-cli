@@ -157,7 +157,7 @@ func testScanln() (int, error) {
 L:
 	for {
 		counter2++
-		vc, err := cast.PromptInput("> ", "")
+		vc, err := cast.PromptInput("> ", true, "")
 		if err != nil {
 			return 1, err
 		}
