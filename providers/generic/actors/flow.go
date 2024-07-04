@@ -75,14 +75,22 @@ func (d *defineVarsParametersVar) askForValue() error {
 			if !isEmpty && !isNotValid {
 				def = d.Value.(string)
 			}
-			val := <-cast.PromptInput("Please, enter value for "+d.Key, def)
+			vcn, err := cast.PromptInput("Please, enter value for "+d.Key, def)
+			if err != nil {
+				return err
+			}
+			val := <-vcn
 			d.Value = val
 		case VarTypeInt:
 			var vv int
 			if !isEmpty && !isNotValid {
 				vv = d.Value.(int)
 			}
-			val := <-cast.PromptInt("Please, enter value for "+d.Key, string(vv))
+			vcn, err := cast.PromptInt("Please, enter value for "+d.Key, string(vv))
+			if err != nil {
+				return err
+			}
+			val := <-vcn
 			d.Value = val
 			v, err := strconv.Atoi(val)
 			if err != nil {
@@ -96,14 +104,22 @@ func (d *defineVarsParametersVar) askForValue() error {
 			for _, obj := range d.Options {
 				options[obj.Value] = obj.Label
 			}
-			val := <-cast.PromptSelect("Please, enter value for "+d.Key, options)
+			vcn, err := cast.PromptSelect("Please, enter value for "+d.Key, options)
+			if err != nil {
+				return err
+			}
+			val := <-vcn
 			d.Value = val
 		case VarTypeBool:
 			// var def string
 			// if !isEmpty && !isNotValid {
 			// 	def = d.Value.(string)
 			// }
-			val := <-cast.PromptBool("Please, enter value for " + d.Key)
+			vcn, err := cast.PromptBool("Please, enter value for " + d.Key)
+			if err != nil {
+				return err
+			}
+			val := <-vcn
 			d.Value = val
 		case VarTypeSelectableVariable:
 			return fmt.Errorf("var type not supported yet")

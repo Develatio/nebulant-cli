@@ -157,7 +157,11 @@ func testScanln() (int, error) {
 L:
 	for {
 		counter2++
-		vv := <-cast.PromptInput("> ", "")
+		vc, err := cast.PromptInput("> ", "")
+		if err != nil {
+			return 1, err
+		}
+		vv := <-vc
 		switch vv {
 		case "exit":
 			break L

@@ -30,6 +30,7 @@ import (
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/google/uuid"
 )
 
 // CriticalLevel const
@@ -155,6 +156,7 @@ const (
 	EventProgressEnd
 	EventInteractiveMenuStart
 	EventPrompt
+	EventPromptDone
 )
 
 // EventPromptType int
@@ -173,12 +175,13 @@ type EventPromptOptsValidateOpts struct {
 }
 
 type EventPromptOpts struct {
+	UUID         string            `json:"uuid"`
 	Type         EventPromptType   `json:"type"`
 	PromptTitle  string            `json:"prompt_title"`
 	DefaultValue string            `json:"default_value"`
 	Options      map[string]string `json:"options"` // for select
 	// for responses
-	Value chan string
+	value chan string
 	//
 	Validate *EventPromptOptsValidateOpts `json:"validate"`
 }
@@ -803,16 +806,21 @@ func (b *BusInfo) GetLoad() float64 {
 	return b.Load
 }
 
-func PromptInput(title string, def string) chan string {
+func PromptInput(title string, def string) (chan string, error) {
+	uid7, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
 	bdata := &BusData{
 		TypeID:    BusDataTypeEvent,
 		EventID:   EP(EventPrompt),
 		Timestamp: time.Now().UTC().UnixMicro(),
 		EPO: &EventPromptOpts{
+			UUID:         uid7.String(),
 			Type:         EventPromptTypeInput,
 			PromptTitle:  title,
 			DefaultValue: def,
-			Value:        make(chan string, 1),
+			value:        make(chan string, 1),
 			Validate: &EventPromptOptsValidateOpts{
 				ValueType:  "string",
 				AllowNull:  false,
@@ -821,19 +829,24 @@ func PromptInput(title string, def string) chan string {
 		},
 	}
 	PushBusData(bdata)
-	return bdata.EPO.Value
+	return bdata.EPO.value, nil
 }
 
-func PromptInt(title string, def string) chan string {
+func PromptInt(title string, def string) (chan string, error) {
+	uid7, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
 	bdata := &BusData{
 		TypeID:    BusDataTypeEvent,
 		EventID:   EP(EventPrompt),
 		Timestamp: time.Now().UTC().UnixMicro(),
 		EPO: &EventPromptOpts{
+			UUID:         uid7.String(),
 			Type:         EventPromptTypeInput,
 			PromptTitle:  title,
 			DefaultValue: def,
-			Value:        make(chan string, 1),
+			value:        make(chan string, 1),
 			Validate: &EventPromptOptsValidateOpts{
 				ValueType:  "int",
 				AllowNull:  false,
@@ -842,19 +855,24 @@ func PromptInt(title string, def string) chan string {
 		},
 	}
 	PushBusData(bdata)
-	return bdata.EPO.Value
+	return bdata.EPO.value, nil
 }
 
-func PromptSelect(title string, options map[string]string) chan string {
+func PromptSelect(title string, options map[string]string) (chan string, error) {
+	uid7, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
 	bdata := &BusData{
 		TypeID:    BusDataTypeEvent,
 		EventID:   EP(EventPrompt),
 		Timestamp: time.Now().UTC().UnixMicro(),
 		EPO: &EventPromptOpts{
+			UUID:        uid7.String(),
 			Type:        EventPromptTypeSelect,
 			PromptTitle: title,
 			Options:     options,
-			Value:       make(chan string, 1),
+			value:       make(chan string, 1),
 			Validate: &EventPromptOptsValidateOpts{
 				ValueType:  "string",
 				AllowNull:  false,
@@ -863,18 +881,23 @@ func PromptSelect(title string, options map[string]string) chan string {
 		},
 	}
 	PushBusData(bdata)
-	return bdata.EPO.Value
+	return bdata.EPO.value, nil
 }
 
-func PromptBool(title string) chan string {
+func PromptBool(title string) (chan string, error) {
+	uid7, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
 	bdata := &BusData{
 		TypeID:    BusDataTypeEvent,
 		EventID:   EP(EventPrompt),
 		Timestamp: time.Now().UTC().UnixMicro(),
 		EPO: &EventPromptOpts{
+			UUID:        uid7.String(),
 			Type:        EventPromptTypeBool,
 			PromptTitle: title,
-			Value:       make(chan string, 1),
+			value:       make(chan string, 1),
 			Validate: &EventPromptOptsValidateOpts{
 				ValueType:  "bool",
 				AllowNull:  false,
@@ -883,5 +906,18 @@ func PromptBool(title string) chan string {
 		},
 	}
 	PushBusData(bdata)
-	return bdata.EPO.Value
+	return bdata.EPO.value, nil
+}
+
+func AnswerPrompt(b *BusData, v string) {
+	bdata := &BusData{
+		TypeID:    BusDataTypeEvent,
+		EventID:   EP(EventPromptDone),
+		Timestamp: time.Now().UTC().UnixMicro(),
+		EPO: &EventPromptOpts{
+			UUID: b.EPO.UUID,
+		},
+	}
+	b.EPO.value <- v
+	PushBusData(bdata)
 }

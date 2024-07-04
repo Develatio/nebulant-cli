@@ -296,6 +296,22 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case cast.EventPrompt:
 				m.prompts = append(m.prompts, &promptInfo{b: msg})
 				cmds = append(cmds, nextPromptCmd())
+			case cast.EventPromptDone:
+				if m.prompt != nil && m.prompt.b.EPO.UUID == msg.EPO.UUID {
+					// this prompt has already answered by some other UI,
+					// advance for the next prompt
+					cmds = append(cmds, nextPromptCmd())
+				} else {
+					var prompts []*promptInfo
+					for _, p := range m.prompts {
+						if p.b.EPO.UUID == msg.EPO.UUID {
+							// a prompt in the qeue has been already answered, skip
+							continue
+						}
+						prompts = append(prompts, p)
+					}
+					m.prompts = prompts
+				}
 			case cast.EventInteractiveMenuStart:
 				m.state = menuState
 			}
@@ -374,10 +390,10 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.prompt.m = f
 			if f.State == huh.StateCompleted {
 				kl := f.GetString("value")
-				m.prompt.b.EPO.Value <- kl
+				cast.AnswerPrompt(m.prompt.b, kl)
 				cmds = append(cmds, nextPromptCmd())
 			} else if f.State == huh.StateAborted {
-				m.prompt.b.EPO.Value <- ""
+				cast.AnswerPrompt(m.prompt.b, "")
 				cmds = append(cmds, nextPromptCmd())
 			}
 		}

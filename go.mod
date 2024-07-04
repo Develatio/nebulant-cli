@@ -85,6 +85,7 @@ require (
 	github.com/bhmj/xpression v0.9.4 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/google/uuid v1.6.0
 	github.com/hetznercloud/hcloud-go/v2 v2.9.0
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
