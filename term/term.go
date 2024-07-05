@@ -30,7 +30,7 @@ import (
 	"os"
 
 	"github.com/develatio/nebulant-cli/config"
-	"golang.org/x/term"
+	x_term "golang.org/x/term"
 )
 
 var Reset string = "\033[0m"
@@ -130,34 +130,14 @@ func (n *noBellStdout) Close() error {
 
 var NoBellStdout = &noBellStdout{}
 
+// IsTerminal returns false if no real term on stdout has
+// dettected or if NoTerm flag (-n) has been setted
 func IsTerminal() bool {
-	// return true
-	// if config.ForceTerm != nil && *config.ForceTerm {
-	// 	return true
-	// }
-	// if config.ForceNoTerm {
-	// 	return false
-	// }
-	return term.IsTerminal(int(os.Stdout.Fd()))
+	if config.NoTerm != nil && *config.NoTerm {
+		return false
+	}
+	return x_term.IsTerminal(int(os.Stdout.Fd()))
 }
-
-// func AppendLine() *oneLineWriteCloser {
-// 	return mls.AppendLine()
-// }
-
-// func Selectable(prompt string, options []string) (int, error) {
-// 	return mls.SelectTest(prompt, options)
-// }
-
-// func openMultilineStdout() {
-// 	return
-// 	// if mls == nil {
-// 	// 	mls = &MultilineStdout{}
-// 	// 	mls.SetMainStdout(Stdout)
-// 	// 	mls.Init()
-// 	// 	log.SetOutput(mls)
-// 	// }
-// }
 
 // PrintInfo func
 func PrintInfo(s string) {
@@ -182,31 +162,6 @@ func Print(a ...interface{}) (n int, err error) {
 	return fmt.Fprint(Stdout, a...)
 }
 
-func ConfigColors() {
-	// if config.DisableColorFlag != nil && *config.DisableColorFlag {
-	// 	Stdout = os.Stdout
-	// 	Stderr = os.Stderr
-	// 	// Reset = ""
-	// 	Red = ""
-	// 	BGRed = ""
-	// 	BGBrightRed = ""
-	// 	Green = ""
-	// 	BGBrightGreen = ""
-	// 	Yellow = ""
-	// 	BGYellow = ""
-	// 	BGBrightYellow = ""
-	// 	Blue = ""
-	// 	Black = ""
-	// 	BGBlack = ""
-	// 	Magenta = ""
-	// 	BGBrightMagenta = ""
-	// 	Cyan = ""
-	// 	Gray = ""
-	// 	White = ""
-	// 	Bold = ""
-	// }
-}
-
 // UpgradeTerm func sets advanced ANSI supoprt, colors and
 // multiline StdOut
 func UpgradeTerm() error {
@@ -220,7 +175,6 @@ func UpgradeTerm() error {
 	if err != nil {
 		return errors.Join(fmt.Errorf("cannot enable colors"), err)
 	}
-	// ConfigColors()
 	log.SetOutput(Stdout)
 	//
 	// uses Stdout (term.Stdout in os.go)

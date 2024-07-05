@@ -112,7 +112,6 @@ func PrepareCmd(cmd *NBLcommand) error {
 			// os.Exit(1)
 			return errors.Join(fmt.Errorf("cannot init term :("), err)
 		}
-		// term.ConfigColors()
 	}
 
 	if config.DEBUG {
@@ -169,8 +168,7 @@ func ConfArgs(fflag *flag.FlagSet, arguments []string) error {
 	config.DebugFlag = fflag.Bool("x", false, "Enable debug.")
 	config.ParanoicDebugFlag = fflag.Bool("xx", false, "Enable paranoic debug.")
 	config.Ipv6Flag = fflag.Bool("6", false, "Force ipv6")
-	config.DisableColorFlag = fflag.Bool("c", false, "Disable colors.")
-	config.ForceTerm = fflag.Bool("ft", false, "Force terminal. Bypass no-term detection.")
+	config.NoTerm = fflag.Bool("n", false, "Force no terminal. This avoid the use of TUI.")
 	config.BridgeAddrFlag = fflag.String("b", "", "self-hosted bridge addr:port (ipv4) or [::1]:port (ipv6).")
 	config.BridgeSecretFlag = fflag.String("bs", config.BRIDGE_SECRET, "self-hosted bridge auth secret string (overrides env NEBULANT_BRIDGE_SECRET).")
 	config.ForceFile = fflag.Bool("f", false, "Run local file")

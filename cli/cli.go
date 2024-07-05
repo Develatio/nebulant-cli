@@ -35,6 +35,10 @@ import (
 )
 
 func Start() (errcode int) {
+	if err := subsystem.ConfArgs(flag.CommandLine, os.Args[1:]); err != nil {
+		cast.LogErr(err.Error(), nil)
+		return 1
+	}
 
 	// Init console logger
 	ff := func(fLink *cast.BusConsumerLink) error {
@@ -43,11 +47,6 @@ func Start() (errcode int) {
 	}
 	cast.InitConsoleLogger(ff)
 	subcom.RegisterSubcommands()
-
-	if err := subsystem.ConfArgs(flag.CommandLine, os.Args[1:]); err != nil {
-		cast.LogErr(err.Error(), nil)
-		return 1
-	}
 
 	// Version and exit
 	if *config.VersionFlag {

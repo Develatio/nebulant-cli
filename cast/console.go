@@ -23,12 +23,15 @@
 package cast
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/term"
+	"github.com/schollz/progressbar/v3"
 )
 
 var counter int = 0
@@ -44,12 +47,75 @@ var prefxmap map[int]string = map[int]string{
 
 var threadcolor map[string]string
 
+var progress map[string]*progressInfo
+
+type noreturnFilterWriter struct{}
+
+func (a noreturnFilterWriter) Write(p []byte) (int, error) {
+	var pp []byte
+	var nn = []byte("\n")
+	var rr = []byte("\r")
+	var n = len(p)
+	pp = append(pp, p...)
+
+	pp = bytes.TrimPrefix(pp, rr)
+	pp = bytes.TrimSuffix(pp, rr)
+
+	pp = bytes.TrimSpace(pp)
+	if len(pp) <= 0 {
+		return n, nil
+	}
+
+	pp = append(pp, nn...)
+
+	s, err := os.Stdout.Write(pp)
+	if err != nil {
+		return s, err
+	}
+	return n, nil
+}
+
+type progressInfo struct {
+	info     string
+	size     int64
+	writed   int64
+	progress *progressbar.ProgressBar
+}
+
+func (p *progressInfo) Update(w int64) error {
+	add := w - p.writed
+	if add <= 0 {
+		return nil
+	}
+	p.writed = w
+	return p.progress.Add64(add)
+}
+
+func (p *progressInfo) Finish() error {
+	return p.progress.Finish()
+}
+
+func newProgress(size int64, description string) *progressbar.ProgressBar {
+	return progressbar.NewOptions64(size,
+		progressbar.OptionEnableColorCodes(false),
+		progressbar.OptionShowBytes(true),
+		progressbar.OptionSetWidth(15),
+		progressbar.OptionSetDescription(description),
+		progressbar.OptionUseANSICodes(false),
+		progressbar.OptionSetWriter(&noreturnFilterWriter{}),
+	)
+}
+
 // ConsoleLogger struct
 type ConsoleLogger struct {
 	fLink *BusConsumerLink
 }
 
-func FormatConsoleLogMsg(fback *BusData) string {
+func p(s string) *string {
+	return &s
+}
+
+func FormatConsoleLogMsg(fback *BusData) *string {
 	color := ""
 	if fback.ThreadID != nil {
 		if _, exists := threadcolor[*fback.ThreadID]; !exists {
@@ -68,38 +134,59 @@ func FormatConsoleLogMsg(fback *BusData) string {
 	if fback.EventID != nil {
 		switch *fback.EventID {
 		case EventActionInit:
-			return fmt.Sprintf(format, prefxmap[*fback.LogLevel], "start")
+			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], "start"))
 		case EventActionKO:
-			return fmt.Sprintf(format, prefxmap[*fback.LogLevel], *fback.M)
+			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], *fback.M))
 		case EventActionUnCaughtKO:
-			return fmt.Sprintf(format, prefxmap[*fback.LogLevel], *fback.M)
+			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], *fback.M))
 		case EventActionOK:
-			return fmt.Sprintf(format, prefxmap[*fback.LogLevel], "done")
+			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], "done"))
 		case EventActionUnCaughtOK:
-			return fmt.Sprintf(format, prefxmap[*fback.LogLevel], "done")
+			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], "done"))
 		case EventThreadDestroyed:
 			delete(threadcolor, *fback.ThreadID)
+		case EventProgressStart:
+			pid := fback.Extra["progressid"].(string)
+			size := fback.Extra["size"].(int64)
+			info := fback.Extra["info"].(string)
+			progress[pid] = &progressInfo{
+				size:     size,
+				info:     info,
+				progress: newProgress(size, info),
+			}
+		case EventProgressTick:
+			writed := fback.Extra["writed"].(int64)
+			pid := fback.Extra["progressid"].(string)
+			pinfo := progress[pid]
+			pinfo.Update(writed)
+		case EventProgressEnd:
+			// TODO: add cmd?
+			pid := fback.Extra["progressid"].(string)
+			npr := progress[pid]
+			npr.Finish()
+			delete(progress, pid)
+			return p("\n")
 		default:
-			return ""
+			return p(string(*fback.EventID) + "unknown event msg")
 		}
 	}
 
 	if fback.Raw {
 		if fback.M != nil {
-			return term.Reset + *fback.M + term.Reset
+			return p(term.Reset + *fback.M + term.Reset)
 		} else {
-			return term.Reset
+			return nil
 		}
 	} else {
 		if fback.M != nil {
 			if config.DEBUG {
 				counter++
-				return fmt.Sprintf(format, prefxmap[*fback.LogLevel], fmt.Sprintf("[%v] %v", counter, *fback.M))
+				return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], fmt.Sprintf("[%v] %v", counter, *fback.M)))
 			} else {
-				return fmt.Sprintf(format, prefxmap[*fback.LogLevel], *fback.M)
+				return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], *fback.M))
 			}
 		} else {
-			return fmt.Sprintf(format, prefxmap[*fback.LogLevel], "")
+			return nil
 		}
 	}
 }
@@ -110,15 +197,18 @@ func (c *ConsoleLogger) printMessage(fback *BusData) bool {
 	}
 
 	msg := FormatConsoleLogMsg(fback)
+	if msg == nil {
+		return false
+	}
 
 	if fback.Raw {
 		var err error
-		_, err = term.Print(msg)
+		_, err = term.Print(*msg)
 		if err != nil {
 			return false
 		}
 	} else {
-		log.Println(msg)
+		log.Println(*msg)
 	}
 	return false
 }
@@ -158,6 +248,7 @@ func (c *ConsoleLogger) setDefaultTheme() {
 // InitConsoleLogger func
 func InitConsoleLogger(upgrader func(*BusConsumerLink) error) {
 	threadcolor = make(map[string]string)
+	progress = make(map[string]*progressInfo)
 	fLink := &BusConsumerLink{
 		Name:           "Console",
 		LogChan:        make(chan *BusData, 100),

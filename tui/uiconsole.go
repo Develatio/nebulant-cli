@@ -253,8 +253,8 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.TypeID {
 		case cast.BusDataTypeLog:
 			s := cast.FormatConsoleLogMsg(msg)
-			if s != "" {
-				cmds = append(cmds, tea.Printf(s))
+			if s != nil {
+				cmds = append(cmds, tea.Printf(*s))
 			}
 		case cast.BusDataTypeEOF:
 			select {
@@ -276,8 +276,8 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case cast.EventNewThread:
 				m.threads[*msg.ThreadID] = true
 				mm := cast.FormatConsoleLogMsg(msg)
-				if mm != "" {
-					cmds = append(cmds, tea.Printf(mm))
+				if mm != nil {
+					cmds = append(cmds, tea.Printf(*mm))
 				}
 			case cast.EventProgressStart:
 				npr := &progressInfo{

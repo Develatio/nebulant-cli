@@ -229,6 +229,7 @@ func (d *debugger) startLocalTermMode() {
 	d.running = true
 	oSstdin := nebulant_term.GenuineOsStdin
 
+	// TODO: replace by own IsTerminal?
 	if !term.IsTerminal(int(os.Stdout.Fd())) {
 		d.lw("No terminal detected. Remote debugger system will start. You can still press any key to start local shell")
 		started := make(chan struct{})

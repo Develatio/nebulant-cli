@@ -147,11 +147,10 @@ var VersionFlag *bool
 var DebugFlag *bool
 var ParanoicDebugFlag *bool
 var Ipv6Flag *bool
-var DisableColorFlag *bool
 var UpgradeAssetsFlag *bool
 var ForceUpgradeAssetsFlag *bool
 var LookupAssetFlag *string
-var ForceTerm *bool
+var NoTerm *bool
 var BuildAssetIndexFlag *string
 var ForceUpgradeAssetsNoDownloadFlag *bool
 var BridgeSecretFlag *string
@@ -160,8 +159,6 @@ var BridgeOriginFlag *string
 var BridgeCertPathFlag *string
 var BridgeKeyPathFlag *string
 var BridgeXtermRootPath *string
-
-var ForceNoTerm = false
 
 var ForceFile *bool
 
