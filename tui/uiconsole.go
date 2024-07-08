@@ -475,7 +475,8 @@ func shutdownUI() tea.Cmd {
 }
 
 func renderHelp() string {
-	return helpStyle.Render("\nb: open builder • p: open pannel • l: switch log level • q: exit\n")
+	// return helpStyle.Render("\nb: open builder • p: open pannel • l: switch log level • q: exit\n")
+	return helpStyle.Render("\nb: open builder • p: open pannel • q: exit\n")
 }
 
 func (m mainModel) quitView() string {
