@@ -29,6 +29,8 @@ import (
 	"log"
 	"os"
 
+	"math/rand"
+
 	"github.com/develatio/nebulant-cli/config"
 	x_term "golang.org/x/term"
 )
@@ -82,24 +84,21 @@ var IdentifyDevice string = "\033Z"
 
 // var mls *MultilineStdout = nil
 
-var colors = []string{
-	White,
-	Red,
-	Green,
-	Yellow,
-	Blue,
-	Cyan,
-	Magenta, // 5
-}
-var current_color = -1
+var colors []string
+var used_colors []string
 
 func GetNewColor() string {
-	current_color++
-	if current_color < len(colors) {
-		return colors[current_color]
+	if len(colors) <= 0 {
+		colors = used_colors
+		used_colors = []string{}
 	}
-	current_color = 0
-	return colors[current_color]
+
+	i := 0
+	color := colors[i]
+	colors = append(colors[:i], colors[i+1:]...)
+	used_colors = append(used_colors, color)
+
+	return color
 }
 
 type OSPTY interface {
@@ -184,4 +183,14 @@ func UpgradeTerm() error {
 	// been disabled manually.
 	// openMultilineStdout()
 	return nil
+}
+
+func init() {
+	for i := 0; i < 256; i++ {
+		colors = append(colors, fmt.Sprintf("\033[38;5;%vm", i))
+	}
+	for i := len(colors) - 1; i > 0; i-- {
+		j := rand.Intn(i + 1)
+		colors[i], colors[j] = colors[j], colors[i]
+	}
 }
