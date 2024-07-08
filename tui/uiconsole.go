@@ -274,11 +274,11 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// never send event type without event id
 			switch *msg.EventID {
 			case cast.EventNewThread:
-				m.threads[*msg.ThreadID] = true
-				mm := cast.FormatConsoleLogMsg(msg)
-				if mm != nil {
-					cmds = append(cmds, tea.Printf(*mm))
-				}
+				// m.threads[*msg.ThreadID] = true
+				// mm := cast.FormatConsoleLogMsg(msg)
+				// if mm != nil {
+				// 	cmds = append(cmds, tea.Printf(*mm))
+				// }
 			case cast.EventProgressStart:
 				npr := &progressInfo{
 					progress: progress.New(
@@ -530,8 +530,12 @@ func StartUI(lk *cast.BusConsumerLink) (tea.Model, error) {
 	waiter.Add(1)
 	defer waiter.Done()
 	defer waiter.Done()
+
 	m := frontUIModel(lk)
 	p := tea.NewProgram(m)
+	defer func() {
+		p.ReleaseTerminal()
+	}()
 	if _, err := p.Run(); err != nil {
 		// stop cli?
 		return m, err

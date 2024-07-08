@@ -145,29 +145,8 @@ func FormatConsoleLogMsg(fback *BusData) *string {
 			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], "done"))
 		case EventThreadDestroyed:
 			delete(threadcolor, *fback.ThreadID)
-		case EventProgressStart:
-			pid := fback.Extra["progressid"].(string)
-			size := fback.Extra["size"].(int64)
-			info := fback.Extra["info"].(string)
-			progress[pid] = &progressInfo{
-				size:     size,
-				info:     info,
-				progress: newProgress(size, info),
-			}
-		case EventProgressTick:
-			writed := fback.Extra["writed"].(int64)
-			pid := fback.Extra["progressid"].(string)
-			pinfo := progress[pid]
-			pinfo.Update(writed)
-		case EventProgressEnd:
-			// TODO: add cmd?
-			pid := fback.Extra["progressid"].(string)
-			npr := progress[pid]
-			npr.Finish()
-			delete(progress, pid)
-			return p("\n")
 		default:
-			return p(string(*fback.EventID) + "unknown event msg")
+			return nil
 		}
 	}
 
@@ -191,26 +170,69 @@ func FormatConsoleLogMsg(fback *BusData) *string {
 	}
 }
 
+func (c *ConsoleLogger) _print(raw bool, msg string) {
+	if raw {
+		var err error
+		_, err = term.Print(msg)
+		if err != nil {
+			// fback err?
+		}
+	} else {
+		log.Println(msg)
+	}
+}
+
 func (c *ConsoleLogger) printMessage(fback *BusData) bool {
 	if !config.DEBUG && fback.LogLevel != nil && *fback.LogLevel == DebugLevel {
 		return false
 	}
 
-	msg := FormatConsoleLogMsg(fback)
-	if msg == nil {
-		return false
-	}
-
-	if fback.Raw {
-		var err error
-		_, err = term.Print(*msg)
-		if err != nil {
-			return false
+	switch fback.TypeID {
+	case BusDataTypeLog:
+		s := FormatConsoleLogMsg(fback)
+		if s != nil {
+			c._print(fback.Raw, *s)
 		}
-	} else {
-		log.Println(*msg)
+	case BusDataTypeEvent:
+		// a nil pointer err here is a dev fail
+		// never send event type without event id
+		switch *fback.EventID {
+		case EventNewThread,
+			EventActionInit,
+			EventActionKO,
+			EventActionUnCaughtKO,
+			EventActionOK,
+			EventActionUnCaughtOK,
+			EventThreadDestroyed:
+			s := FormatConsoleLogMsg(fback)
+			if s != nil {
+				c._print(fback.Raw, *s)
+			}
+		case EventProgressStart:
+			pid := fback.Extra["progressid"].(string)
+			size := fback.Extra["size"].(int64)
+			info := fback.Extra["info"].(string)
+			progress[pid] = &progressInfo{
+				size:     size,
+				info:     info,
+				progress: newProgress(size, info),
+			}
+		case EventProgressTick:
+			writed := fback.Extra["writed"].(int64)
+			pid := fback.Extra["progressid"].(string)
+			pinfo := progress[pid]
+			pinfo.Update(writed)
+		case EventProgressEnd:
+			// TODO: add cmd?
+			pid := fback.Extra["progressid"].(string)
+			npr := progress[pid]
+			npr.Finish()
+			delete(progress, pid)
+			c._print(true, "\n")
+		}
 	}
-	return false
+	return true
+
 }
 
 func (c *ConsoleLogger) readCastBus() {
