@@ -222,6 +222,13 @@ func startServerModeCmd() tea.Cmd {
 		// if err != nil {
 		// 	cast.LogErr(err.Error(), nil)
 		// }
+		if executive.MDirector == nil {
+			err := executive.InitDirector(true, true) // Server mode
+			if err != nil {
+				cast.LogErr(err.Error(), nil)
+				panic(err.Error())
+			}
+		}
 		errc := executive.InitServerMode()
 		err := <-errc
 		if err != nil {
