@@ -24,7 +24,6 @@ package executive
 
 import (
 	"fmt"
-	"math/rand"
 	"runtime/debug"
 	"strconv"
 	"sync"
@@ -74,7 +73,7 @@ func (m *Manager) reset() {
 	m.ExecutionUUID = nil
 	m.Stats = &stats{}
 	m.Logger = &cast.Logger{}
-	m.Logger.SetThreadID(fmt.Sprintf("%d", rand.Int()))
+	m.Logger.SetThreadID("manager")
 }
 
 // GetLogger func
@@ -175,7 +174,7 @@ func (m *Manager) Run() error {
 
 	startActionContext := m.Runtime.NewAContext(nil, m.IRB.StartAction)
 	m.Logger.ParanoicLogDebug("after set context")
-	st.SetLogger(m.GetLogger())
+	st.SetLogger(m.GetLogger().Duplicate())
 	startActionContext.SetStore(st)
 	m.Logger.ParanoicLogDebug("after set store")
 

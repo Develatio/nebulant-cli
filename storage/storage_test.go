@@ -63,6 +63,7 @@ func (l *fakeLogger) ByteLogInfo(b []byte)    {}
 func (l *fakeLogger) LogDebug(s string)       {}
 func (l *fakeLogger) Duplicate() base.ILogger { return l }
 func (l *fakeLogger) SetActionID(ai string)   {}
+func (l *fakeLogger) SetActionName(an string) {}
 func (l *fakeLogger) SetThreadID(ti string)   {}
 
 type tsie struct {

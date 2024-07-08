@@ -1,8 +1,6 @@
-//go:build js
-
 // MIT License
 //
-// Copyright (C) 2022  Develatio Technologies S.L.
+// Copyright (C) 2020  Develatio Technologies S.L.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,15 +20,4 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package interactive
-
-import (
-	"fmt"
-
-	"github.com/develatio/nebulant-cli/subsystem"
-)
-
-func LoopV2(nblc *subsystem.NBLcommand) error {
-	fmt.Println("Not supported")
-	return nil
-}
+package tui

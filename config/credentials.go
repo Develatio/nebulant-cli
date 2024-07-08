@@ -36,6 +36,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	math_rand "math/rand"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -66,8 +67,9 @@ type credentialsStoreV1 struct {
 //
 // Credentials struct
 type CredentialsStore struct {
-	Version     string                `json:"version"`
-	Credentials map[string]Credential `json:"credentials"`
+	Version       string                `json:"version"`
+	Credentials   map[string]Credential `json:"credentials"`
+	ActiveProfile string                `json:"active_profile"`
 }
 
 // Credential struct
@@ -89,7 +91,7 @@ type ProfileOrganization struct {
 // Profile struct
 type Profile struct {
 	Name         string              `json:"name"`
-	Organization ProfileOrganization `json:"organization" validate:"required"`
+	Organization ProfileOrganization `json:"current_organization" validate:"required"`
 }
 
 func createEmptyCredentialsFile() (int, error) {
@@ -99,12 +101,12 @@ func createEmptyCredentialsFile() (int, error) {
 		crs := &CredentialsStore{
 			Credentials: map[string]Credential{},
 		}
-		return saveCredentialsFile(crs)
+		return SaveCredentialsFile(crs)
 	}
 	return 0, nil
 }
 
-func readCredentialsFile() (*CredentialsStore, error) {
+func ReadCredentialsFile() (*CredentialsStore, error) {
 	credentialsPath := filepath.Join(AppHomePath(), "credentials")
 
 	jsonFile, err := os.Open(credentialsPath) // #nosec G304 -- Not a file inclusion, just a json read
@@ -128,7 +130,7 @@ func readCredentialsFile() (*CredentialsStore, error) {
 	return &crs, nil
 }
 
-func saveCredentialsFile(crs *CredentialsStore) (int, error) {
+func SaveCredentialsFile(crs *CredentialsStore) (int, error) {
 	credentialsPath := filepath.Join(AppHomePath(), "credentials")
 
 	file, err := os.OpenFile(credentialsPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600) // #nosec G304-- file inclusion from var needed
@@ -145,14 +147,22 @@ func saveCredentialsFile(crs *CredentialsStore) (int, error) {
 
 // ReadCredential func
 func ReadCredential(credentialName string) (*Credential, error) {
-	crs, err := readCredentialsFile()
+	crs, err := ReadCredentialsFile()
 	if err != nil {
 		return nil, err
 	}
+
+	if credentialName == "" {
+		credentialName = crs.ActiveProfile
+		if credentialName == "" {
+			credentialName = FALLBACK_PROFILE_NAME // default
+		}
+	}
+
 	if credential, exists := crs.Credentials[credentialName]; exists {
 		return &credential, nil
 	}
-	return nil, fmt.Errorf("Credential not found")
+	return nil, fmt.Errorf("Credential of profile [%s] not found", credentialName)
 }
 
 func GetJar() (*cookiejar.Jar, error) {
@@ -164,6 +174,25 @@ func GetJar() (*cookiejar.Jar, error) {
 		cachedjar = _cj
 	}
 	return cachedjar, nil
+}
+
+func LoginWithCredentialName(name string) (*cookiejar.Jar, error) {
+	crs, err := ReadCredentialsFile()
+	if err != nil {
+		return nil, err
+	}
+	if credential, exists := crs.Credentials[name]; exists {
+		recovjar := cachedjar
+		cachedjar = nil
+		jar, err := Login(&credential)
+		if err != nil {
+			cachedjar = recovjar
+			return nil, err
+		}
+		return jar, err
+	} else {
+		return nil, fmt.Errorf("unknown credential")
+	}
 }
 
 func Login(credential *Credential) (*cookiejar.Jar, error) {
@@ -268,6 +297,52 @@ func _fillProfile() error {
 	return nil
 }
 
+func SetTokenAsDefault(name string) error {
+	crs, err := ReadCredentialsFile()
+	if err != nil {
+		return err
+	}
+
+	if _, exists := crs.Credentials[name]; !exists {
+		return fmt.Errorf("unknown credential")
+	}
+
+	crs.ActiveProfile = name
+	_, err = SaveCredentialsFile(crs)
+	if err != nil {
+		return err
+	}
+
+	cr := crs.Credentials[name]
+	CREDENTIAL = &cr
+
+	return nil
+}
+
+func RemoveToken(name string) error {
+	crs, err := ReadCredentialsFile()
+	if err != nil {
+		return err
+	}
+
+	if _, exists := crs.Credentials[name]; !exists {
+		return fmt.Errorf("unknown credential")
+	}
+
+	if crs.ActiveProfile == name {
+		return fmt.Errorf("cannot delete default credential")
+	}
+
+	delete(crs.Credentials, name)
+
+	_, err = SaveCredentialsFile(crs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func RequestToken() error {
 	tr := &http.Transport{
 		MaxIdleConns:       10,
@@ -336,13 +411,24 @@ func RequestToken() error {
 		return fmt.Errorf("token request denied")
 	}
 
-	crs, err := readCredentialsFile()
+	if credential.AuthToken == nil {
+		return fmt.Errorf("empty token received")
+	}
+
+	if *credential.AuthToken == "" {
+		return fmt.Errorf("empty token received")
+	}
+
+	crs, err := ReadCredentialsFile()
 	if err != nil {
 		return err
 	}
 
-	crs.Credentials[ACTIVE_CONF_PROFILE] = credential
-	_, err = saveCredentialsFile(crs)
+	// new token, new profile
+	profile := fmt.Sprintf("%d", math_rand.Int()) // #nosec G404 -- Weak random is OK here
+	crs.ActiveProfile = profile
+	crs.Credentials[profile] = credential
+	_, err = SaveCredentialsFile(crs)
 	if err != nil {
 		return err
 	}

@@ -38,6 +38,8 @@ const (
 	ExecState
 	// ExecEmancipation const
 	ExecEmancipation
+	//
+	ExecShutdown
 )
 
 type ExecCtrlInstruction struct {

@@ -22,6 +22,10 @@ var EmojiSet map[string]string = map[string]string{
 	"Dizzy":                        "💫",
 	"CounterclockwiseArrowsButton": "🔄",
 	"WhiteQuestionMark":            "❔",
+	"Sparkles":                     "✨",
+	"CheckMarkButton":              "✅",
+	"CrossMarkButton":              "❎",
+	"CrossMark":                    "❌",
 }
 
 var noEmojiSupportSet map[string]string = map[string]string{
@@ -43,7 +47,11 @@ var noEmojiSupportSet map[string]string = map[string]string{
 	"Key":                          "  ",
 	"FaceWithMonocle":              "  ",
 	"Ambulance":                    "  ",
-	"Dizzy":                        "  ",
+	"Dizzy":                        "･ﾟ✧",
 	"CounterclockwiseArrowsButton": "  ",
-	"WhiteQuestionMark":            "  ",
+	"WhiteQuestionMark":            "? ",
+	"Sparkles":                     "*:",
+	"CheckMarkButton":              "VV",
+	"CrossMarkButton":              "--",
+	"CrossMark":                    "XX",
 }

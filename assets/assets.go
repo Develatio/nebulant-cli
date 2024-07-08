@@ -46,7 +46,6 @@ import (
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/downloader"
-	"github.com/develatio/nebulant-cli/term"
 )
 
 //go:embed proxy.html
@@ -261,17 +260,9 @@ func writeIndexFile(fpath string, list *index, name string) (int, error) {
 	nn = n + nn
 	partcount := 0
 	partlen := len(list.Parts)
-	lin := term.AppendLine()
-	defer lin.Close()
-	bar, err := lin.GetProgressBar(int64(partlen), "Writing "+name+" index file", false)
-	if err != nil {
-		return 0, err
-	}
+	bar := cast.NewProgress(int64(partlen), "Writing "+name+" index file", "", "", "", "")
 	for tkn, positions := range list.Parts {
-		err := bar.Add(1)
-		if err != nil {
-			cast.LogWarn("progress bar err "+err.Error(), nil)
-		}
+		bar.Add(1)
 		partcount++
 		partsep := ""
 		if partcount < partlen {
@@ -499,12 +490,7 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
-
-	lin := term.AppendLine()
-	bar, err := lin.GetProgressBar(fi.Size(), "Reading asset items", false)
-	if err != nil {
-		return 0, err
-	}
+	bar := cast.NewProgress(fi.Size(), "Reading asset items", "", "", "", "")
 
 	dec := json.NewDecoder(input)
 
@@ -515,10 +501,7 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 
 	start := time.Now()
 	readed := dec.InputOffset()
-	err = bar.Add64(readed)
-	if err != nil {
-		cast.LogWarn("progress bar err "+err.Error(), nil)
-	}
+	bar.Add64(readed)
 	// loop arr values
 	for dec.More() {
 		m := assetdef.FreshItem()
@@ -527,10 +510,7 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 		byteinit := dec.InputOffset()
 		delta := byteinit - readed
 		readed = byteinit
-		err := bar.Add64(delta)
-		if err != nil {
-			cast.LogWarn("progress bar err "+err.Error(), nil)
-		}
+		bar.Add64(delta)
 
 		err = dec.Decode(m)
 		if err != nil {
@@ -589,11 +569,7 @@ func makeSubIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
 
-	lin := term.AppendLine()
-	bar, err := lin.GetProgressBar(fi.Size(), "Optimizing "+assetdef.Name+" index", false)
-	if err != nil {
-		return 0, err
-	}
+	bar := cast.NewProgress(fi.Size(), "Optimizing "+assetdef.Name+" index", "", "", "", "")
 	dec := json.NewDecoder(input)
 
 	// read {
@@ -611,10 +587,7 @@ func makeSubIndex(assetdef *AssetDefinition) (int, error) {
 
 	start := time.Now()
 	readed := dec.InputOffset()
-	err = bar.Add64(readed)
-	if err != nil {
-		cast.LogWarn("progress bar err "+err.Error(), nil)
-	}
+	bar.Add64(readed)
 	// while the array contains values
 	for dec.More() {
 		var m tinyIndexItem
@@ -622,10 +595,7 @@ func makeSubIndex(assetdef *AssetDefinition) (int, error) {
 		byteinit := dec.InputOffset()
 		delta := byteinit - readed
 		readed = byteinit
-		err := bar.Add64(delta)
-		if err != nil {
-			cast.LogWarn("progress bar err "+err.Error(), nil)
-		}
+		bar.Add64(delta)
 
 		err = dec.Decode(&m)
 		if err != nil {

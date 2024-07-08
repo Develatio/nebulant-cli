@@ -29,8 +29,10 @@ import (
 	"log"
 	"os"
 
+	"math/rand"
+
 	"github.com/develatio/nebulant-cli/config"
-	"golang.org/x/term"
+	x_term "golang.org/x/term"
 )
 
 var Reset string = "\033[0m"
@@ -80,7 +82,24 @@ var EraseDisplay string = "\033[2J"
 
 var IdentifyDevice string = "\033Z"
 
-var mls *MultilineStdout = nil
+// var mls *MultilineStdout = nil
+
+var colors []string
+var used_colors []string
+
+func GetNewColor() string {
+	if len(colors) <= 0 {
+		colors = used_colors
+		used_colors = []string{}
+	}
+
+	i := 0
+	color := colors[i]
+	colors = append(colors[:i], colors[i+1:]...)
+	used_colors = append(used_colors, color)
+
+	return color
+}
 
 type OSPTY interface {
 	Close() error
@@ -110,31 +129,13 @@ func (n *noBellStdout) Close() error {
 
 var NoBellStdout = &noBellStdout{}
 
-func isTerminal() bool {
-	if config.ForceTerm != nil && *config.ForceTerm {
-		return true
-	}
-	if config.ForceNoTerm {
+// IsTerminal returns false if no real term on stdout has
+// dettected or if NoTerm flag (-n) has been setted
+func IsTerminal() bool {
+	if config.NoTerm != nil && *config.NoTerm {
 		return false
 	}
-	return term.IsTerminal(int(os.Stdout.Fd()))
-}
-
-func AppendLine() *oneLineWriteCloser {
-	return mls.AppendLine()
-}
-
-func Selectable(prompt string, options []string) (int, error) {
-	return mls.SelectTest(prompt, options)
-}
-
-func openMultilineStdout() {
-	if mls == nil {
-		mls = &MultilineStdout{}
-		mls.SetMainStdout(Stdout)
-		mls.Init()
-		log.SetOutput(mls)
-	}
+	return x_term.IsTerminal(int(os.Stdout.Fd()))
 }
 
 // PrintInfo func
@@ -160,91 +161,19 @@ func Print(a ...interface{}) (n int, err error) {
 	return fmt.Fprint(Stdout, a...)
 }
 
-// I know, this is too intrusive
-// way to check emoji support
-func configEmojiSupport() error {
-	width, _, err := term.GetSize(int(os.Stdout.Fd()))
-	if err != nil {
-		return err
-	}
-	fmt.Print("🔧")
-	fmt.Print("\b")
-	fmt.Print("🔧")
-	count := width - 3
-	for i := 0; i < count; i++ {
-		fmt.Print("*")
-	}
-	cpos, _, err := getCursorPosition()
-	if err != nil {
-		return err
-	}
-	if cpos == 0 {
-		EmojiSet = noEmojiSupportSet
-		_, err := Print(CursorUp)
-		if err != nil {
-			return err
-		}
-	}
-	fmt.Print("\b\b\b")
-	_, err = Print(EraseEntireLine)
-	if err != nil {
-		return err
-	}
-	_, err = Print("\n")
-	if err != nil {
-		return err
-	}
-	_, err = Print(CursorUp)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func ConfigColors() {
-	if config.DisableColorFlag != nil && *config.DisableColorFlag {
-		Stdout = os.Stdout
-		Stderr = os.Stderr
-		// Reset = ""
-		Red = ""
-		BGRed = ""
-		BGBrightRed = ""
-		Green = ""
-		BGBrightGreen = ""
-		Yellow = ""
-		BGYellow = ""
-		BGBrightYellow = ""
-		Blue = ""
-		Black = ""
-		BGBlack = ""
-		Magenta = ""
-		BGBrightMagenta = ""
-		Cyan = ""
-		Gray = ""
-		White = ""
-		Bold = ""
-	}
-}
-
 // UpgradeTerm func sets advanced ANSI supoprt, colors and
 // multiline StdOut
 func UpgradeTerm() error {
+	// return nil
 	var err error
 	if !config.DEBUG {
 		log.SetFlags(0)
 	}
 
-	if isTerminal() {
-		err = configEmojiSupport()
-		if err != nil {
-			return errors.Join(fmt.Errorf("cannot configure emoji support"), err)
-		}
-	}
 	err = EnableColorSupport()
 	if err != nil {
 		return errors.Join(fmt.Errorf("cannot enable colors"), err)
 	}
-	ConfigColors()
 	log.SetOutput(Stdout)
 	//
 	// uses Stdout (term.Stdout in os.go)
@@ -252,6 +181,16 @@ func UpgradeTerm() error {
 	// as default, or can be os.Stdout if
 	// os cannot support colors or if has
 	// been disabled manually.
-	openMultilineStdout()
+	// openMultilineStdout()
 	return nil
+}
+
+func init() {
+	for i := 0; i < 256; i++ {
+		colors = append(colors, fmt.Sprintf("\033[38;5;%vm", i))
+	}
+	for i := len(colors) - 1; i > 0; i-- {
+		j := rand.Intn(i + 1)
+		colors[i], colors[j] = colors[j], colors[i]
+	}
 }

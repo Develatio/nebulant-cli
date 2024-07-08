@@ -23,9 +23,11 @@
 package subcom
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"net"
+	"net/http"
 
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
@@ -85,7 +87,9 @@ func ServeCmd(nblc *subsystem.NBLcommand) (int, error) {
 	errc := executive.InitServerMode()
 	err = <-errc
 	if err != nil {
-		return 2, err
+		if !errors.Is(err, http.ErrServerClosed) {
+			return 2, err
+		}
 	}
 	executive.MDirector.Wait() // None to wait if director has stoped
 	return 0, nil

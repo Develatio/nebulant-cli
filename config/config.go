@@ -26,6 +26,8 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -87,8 +89,8 @@ var PROFILING bool = false
 // BACKEND_AUTH_TOKEN conf
 var BACKEND_AUTH_TOKEN = ""
 
-// ACTIVE_CONF_PROFILE
-var ACTIVE_CONF_PROFILE = "default"
+// FALLBACK_PROFILE_NAME
+const FALLBACK_PROFILE_NAME = "default"
 
 // CREDENTIAL
 var CREDENTIAL *Credential = &Credential{}
@@ -145,11 +147,10 @@ var VersionFlag *bool
 var DebugFlag *bool
 var ParanoicDebugFlag *bool
 var Ipv6Flag *bool
-var DisableColorFlag *bool
 var UpgradeAssetsFlag *bool
 var ForceUpgradeAssetsFlag *bool
 var LookupAssetFlag *string
-var ForceTerm *bool
+var NoTerm *bool
 var BuildAssetIndexFlag *string
 var ForceUpgradeAssetsNoDownloadFlag *bool
 var BridgeSecretFlag *string
@@ -158,8 +159,6 @@ var BridgeOriginFlag *string
 var BridgeCertPathFlag *string
 var BridgeKeyPathFlag *string
 var BridgeXtermRootPath *string
-
-var ForceNoTerm = false
 
 var ForceFile *bool
 
@@ -193,9 +192,6 @@ func init() {
 			log.Fatal(err)
 		}
 	}
-	if os.Getenv("NEBULANT_CONF_PROFILE") != "" {
-		ACTIVE_CONF_PROFILE = os.Getenv("NEBULANT_CONF_PROFILE")
-	}
 
 	if LOAD_CONF_FILES == "false" {
 		return
@@ -215,13 +211,11 @@ func init() {
 	}
 
 	// Load credentials from file
-	credential, err := ReadCredential(ACTIVE_CONF_PROFILE)
-	if err != nil && ACTIVE_CONF_PROFILE != "default" {
-		log.Panic("Cannot read credentials from specified profile " + ACTIVE_CONF_PROFILE)
+	credential, err := ReadCredential(os.Getenv("NEBULANT_CONF_PROFILE"))
+	if err != nil {
+		log.Panic(errors.Join(fmt.Errorf("cannot read credential file"), err))
 	}
-	if credential != nil {
-		CREDENTIAL = credential
-	}
+	CREDENTIAL = credential
 
 	// Use credentials from env vars if exists
 	if os.Getenv("NEBULANT_TOKEN_ID") != "" && os.Getenv("NEBULANT_TOKEN_SECRET") != "" {
