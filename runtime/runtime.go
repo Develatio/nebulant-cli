@@ -111,6 +111,8 @@ func (r *Runtime) NewEventListener() *base.EventListener {
 }
 
 func (r *Runtime) NewThread(actx base.IActionContext) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.state == base.RuntimeStateEnding || r.state == base.RuntimeStateEnd {
 		return
 	}
