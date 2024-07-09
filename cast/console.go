@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/term"
@@ -35,6 +36,7 @@ import (
 )
 
 var counter int = 0
+var span int = 10
 
 var prefxmap map[int]string = map[int]string{
 	CriticalLevel: "!CRITICAL ",
@@ -128,7 +130,12 @@ func FormatConsoleLogMsg(fback *BusData) *string {
 	aname := ""
 	if fback.ActionName != nil {
 		aname = *fback.ActionName
-		format = fmt.Sprintf("%s %s\t |%s %%s %%s", color, aname, term.Reset)
+		space := span - len(aname)
+		if space <= 1 {
+			span = len(aname) + 2
+			space = 2
+		}
+		format = fmt.Sprintf("%s %s%s|%s %%s %%s", color, aname, strings.Repeat(" ", space), term.Reset)
 	}
 
 	if fback.EventID != nil {
