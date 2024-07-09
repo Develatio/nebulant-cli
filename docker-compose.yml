@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: develatio/nebulant_bridge
-    command: "/app/dist/nebulant-bridge -x -b 0.0.0.0:16789 -bs ultrasecret"
+    command: "make runbridge ARGS='-x -b 0.0.0.0:16789 -bs ultrasecret'"
     networks:
       - nebulant-private
       - nebulant-lan

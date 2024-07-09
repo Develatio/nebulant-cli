@@ -71,6 +71,10 @@ endif
 
 GOEXE=$(shell go env GOEXE)
 
+.PHONY: create-network
+create-network:
+	docker network create nebulant-lan 2> /dev/null || true
+
 .PHONY: runrace
 runrace:
 	CGO_ENABLED=1 go run -race -ldflags "-X github.com/develatio/nebulant-cli/config.LOAD_CONF_FILES=false $(LDFLAGS) $(LOCALLDFLAGS)" nebulant.go $(ARGS)
@@ -82,6 +86,10 @@ runracebridge:
 .PHONY: runbridge
 runbridge:
 	CGO_ENABLED=1 go run -ldflags "-X github.com/develatio/nebulant-cli/config.LOAD_CONF_FILES=false $(LDFLAGS) $(LOCALLDFLAGS)" ./bridge $(ARGS)
+
+.PHONY: runbridgedocker
+runbridgedocker: create-network
+	docker compose -f docker-compose.yml up bridge
 
 .PHONY: run
 run:
