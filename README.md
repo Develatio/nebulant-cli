@@ -8,16 +8,16 @@ for the web editor (providing live-run and autocomplete features) or as a
 standalone executor of Nebulant blueprint files (suitable for CI/CD
 environments).
 
-The Nebulant project is a simplet yet powerful UI-based tool that allows you to
-define and execute a chain of actions. Think about it as a "cloud automation
+The Nebulant project is a simple yet powerful UI-based tool that allows you to
+define and execute a chain of actions. Think of it as "cloud automation
 toolkit" that you can use to script and automate actions performed on your cloud
 providers, without writing code.
 
 Actions can be anything, from simple operations such as `sleep` or `print`, to
-execution control with conditional evaluation and loops, to API calls (eg.
-`create an AWS EC2 instance`) performed on your favourite cloud provider.
+execution control with conditional evaluation and loops, to API calls (e.g..
+`create an AWS EC2 instance`) performed on your favorite cloud provider.
 
-Nebulant is an imperative way for controling resources, which means that instead
+Nebulant is an imperative way of controlling resources, which means that instead
 of describing the final result you're willing to obtain, you have the power to
 define exactly how and when each action should be done.
 
@@ -68,7 +68,7 @@ TODO: <^ PUT HERE A SHORT VIDEO OF THE ABOVE ^>
 The second way that you can use this CLI is by running blueprints directly with
 it. You'll most probably want to do this in any of the following situations:
 
-* you've done creating your blueprint and you want to run it in a CI/CD pipeline
+* you've finished creating your blueprint and you want to run it in a CI/CD pipeline
 * you found a blueprint in the
 [Nebulant Marketplace](https://builder.nebulant.app) and you want to run it.
 
@@ -143,7 +143,7 @@ Check the table of supported OSs and architectures.
 development practices that create an independently-verifiable path from source
 to binary code.*
 
-At Develatio we believe in transparency and we emphasize the safety of our
+At Develatio, we believe in transparency, and we emphasize the safety of our
 products. For this reason we offer you the means to build the source code
 yourself and verify that the resulting binaries match the ones that we provide.
 
@@ -172,7 +172,7 @@ $ codesign --remove-signature nebulant-darwin-arm64
 $ xxd nebulant-darwin-arm64 > unsigned-nebulant-darwin-arm64
 ```
 
-Now you should be able to follow the 4th step and get no differences.
+Now you should be able to follow the 4th step and see no differences.
 
 <br />
 
@@ -188,7 +188,7 @@ organization, that would be all **the blueprints** of all the collections you've
 been granted access to.
 
 The CLI can store tokens under profiles, which allows you to easily switch
-between them. Eg, you might have generated multiple users, each one granted
+between them. For example, you might have generated multiple users, each one granted
 access only to certain collections of blueprints. Or you might have accounts in
 multiple organizations.
 
@@ -199,7 +199,7 @@ variable:
 $ export NEBULANT_CONF_PROFILE=my_profile
 ```
 
-Or by interactivelly selecting the desired profile:
+Or by interactively selecting the desired profile:
 
 ```shell
 $ ./nebulant auth profiles <- ?????
@@ -220,7 +220,7 @@ Note that environment variables will take precedence over config files.
 🫡 Contributing
 --------------------------------------------------------------------------------
 
-If you find an issue, please report it on the
+If you find an issue, please report it to the
 [issue tracker](https://github.com/develatio/nebulant-cli/issues/new).
 
 <br />
