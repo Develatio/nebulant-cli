@@ -30,7 +30,7 @@ For more information, see the [website](https://nebulant.app) of the Nebulant.
 
 Find information about how to use the CLI, showcases, supported cloud providers
 and much more at
-[our docs website](https://nebulant.app/docs/cli/index/).
+[our docs website](https://nebulant.app/docs/cli/).
 
 <br />
 
@@ -229,4 +229,4 @@ If you find an issue, please report it to the
 --------------------------------------------------------------------------------
 
 This project is licensed under the
-[MIT License](https://github.com/develatio/nebulant-cli/blob/master/LICENSE).
+[MIT License](https://opensource.org/license/mit).
