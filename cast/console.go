@@ -30,6 +30,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/term"
 	"github.com/schollz/progressbar/v3"
@@ -39,12 +40,12 @@ var counter int = 0
 var span int = 10
 
 var prefxmap map[int]string = map[int]string{
-	CriticalLevel: "!CRITICAL ",
-	ErrorLevel:    "!ERROR ",
-	WarningLevel:  "!WARNING ",
-	InfoLevel:     "",
-	DebugLevel:    "DEBUG ",
-	NotsetLevel:   "",
+	base.CriticalLevel: "!CRITICAL ",
+	base.ErrorLevel:    "!ERROR ",
+	base.WarningLevel:  "!WARNING ",
+	base.InfoLevel:     "",
+	base.DebugLevel:    "DEBUG ",
+	base.NotsetLevel:   "",
 }
 
 var threadcolor map[string]string
@@ -110,14 +111,15 @@ func newProgress(size int64, description string) *progressbar.ProgressBar {
 
 // ConsoleLogger struct
 type ConsoleLogger struct {
-	fLink *BusConsumerLink
+	logLevelFilter int
+	fLink          *BusConsumerLink
 }
 
 func p(s string) *string {
 	return &s
 }
 
-func FormatConsoleLogMsg(fback *BusData) *string {
+func FormatConsoleLogMsg(fback *BusData, verbose bool) *string {
 	color := ""
 	if fback.ThreadID != nil {
 		if _, exists := threadcolor[*fback.ThreadID]; !exists {
@@ -165,7 +167,7 @@ func FormatConsoleLogMsg(fback *BusData) *string {
 		}
 	} else {
 		if fback.M != nil {
-			if config.DEBUG {
+			if verbose {
 				counter++
 				return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], fmt.Sprintf("[%v] %v", counter, *fback.M)))
 			} else {
@@ -190,15 +192,13 @@ func (c *ConsoleLogger) _print(raw bool, msg string) {
 }
 
 func (c *ConsoleLogger) printMessage(fback *BusData) bool {
-	if !config.DEBUG && fback.LogLevel != nil && *fback.LogLevel == DebugLevel {
-		return false
-	}
-
 	switch fback.TypeID {
 	case BusDataTypeLog:
-		s := FormatConsoleLogMsg(fback)
-		if s != nil {
-			c._print(fback.Raw, *s)
+		if fback.LogLevel != nil && *fback.LogLevel >= c.logLevelFilter {
+			s := FormatConsoleLogMsg(fback, c.logLevelFilter <= base.DebugLevel)
+			if s != nil {
+				c._print(fback.Raw, *s)
+			}
 		}
 	case BusDataTypeEvent:
 		// a nil pointer err here is a dev fail
@@ -211,7 +211,7 @@ func (c *ConsoleLogger) printMessage(fback *BusData) bool {
 			EventActionOK,
 			EventActionUnCaughtOK,
 			EventThreadDestroyed:
-			s := FormatConsoleLogMsg(fback)
+			s := FormatConsoleLogMsg(fback, c.logLevelFilter <= base.DebugLevel)
 			if s != nil {
 				c._print(fback.Raw, *s)
 			}
@@ -264,13 +264,13 @@ L:
 
 func (c *ConsoleLogger) setDefaultTheme() {
 	prefxmap = map[int]string{
-		CriticalLevel:      " " + term.White + term.BGRed + " " + term.EmojiSet["FaceScreamingInFear"] + " CRITICAL ERROR " + term.Reset,
-		ErrorLevel:         " " + term.White + term.BGRed + " " + term.EmojiSet["PoliceCarLight"] + " ERROR " + term.Reset,
-		WarningLevel:       " " + term.Black + term.BGYellow + " " + term.EmojiSet["Construction"] + " WARNING " + term.Reset,
-		InfoLevel:          " " + term.Blue + "»" + term.Magenta + "»" + term.Reset,
-		DebugLevel:         " " + term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
-		ParanoicDebugLevel: " " + term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
-		NotsetLevel:        "( · ) ",
+		base.CriticalLevel:      " " + term.White + term.BGRed + " " + term.EmojiSet["FaceScreamingInFear"] + " CRITICAL ERROR " + term.Reset,
+		base.ErrorLevel:         " " + term.White + term.BGRed + " " + term.EmojiSet["PoliceCarLight"] + " ERROR " + term.Reset,
+		base.WarningLevel:       " " + term.Black + term.BGYellow + " " + term.EmojiSet["Construction"] + " WARNING " + term.Reset,
+		base.InfoLevel:          " " + term.Blue + "»" + term.Magenta + "»" + term.Reset,
+		base.DebugLevel:         " " + term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
+		base.ParanoicDebugLevel: " " + term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
+		base.NotsetLevel:        "( · ) ",
 	}
 }
 
@@ -285,7 +285,7 @@ func InitConsoleLogger(upgrader func(*BusConsumerLink) error) {
 		Off:            make(chan struct{}),
 		AllowEventData: true,
 	}
-	clogger := &ConsoleLogger{fLink: fLink}
+	clogger := &ConsoleLogger{fLink: fLink, logLevelFilter: config.LOGLEVEL}
 	clogger.setDefaultTheme()
 	SBus.connect <- fLink
 	SBus.castWaiter.Add(1)

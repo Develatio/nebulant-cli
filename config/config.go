@@ -33,6 +33,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+
+	"github.com/develatio/nebulant-cli/base"
 )
 
 // Version var
@@ -77,11 +79,13 @@ var FrontUrl string = "https://builder.nebulant.app"
 // FrontOriginPre var
 var FrontOriginPre string = "https://builder.nebulant.dev"
 
-// DEBUG conf
-var DEBUG bool = false
-
-// PARANOICDEBUG conf
-var PARANOICDEBUG bool = false
+// LOGLEVEL config. The default log level
+// used at console logger and uiconsole init.
+// Every log consumer should handle his own
+// loglevel filter, so this is just the initial
+// loglevel (default) or initial value setted
+// by the user.
+var LOGLEVEL int = base.InfoLevel
 
 // PROFILING conf
 var PROFILING bool = false
@@ -144,13 +148,15 @@ var ServerModeFlag *bool
 var AddrFlag *string
 var BridgeAddrFlag *string
 var VersionFlag *bool
-var DebugFlag *bool
-var ParanoicDebugFlag *bool
+
+// var DebugFlag *bool
+// var ParanoicDebugFlag *bool
+var LogLevelFlag *string
 var Ipv6Flag *bool
 var UpgradeAssetsFlag *bool
 var ForceUpgradeAssetsFlag *bool
 var LookupAssetFlag *string
-var NoTerm *bool
+var NoTermFlag *bool
 var BuildAssetIndexFlag *string
 var ForceUpgradeAssetsNoDownloadFlag *bool
 var BridgeSecretFlag *string
@@ -160,7 +166,7 @@ var BridgeCertPathFlag *string
 var BridgeKeyPathFlag *string
 var BridgeXtermRootPath *string
 
-var ForceFile *bool
+var ForceFileFlag *bool
 
 var LOAD_CONF_FILES = "true"
 
@@ -178,18 +184,33 @@ func AppHomePath() string {
 // * Environment Variables
 // * Shared Credentials file
 func init() {
-	if os.Getenv("NEBULANT_DEBUG") != "" {
-		var err error
-		DEBUG, err = strconv.ParseBool(os.Getenv("NEBULANT_DEBUG"))
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
 	if os.Getenv("NEBULANT_PROFILING") != "" {
 		var err error
 		PROFILING, err = strconv.ParseBool(os.Getenv("NEBULANT_PROFILING"))
 		if err != nil {
 			log.Fatal(err)
+		}
+	}
+
+	if LogLevelFlag != nil {
+		switch *LogLevelFlag {
+		case "critical":
+			LOGLEVEL = base.CriticalLevel
+		case "error":
+			LOGLEVEL = base.ErrorLevel
+		case "warning":
+			LOGLEVEL = base.WarningLevel
+		case "info":
+			LOGLEVEL = base.InfoLevel
+		case "debug":
+			LOGLEVEL = base.DebugLevel
+		case "paranoic":
+			LOGLEVEL = base.ParanoicDebugLevel
+		case "silent":
+			LOGLEVEL = base.SilentLevel
+		case "default":
+			log.Panic("unknown log level")
+
 		}
 	}
 

@@ -53,7 +53,7 @@ import (
 var Bridge *Puente = &Puente{pools: make(map[string]*pool), xtermindex: assets.XTERM}
 
 func Serve() error {
-	if config.DEBUG {
+	if config.PROFILING {
 		go func() {
 			for {
 				var m runtime.MemStats

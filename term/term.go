@@ -31,6 +31,7 @@ import (
 
 	"math/rand"
 
+	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/config"
 	x_term "golang.org/x/term"
 )
@@ -132,7 +133,7 @@ var NoBellStdout = &noBellStdout{}
 // IsTerminal returns false if no real term on stdout has
 // dettected or if NoTerm flag (-n) has been setted
 func IsTerminal() bool {
-	if config.NoTerm != nil && *config.NoTerm {
+	if config.NoTermFlag != nil && *config.NoTermFlag {
 		return false
 	}
 	return x_term.IsTerminal(int(os.Stdout.Fd()))
@@ -166,7 +167,7 @@ func Print(a ...interface{}) (n int, err error) {
 func UpgradeTerm() error {
 	// return nil
 	var err error
-	if !config.DEBUG {
+	if config.LOGLEVEL > base.DebugLevel {
 		log.SetFlags(0)
 	}
 

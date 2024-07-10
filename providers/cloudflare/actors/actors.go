@@ -27,7 +27,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 )
 
 type s3ClientFunc func() *s3.Client
@@ -36,14 +35,14 @@ type s3ClientFunc func() *s3.Client
 type ActionContext struct {
 	Rehearsal           bool
 	AwsConfig           aws.Config
-	Action              *blueprint.Action
+	Action              *base.Action
 	Store               base.IStore
 	Logger              base.ILogger
 	NewS3Client         s3ClientFunc
 	NewCloudFlareClient interface{}
 }
 
-var NewActionContext = func(awsConf aws.Config, action *blueprint.Action, store base.IStore, logger base.ILogger) *ActionContext {
+var NewActionContext = func(awsConf aws.Config, action *base.Action, store base.IStore, logger base.ILogger) *ActionContext {
 	l := logger.Duplicate()
 	l.SetActionID(action.ActionID)
 	l.SetActionName(action.ActionName)

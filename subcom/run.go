@@ -38,7 +38,7 @@ import (
 func parseRunFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
-	config.ForceFile = fs.Bool("f", false, "Run local file")
+	config.ForceFileFlag = fs.Bool("f", false, "Run local file")
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant run [org/coll/bp] [-f filepath] [--varname=varvalue --varname=varvalue]\n\n")
 		fmt.Fprintf(fs.Output(), "Examples:\n")
@@ -71,7 +71,7 @@ func RunCmd(nblc *subsystem.NBLcommand) (int, error) {
 		irbConf.Args = args[1:]
 	}
 	var bpUrl *blueprint.BlueprintURL
-	if config.ForceFile != nil && *config.ForceFile {
+	if config.ForceFileFlag != nil && *config.ForceFileFlag {
 		bpUrl, err = blueprint.ParsePath(bluePrintFilePath)
 	} else {
 		bpUrl, err = blueprint.ParseURL(bluePrintFilePath)

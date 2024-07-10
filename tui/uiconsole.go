@@ -43,6 +43,16 @@ import (
 
 var waiter *sync.WaitGroup
 
+var logleveltranslator map[int]string = map[int]string{
+	base.CriticalLevel:      "Critical",
+	base.ErrorLevel:         "Error",
+	base.WarningLevel:       "Warning",
+	base.InfoLevel:          "Info",
+	base.DebugLevel:         "Debug",
+	base.ParanoicDebugLevel: "Paranoic",
+	base.SilentLevel:        "Silent",
+}
+
 // sessionState is used to track which model is focused
 type sessionState uint
 
@@ -103,7 +113,7 @@ type mainModel struct {
 	// link to receive bus msg and events
 	lk *cast.BusConsumerLink
 	// setted debug level
-	dbglevel int
+	logLevelFilter int
 }
 
 func frontUIModel(l *cast.BusConsumerLink) mainModel {
@@ -113,7 +123,7 @@ func frontUIModel(l *cast.BusConsumerLink) mainModel {
 		lk:              l,
 		threads:         make(map[string]bool),
 		progress:        make(map[string]*progressInfo),
-		dbglevel:        6,
+		logLevelFilter:  config.LOGLEVEL,
 		uimenu:          uimenu.New(),
 	}
 
@@ -252,9 +262,11 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, readCastBusCmd(m.lk))
 		switch msg.TypeID {
 		case cast.BusDataTypeLog:
-			s := cast.FormatConsoleLogMsg(msg)
-			if s != nil {
-				cmds = append(cmds, tea.Printf(*s))
+			if msg.LogLevel != nil && *msg.LogLevel >= m.logLevelFilter {
+				s := cast.FormatConsoleLogMsg(msg, m.logLevelFilter <= base.DebugLevel)
+				if s != nil {
+					cmds = append(cmds, tea.Printf(*s))
+				}
 			}
 		case cast.BusDataTypeEOF:
 			select {
@@ -376,8 +388,24 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = quitState
 			case "b":
 				cmds = append(cmds, tuicmd.OpenBuilderCmd())
-			case "6":
-				config.DEBUG = true
+			case "l":
+				// config.DEBUG = true
+				switch m.logLevelFilter {
+				case base.CriticalLevel:
+					m.logLevelFilter = base.ErrorLevel
+				case base.ErrorLevel:
+					m.logLevelFilter = base.WarningLevel
+				case base.WarningLevel:
+					m.logLevelFilter = base.InfoLevel
+				case base.InfoLevel:
+					m.logLevelFilter = base.DebugLevel
+				case base.DebugLevel:
+					m.logLevelFilter = base.ParanoicDebugLevel
+				case base.ParanoicDebugLevel:
+					m.logLevelFilter = base.SilentLevel
+				case base.SilentLevel:
+					m.logLevelFilter = base.CriticalLevel
+				}
 			case "enter":
 				// nothing yet
 			}
@@ -474,9 +502,10 @@ func shutdownUI() tea.Cmd {
 	return tea.Quit
 }
 
-func renderHelp() string {
+func (m mainModel) renderHelp() string {
 	// return helpStyle.Render("\nb: open builder • p: open pannel • l: switch log level • q: exit\n")
-	return helpStyle.Render("\nb: open builder • p: open pannel • q: exit\n")
+	lls := logleveltranslator[m.logLevelFilter]
+	return helpStyle.Render("\nb: open builder • p: open pannel • l: log level (", lls, ") • q: exit\n")
 }
 
 func (m mainModel) quitView() string {
@@ -485,7 +514,7 @@ func (m mainModel) quitView() string {
 }
 
 func (m mainModel) logView() string {
-	return renderHelp()
+	return m.renderHelp()
 }
 
 func (m mainModel) promptView() string {

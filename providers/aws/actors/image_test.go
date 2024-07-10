@@ -31,7 +31,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/providers/aws/actors"
 	"github.com/develatio/nebulant-cli/storage"
 )
@@ -55,7 +54,7 @@ type fakeEC2Client struct {
 }
 
 func mockapi() (*session.Session, error) {
-	actors.NewActionContext = func(awsSess *session.Session, action *blueprint.Action, store base.IStore, logger base.ILogger) *actors.ActionContext {
+	actors.NewActionContext = func(awsSess *session.Session, action *base.Action, store base.IStore, logger base.ILogger) *actors.ActionContext {
 		return &actors.ActionContext{
 			AwsSess: awsSess,
 			Action:  action,
@@ -122,7 +121,7 @@ func TestFindImages(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	action := &blueprint.Action{
+	action := &base.Action{
 		Provider:   "aws",
 		ActionName: "find_images",
 		Parameters: p,
@@ -168,7 +167,7 @@ func TestFindOneImage(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	action := &blueprint.Action{
+	action := &base.Action{
 		Provider:   "aws",
 		ActionName: "findone_image",
 		Parameters: p,

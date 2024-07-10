@@ -22,8 +22,10 @@
 
 package blueprint
 
+import "github.com/develatio/nebulant-cli/base"
+
 // ActionValidatorFunc type
-type ActionValidatorFunc func(action *Action) error
+type ActionValidatorFunc func(action *base.Action) error
 
 var ActionValidators map[string]ActionValidatorFunc = make(map[string]ActionValidatorFunc)
 

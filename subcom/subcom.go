@@ -25,6 +25,7 @@ package subcom
 import (
 	"time"
 
+	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/term"
@@ -68,7 +69,7 @@ func RegisterSubcommands() {
 					EventID:       cast.EP(cast.EventInteractiveMenuStart),
 					ActionID:      nil,
 					ActionName:    nil,
-					LogLevel:      cast.EP(cast.InfoLevel),
+					LogLevel:      cast.EP(base.InfoLevel),
 					ThreadID:      nil,
 					ExecutionUUID: nil,
 					Timestamp:     time.Now().UTC().UnixMicro(),

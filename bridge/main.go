@@ -66,7 +66,7 @@ func main() {
 
 	config.BridgeAddrFlag = flag.String("b", net.JoinHostPort(config.BRIDGE_ADDR, config.BRIDGE_PORT), "Bind addr:port (ipv4) or [::1]:port (ipv6).")
 	config.VersionFlag = flag.Bool("v", false, "Show version and exit.")
-	config.DebugFlag = flag.Bool("x", false, "Enable debug.")
+	config.LogLevelFlag = flag.String("l", "info", "Set the log level. \n\t\t\tDefault: info. \n\t\t\tAvail: critical, error, warning, info, debug, paranoic, silent")
 	config.BridgeSecretFlag = flag.String("bs", config.BRIDGE_SECRET, "Auth secret string (overrides env NEBULANT_BRIDGE_SECRET).")
 	config.BridgeOriginFlag = flag.String("o", "*", "Access-Control-Allow-Origin header.")
 	config.BridgeCertPathFlag = flag.String("c", "", "https/wss cert file path.")
@@ -79,10 +79,6 @@ func main() {
 	}
 
 	flag.Parse()
-
-	if *config.DebugFlag {
-		config.DEBUG = true
-	}
 
 	if len(*config.BridgeSecretFlag) <= 0 {
 		flag.Usage()

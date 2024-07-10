@@ -27,7 +27,6 @@ import (
 	"sync"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 )
 
 type LogFunc func(b []byte)
@@ -55,7 +54,7 @@ func (l *logWriter) Write(p []byte) (int, error) {
 // ActionContext struct
 type ActionContext struct {
 	Rehearsal bool
-	Action    *blueprint.Action
+	Action    *base.Action
 	Store     base.IStore
 	Logger    base.ILogger
 	Actx      base.IActionContext

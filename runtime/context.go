@@ -27,7 +27,6 @@ import (
 	"io"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/nsterm"
 )
 
@@ -40,7 +39,7 @@ type actionContext struct {
 	dbgfunc   func()
 	vpty      *nsterm.VPTY2
 	store     base.IStore
-	action    *blueprint.Action
+	action    *base.Action
 	// provider base.IProvider
 	parent base.IActionContext
 	child  base.IActionContext
@@ -158,6 +157,6 @@ func (a *actionContext) GetRunStatus() base.ActionContextRunStatus {
 	return a.runStatus
 }
 
-func (a *actionContext) GetAction() *blueprint.Action {
+func (a *actionContext) GetAction() *base.Action {
 	return a.action
 }

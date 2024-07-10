@@ -25,6 +25,8 @@ package cast
 import (
 	"fmt"
 	"time"
+
+	"github.com/develatio/nebulant-cli/base"
 )
 
 func NewProgress(size int64, info, actionid, actionname, threadid, euuid string) *Progress {
@@ -41,7 +43,7 @@ func NewProgress(size int64, info, actionid, actionname, threadid, euuid string)
 		EventID:       EP(EventProgressStart),
 		ActionID:      p.actionid,
 		ActionName:    p.actionname,
-		LogLevel:      EP(InfoLevel),
+		LogLevel:      EP(base.InfoLevel),
 		ThreadID:      p.threadid,
 		ExecutionUUID: p.euuid,
 		Timestamp:     time.Now().UTC().UnixMicro(),
@@ -73,7 +75,7 @@ func (g *Progress) Add64(n int64) {
 			EventID:       EP(EventProgressEnd),
 			ActionID:      g.actionid,
 			ActionName:    g.actionname,
-			LogLevel:      EP(InfoLevel),
+			LogLevel:      EP(base.InfoLevel),
 			ThreadID:      g.threadid,
 			ExecutionUUID: g.euuid,
 			Timestamp:     time.Now().UTC().UnixMicro(),
@@ -90,7 +92,7 @@ func (g *Progress) Add64(n int64) {
 		EventID:       EP(EventProgressTick),
 		ActionID:      g.actionid,
 		ActionName:    g.actionname,
-		LogLevel:      EP(InfoLevel),
+		LogLevel:      EP(base.InfoLevel),
 		ThreadID:      g.threadid,
 		ExecutionUUID: g.euuid,
 		Timestamp:     time.Now().UTC().UnixMicro(),
@@ -114,7 +116,7 @@ func (g *Progress) Write(p []byte) (int, error) {
 			EventID:       EP(EventProgressEnd),
 			ActionID:      g.actionid,
 			ActionName:    g.actionname,
-			LogLevel:      EP(InfoLevel),
+			LogLevel:      EP(base.InfoLevel),
 			ThreadID:      g.threadid,
 			ExecutionUUID: g.euuid,
 			Timestamp:     time.Now().UTC().UnixMicro(),
@@ -131,7 +133,7 @@ func (g *Progress) Write(p []byte) (int, error) {
 		EventID:       EP(EventProgressTick),
 		ActionID:      g.actionid,
 		ActionName:    g.actionname,
-		LogLevel:      EP(InfoLevel),
+		LogLevel:      EP(base.InfoLevel),
 		ThreadID:      g.threadid,
 		ExecutionUUID: g.euuid,
 		Timestamp:     time.Now().UTC().UnixMicro(),

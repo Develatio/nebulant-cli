@@ -29,13 +29,12 @@ import (
 	"sync"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 	hook_providers "github.com/develatio/nebulant-cli/hook/providers"
 	"github.com/develatio/nebulant-cli/providers/hetzner/actors"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 )
 
-func ActionValidator(action *blueprint.Action) error {
+func ActionValidator(action *base.Action) error {
 	if action.Provider != "hetznerCloud" {
 		return nil
 	}
@@ -105,7 +104,7 @@ func (p *Provider) HandleAction(actx base.IActionContext) (*base.ActionOutput, e
 }
 
 // OnActionErrorHook func
-func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Action, error) {
+func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*base.Action, error) {
 
 	// retry on net err, skip others
 	if _, ok := aout.Records[0].Error.(net.Error); ok {

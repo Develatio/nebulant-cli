@@ -26,7 +26,6 @@ import (
 	"io"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 )
 
 // actioncontext type
@@ -34,7 +33,7 @@ type joinPointContext struct {
 	_dbgname  string
 	runStatus base.ActionContextRunStatus
 	store     base.IStore
-	action    *blueprint.Action
+	action    *base.Action
 	parents   []base.IActionContext
 	child     base.IActionContext
 	elistener *base.EventListener
@@ -78,7 +77,7 @@ func (j *joinPointContext) Type() base.ContextType { return base.ContextTypeJoin
 func (j *joinPointContext) IsThreadPoint() bool    { return false }
 func (j *joinPointContext) IsJoinPoint() bool      { return true }
 
-func (j *joinPointContext) GetAction() *blueprint.Action {
+func (j *joinPointContext) GetAction() *base.Action {
 	return j.action
 }
 

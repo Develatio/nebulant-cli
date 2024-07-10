@@ -32,7 +32,6 @@ import (
 	"unicode"
 
 	"github.com/aws/aws-sdk-go/private/protocol/json/jsonutil"
-	"github.com/develatio/nebulant-cli/blueprint"
 )
 
 // compressStruct func
@@ -167,7 +166,7 @@ type StorageRecord struct {
 	ValueID    string                    `json:"valueID"`
 	RefName    string                    `json:"refName"`
 	Aout       *ActionOutput             `json:"-"`
-	Action     *blueprint.Action         `json:"-"`
+	Action     *Action                   `json:"-"`
 	RawSource  interface{}               `json:"-"`
 	Value      interface{}               `json:"value"`
 	PlainValue map[string]*AttrTreeValue `json:"-"`

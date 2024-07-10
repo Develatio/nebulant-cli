@@ -24,11 +24,10 @@ package azure
 
 import (
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 	hook_providers "github.com/develatio/nebulant-cli/hook/providers"
 )
 
-func ActionValidator(action *blueprint.Action) error {
+func ActionValidator(action *base.Action) error {
 	return nil
 }
 
@@ -57,7 +56,7 @@ func (p *Provider) HandleAction(actx base.IActionContext) (*base.ActionOutput, e
 	return nil, nil
 }
 
-func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Action, error) {
+func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*base.Action, error) {
 	phcontext := &hook_providers.ProviderHookContext{
 		Logger: p.Logger,
 		Store:  p.store,

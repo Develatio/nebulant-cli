@@ -31,6 +31,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
@@ -114,7 +115,7 @@ func PrepareCmd(cmd *NBLcommand) error {
 		}
 	}
 
-	if config.DEBUG {
+	if config.LOGLEVEL <= base.DebugLevel {
 		cast.LogDebug("Debug mode activated. Testing message levels...", nil)
 		cast.LogInfo("Info message", nil)
 		cast.LogWarn("Warning message", nil)
@@ -143,7 +144,7 @@ func PrepareCmd(cmd *NBLcommand) error {
 		cast.SBus.RegisterProviderInitFunc("execution-control", generic.New)
 		cast.SBus.RegisterProviderInitFunc("hetznerCloud", hetzner.New)
 		cast.SBus.RegisterProviderInitFunc("cloudflare", cloudflare.New)
-		blueprint.ActionValidators["providerValidator"] = func(action *blueprint.Action) error {
+		blueprint.ActionValidators["providerValidator"] = func(action *base.Action) error {
 			if _, err := cast.SBus.GetProviderInitFunc(action.Provider); err != nil {
 				return err
 			}
@@ -165,13 +166,12 @@ func ConfArgs(fflag *flag.FlagSet, arguments []string) error {
 	sflag := fflag.Bool("s", false, "Ignored for compatibility")
 	//
 	config.VersionFlag = fflag.Bool("v", false, "Show version and exit.")
-	config.DebugFlag = fflag.Bool("x", false, "Enable debug.")
-	config.ParanoicDebugFlag = fflag.Bool("xx", false, "Enable paranoic debug.")
+	config.LogLevelFlag = flag.String("l", "info", "\t Set the log level. \n\t\t\t\tAvail: critical, error, warning, info, debug, paranoic, silent")
 	config.Ipv6Flag = fflag.Bool("6", false, "Force ipv6")
-	config.NoTerm = fflag.Bool("n", false, "Force no terminal. This avoid the use of TUI.")
-	config.BridgeAddrFlag = fflag.String("b", "", "self-hosted bridge addr:port (ipv4) or [::1]:port (ipv6).")
-	config.BridgeSecretFlag = fflag.String("bs", config.BRIDGE_SECRET, "self-hosted bridge auth secret string (overrides env NEBULANT_BRIDGE_SECRET).")
-	config.ForceFile = fflag.Bool("f", false, "Run local file")
+	config.NoTermFlag = fflag.Bool("n", false, "Force no terminal. This avoid the use of TUI.")
+	config.BridgeAddrFlag = fflag.String("b", "", "\t self-hosted bridge addr:port (ipv4) or [::1]:port (ipv6).")
+	config.BridgeSecretFlag = fflag.String("bs", config.BRIDGE_SECRET, "\t self-hosted bridge auth secret string (overrides env NEBULANT_BRIDGE_SECRET).")
+	config.ForceFileFlag = fflag.Bool("f", false, "Run local file")
 
 	fflag.Usage = func() {
 		var runtimecmds []string

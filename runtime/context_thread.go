@@ -30,7 +30,6 @@ import (
 	"math/rand"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 )
 
 type threadPointContext struct {
@@ -39,7 +38,7 @@ type threadPointContext struct {
 	parent    base.IActionContext
 	children  []base.IActionContext
 	elistener *base.EventListener
-	a         *blueprint.Action
+	a         *base.Action
 }
 
 func (t *threadPointContext) SetStore(s base.IStore) {}
@@ -78,9 +77,9 @@ func (t *threadPointContext) Type() base.ContextType { return base.ContextTypeTh
 func (t *threadPointContext) IsThreadPoint() bool    { return true }
 func (t *threadPointContext) IsJoinPoint() bool      { return false }
 
-func (t *threadPointContext) GetAction() *blueprint.Action {
+func (t *threadPointContext) GetAction() *base.Action {
 	if t.a == nil {
-		t.a = &blueprint.Action{
+		t.a = &base.Action{
 			ActionName: "forky",
 			ActionID:   fmt.Sprintf("%d", rand.Int()), // #nosec G404 -- Weak random is OK here
 		}

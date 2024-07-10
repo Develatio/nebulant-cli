@@ -58,15 +58,6 @@ func Start() (errcode int) {
 		// os.Exit(0)
 	}
 
-	// Debug
-	if *config.DebugFlag {
-		config.DEBUG = true
-	}
-	if *config.ParanoicDebugFlag {
-		config.DEBUG = true
-		config.PARANOICDEBUG = true
-	}
-
 	sc := flag.Arg(0)
 	if sc == "" {
 		sc = "interactive"

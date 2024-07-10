@@ -392,7 +392,7 @@ func (r *Runtime) _deactivateContext(actx base.IActionContext) {
 // NewActionContext func creates a new base.IActionContext
 // (runtime.actionContext), push into the runtime action
 // stack and return the newly created action context
-func (r *Runtime) NewAContext(parent base.IActionContext, action *blueprint.Action) base.IActionContext {
+func (r *Runtime) NewAContext(parent base.IActionContext, action *base.Action) base.IActionContext {
 	if action.JoinThreadsPoint {
 		return r.NewAContextJoin(parent, action)
 	}
@@ -409,7 +409,7 @@ func (r *Runtime) NewAContext(parent base.IActionContext, action *blueprint.Acti
 	return ac
 }
 
-func (r *Runtime) NewAContextThread(parent base.IActionContext, actions []*blueprint.Action) base.IActionContext {
+func (r *Runtime) NewAContextThread(parent base.IActionContext, actions []*base.Action) base.IActionContext {
 	newcontexts := make([]base.IActionContext, len(actions))
 	// thread point parent aka MIM context
 	threadctx := &threadPointContext{
@@ -438,7 +438,7 @@ func (r *Runtime) NewAContextThread(parent base.IActionContext, actions []*bluep
 	return threadctx
 }
 
-func (r *Runtime) NewAContextJoin(parent base.IActionContext, action *blueprint.Action) base.IActionContext {
+func (r *Runtime) NewAContextJoin(parent base.IActionContext, action *base.Action) base.IActionContext {
 	st := parent.GetStore()
 	if st == nil {
 		panic("asdf")

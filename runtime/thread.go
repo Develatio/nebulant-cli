@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
 )
 
@@ -233,7 +232,7 @@ func (t *Thread) _runCurrent() {
 	//	store := actx.GetStore()
 	// store.GetLogger().SetThreadID(fmt.Sprintf("%p", t))
 	// store.GetLogger().SetActionID(action.ActionID)
-	var nexts []*blueprint.Action
+	var nexts []*base.Action
 
 	if actx.IsThreadPoint() {
 		t.runtime.switchContext(actx)
@@ -281,7 +280,7 @@ func (t *Thread) _runCurrent() {
 		EventID:       cast.EP(cast.EventActionInit),
 		ActionID:      &action.ActionID,
 		ActionName:    &action.ActionName,
-		LogLevel:      cast.EP(cast.InfoLevel),
+		LogLevel:      cast.EP(base.InfoLevel),
 		ThreadID:      cast.SEP(fmt.Sprintf("%p", t)),
 		ExecutionUUID: t.runtime.irb.ExecutionUUID,
 		Timestamp:     time.Now().UTC().UnixMicro(),
@@ -318,10 +317,10 @@ func (t *Thread) _runCurrent() {
 
 	// determine KO/OK action event
 	if t.ExitCode > 0 {
-		lvl := cast.ErrorLevel
+		lvl := base.ErrorLevel
 		ev := cast.EventActionUnCaughtKO // un-handled KO
 		if len(nexts) > 0 {              // handled KO
-			lvl = cast.WarningLevel
+			lvl = base.WarningLevel
 			ev = cast.EventActionKO
 		}
 		cast.PushMixedLogEventBusData(&cast.BusData{
@@ -342,7 +341,7 @@ func (t *Thread) _runCurrent() {
 		cast.PushMixedLogEventBusData(&cast.BusData{
 			EventID:       &ev,
 			ActionID:      &action.ActionID,
-			LogLevel:      cast.EP(cast.InfoLevel),
+			LogLevel:      cast.EP(base.InfoLevel),
 			ActionName:    &action.ActionName,
 			ThreadID:      cast.SEP(fmt.Sprintf("%p", t)),
 			ExecutionUUID: t.runtime.irb.ExecutionUUID,

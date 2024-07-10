@@ -29,30 +29,8 @@ import (
 	"time"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/config"
 	"github.com/google/uuid"
 )
-
-// CriticalLevel const
-const CriticalLevel = 50
-
-// ErrorLevel const
-const ErrorLevel = 40
-
-// WarningLevel const
-const WarningLevel = 30
-
-// InfoLevel const
-const InfoLevel = 20
-
-// DebugLevel const
-const DebugLevel = 10
-
-// DebugLevel const
-const ParanoicDebugLevel = 5
-
-// NotsetLevel const
-const NotsetLevel = 0
 
 // SBusBufferSize const
 const SBusBufferSize = 100000
@@ -339,9 +317,6 @@ func (s *SystemBus) Start() {
 
 				sent := false                         // always ensure data receipt
 				if busdata.TypeID == BusDataTypeLog { // dispatch log data
-					if !config.DEBUG && *busdata.LogLevel == DebugLevel {
-						continue
-					}
 					for !sent {
 						select {
 						case busConsumerLink.LogChan <- busdata:
@@ -423,14 +398,6 @@ type _logmsg struct {
 }
 
 func _log(_l _logmsg) {
-	// prevent debug messages on non-debug mode
-	if !config.DEBUG && _l.level == DebugLevel {
-		return
-	}
-	if !config.PARANOICDEBUG && _l.level == ParanoicDebugLevel {
-		return
-	}
-
 	bdata := &BusData{
 		TypeID:   BusDataTypeLog,
 		M:        _l.m,
@@ -459,27 +426,27 @@ func _log(_l _logmsg) {
 
 // LogCritical func
 func LogCritical(s string, re *string) {
-	Log(CriticalLevel, &s, re, nil, nil, false)
+	Log(base.CriticalLevel, &s, re, nil, nil, false)
 }
 
 // LogErr func
 func LogErr(s string, re *string) {
-	Log(ErrorLevel, &s, re, nil, nil, false)
+	Log(base.ErrorLevel, &s, re, nil, nil, false)
 }
 
 // LogWarn func
 func LogWarn(s string, re *string) {
-	Log(WarningLevel, &s, re, nil, nil, false)
+	Log(base.WarningLevel, &s, re, nil, nil, false)
 }
 
 // LogInfo func
 func LogInfo(s string, re *string) {
-	Log(InfoLevel, &s, re, nil, nil, false)
+	Log(base.InfoLevel, &s, re, nil, nil, false)
 }
 
 // LogDebug func
 func LogDebug(s string, re *string) {
-	Log(DebugLevel, &s, re, nil, nil, false)
+	Log(base.DebugLevel, &s, re, nil, nil, false)
 }
 
 // SBusConnect func
@@ -641,7 +608,7 @@ func (l *Logger) SetThreadID(ti string) {
 // LogCritical func
 func (l *Logger) LogCritical(s string) {
 	_log(_logmsg{
-		level: CriticalLevel,
+		level: base.CriticalLevel,
 		m:     &s,
 		ei:    l.ExecutionUUID,
 		ai:    l.ActionID,
@@ -654,7 +621,7 @@ func (l *Logger) LogCritical(s string) {
 // LogErr func
 func (l *Logger) LogErr(s string) {
 	_log(_logmsg{
-		level: ErrorLevel,
+		level: base.ErrorLevel,
 		m:     &s,
 		ei:    l.ExecutionUUID,
 		ai:    l.ActionID,
@@ -669,7 +636,7 @@ func (l *Logger) ByteLogErr(b []byte) {
 	// last chance to determine encoding
 	s := string(b)
 	_log(_logmsg{
-		level: ErrorLevel,
+		level: base.ErrorLevel,
 		m:     &s,
 		ei:    l.ExecutionUUID,
 		ai:    l.ActionID,
@@ -682,7 +649,7 @@ func (l *Logger) ByteLogErr(b []byte) {
 // LogWarn func
 func (l *Logger) LogWarn(s string) {
 	_log(_logmsg{
-		level: WarningLevel,
+		level: base.WarningLevel,
 		m:     &s,
 		ei:    l.ExecutionUUID,
 		ai:    l.ActionID,
@@ -695,7 +662,7 @@ func (l *Logger) LogWarn(s string) {
 // LogInfo func
 func (l *Logger) LogInfo(s string) {
 	_log(_logmsg{
-		level: InfoLevel,
+		level: base.InfoLevel,
 		m:     &s,
 		ei:    l.ExecutionUUID,
 		ai:    l.ActionID,
@@ -710,7 +677,7 @@ func (l *Logger) ByteLogInfo(b []byte) {
 	// last chance to determine encoding
 	s := string(b)
 	_log(_logmsg{
-		level: InfoLevel,
+		level: base.InfoLevel,
 		m:     &s,
 		ei:    l.ExecutionUUID,
 		ai:    l.ActionID,
@@ -723,7 +690,7 @@ func (l *Logger) ByteLogInfo(b []byte) {
 // LogDebug func
 func (l *Logger) LogDebug(s string) {
 	_log(_logmsg{
-		level: DebugLevel,
+		level: base.DebugLevel,
 		m:     &s,
 		ei:    l.ExecutionUUID,
 		ai:    l.ActionID,
@@ -736,7 +703,7 @@ func (l *Logger) LogDebug(s string) {
 // ParanoicLogDebug func
 func (l *Logger) ParanoicLogDebug(s string) {
 	_log(_logmsg{
-		level: ParanoicDebugLevel,
+		level: base.ParanoicDebugLevel,
 		m:     &s,
 		ei:    l.ExecutionUUID,
 		ai:    l.ActionID,
