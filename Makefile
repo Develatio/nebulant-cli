@@ -151,7 +151,7 @@ buildall:
 	GOOS=windows GOARCH=amd64 GOEXE=.exe DIST_SUFFIX=-windows-amd64.exe $(MAKE) build_platform
 	GOOS=darwin GOARCH=arm64 GOEXE= DIST_SUFFIX=-darwin-arm64 $(MAKE) build_platform
 	GOOS=darwin GOARCH=amd64 GOEXE= DIST_SUFFIX=-darwin-amd64 $(MAKE) build_platform
-	GOOS=js GOARCH=wasm GOEXE= DIST_SUFFIX=-js-wasm $(MAKE) build_platform
+	# GOOS=js GOARCH=wasm GOEXE= DIST_SUFFIX=-js-wasm $(MAKE) build_platform
 
 .PHONY: buildalldev
 buildalldev: EXTRAFLAGS=$(DEVLDFLAGS)
