@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/develatio/nebulant-cli/cast"
-	"github.com/develatio/nebulant-cli/term"
 )
 
 // 1500MB zip file size limit (a reasonable, but arbitrary value)
@@ -37,6 +36,7 @@ func GetHttpClient() *http.Client {
 }
 
 func DownloadFileWithProgressBar(url string, outfilepath string, msg string) error {
+	// TODO
 	startTime := time.Now()
 	cast.LogDebug("Downloading "+url, nil)
 	client := GetHttpClient()
@@ -60,14 +60,7 @@ func DownloadFileWithProgressBar(url string, outfilepath string, msg string) err
 		return err
 	}
 	defer file.Close()
-
-	lin := term.AppendLine()
-	defer lin.Close()
-	bar, err := lin.GetProgressBar(resp.ContentLength, msg, true)
-	if err != nil {
-		return err
-	}
-
+	bar := cast.NewProgress(resp.ContentLength, msg, "", "", "", "")
 	ioreader := resp.Body
 	if strings.ToLower(resp.Header.Get("Content-Type")) == "application/x-bzip2" {
 		bz2dec := bzip2.NewReader(resp.Body)

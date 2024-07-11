@@ -96,12 +96,43 @@ L:
 	for { // Infine loop until break L
 		select { // Loop until a case ocurrs.
 		case instr := <-d.ExecInstruction:
-			cast.LogInfo("[Director] Received instruction with id "+*instr.ExecutionUUID, nil)
+			if instr.Instruction == ExecShutdown {
+				d.serverMode = false
+				if len(d.managers) > 0 {
+					for manager := range d.managers {
+						manager.Runtime.Stop()
+					}
+					continue
+				} else {
+					d.serverMode = false
+					break L
+				}
+			}
+
+			inname := "unknown"
+			switch instr.Instruction {
+			case ExecStop:
+				inname = "ExecStop"
+			case ExecStart:
+				inname = "ExecStart"
+			case ExecPause:
+				inname = "ExecPause"
+			case ExecResume:
+				inname = "ExecResume"
+			case ExecState:
+				inname = "ExecState"
+			case ExecEmancipation:
+				inname = "ExecEmancipation"
+			case ExecShutdown:
+				inname = "ExecShutdown"
+			}
+			cast.LogInfo(fmt.Sprintf("[Director] Instruction %s for exec id %s", inname, *instr.ExecutionUUID), nil)
 			if len(d.managers) <= 0 {
 				cast.LogInfo("[Director] No managers available", nil)
 				cast.PushEvent(cast.EventRuntimeOut, instr.ExecutionUUID)
 				continue
 			}
+
 			managerFound := false
 			for manager := range d.managers {
 				if instr.ExecutionUUID != nil && *manager.ExecutionUUID == *instr.ExecutionUUID {

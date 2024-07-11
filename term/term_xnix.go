@@ -26,28 +26,11 @@ package term
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 
 	"github.com/creack/pty"
-	"golang.org/x/term"
 )
-
-func getCursorPosition() (width, height int, err error) {
-	oldState, err := term.MakeRaw(0)
-	if err != nil {
-		panic(err)
-	}
-	defer term.Restore(0, oldState)
-	if _, err = os.Stdout.Write([]byte("\033[6n")); err != nil {
-		return 0, 0, err
-	}
-	if _, err = fmt.Fscanf(os.Stdin, "\033[%d;%d", &width, &height); err != nil {
-		return 0, 0, err
-	}
-	return width, height, nil
-}
 
 func EnableColorSupport() error { return nil }
 

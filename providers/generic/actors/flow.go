@@ -33,7 +33,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/term"
+	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/joho/godotenv"
 )
@@ -69,59 +69,65 @@ func (d *defineVarsParametersVar) askForValue() error {
 	isEmpty := v.Kind() == reflect.Ptr && v.IsNil()
 	isNotValid := !v.IsValid()
 	if d.AskAtRuntime != nil && *d.AskAtRuntime {
-		lin := term.AppendLine()
-		defer lin.Close()
-		var err error
 		switch *d.Type {
 		case VarTypeString:
-			var vv string
-			var def []byte
+			var def string
 			if !isEmpty && !isNotValid {
-				def = []byte(d.Value.(string))
+				def = d.Value.(string)
 			}
-			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", def, &vv)
-			d.Value = vv
+			vcn, err := cast.PromptInput("Please, enter value for "+d.Key, d.Required, def)
 			if err != nil {
 				return err
 			}
-
+			val := <-vcn
+			d.Value = val
 		case VarTypeInt:
 			var vv int
 			if !isEmpty && !isNotValid {
 				vv = d.Value.(int)
 			}
-			_, err = lin.Scanln(" Please, enter value for "+d.Key+": ", nil, &vv)
-			d.Value = vv
+			vcn, err := cast.PromptInt("Please, enter value for "+d.Key, d.Required, string(vv))
 			if err != nil {
 				return err
 			}
+			val := <-vcn
+			d.Value = val
+			v, err := strconv.Atoi(val)
+			if err != nil {
+				return err
+			}
+			d.Value = v
 		case VarTypeSelectableStatic:
 			// TODO: test if there is value
 			// selected and mark option acordingly
-			var options []string
+			options := make(map[string]string)
 			for _, obj := range d.Options {
-				options = append(options, obj.Label)
+				options[obj.Value] = obj.Label
 			}
-			optidx, err := term.Selectable("Please, enter value for "+d.Key+": ", options)
+			vcn, err := cast.PromptSelect("Please, enter value for "+d.Key, d.Required, options)
 			if err != nil {
 				return err
 			}
-			if optidx < 0 {
-				return fmt.Errorf("no option selected")
+			val := <-vcn
+			d.Value = val
+		case VarTypeBool:
+			def := "false"
+			if !isEmpty && !isNotValid {
+				vv := d.Value.(bool)
+				if vv {
+					def = "true"
+				}
 			}
-			d.Value = d.Options[optidx].Value
-		case VarTypeBool, VarTypeSelectableVariable:
+			vcn, err := cast.PromptBool("Please, enter value for "+d.Key, d.Required, def)
+			if err != nil {
+				return err
+			}
+			val := <-vcn
+			d.Value = val
+		case VarTypeSelectableVariable:
 			return fmt.Errorf("var type not supported yet")
 		default:
 			return fmt.Errorf("unknown var type")
-		}
-		// _, err = lin.Write([]byte("var setted to " + first))
-		// if err != nil {
-		// 	return err
-		// }
-		err = lin.Close()
-		if err != nil {
-			return err
 		}
 	}
 	return nil

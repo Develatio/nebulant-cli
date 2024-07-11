@@ -32,12 +32,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 	hook_providers "github.com/develatio/nebulant-cli/hook/providers"
 	"github.com/develatio/nebulant-cli/providers/aws/actors"
 )
 
-func ActionValidator(action *blueprint.Action) error {
+func ActionValidator(action *base.Action) error {
 	if action.Provider != "aws" {
 		return nil
 	}
@@ -107,7 +106,7 @@ func (p *Provider) HandleAction(actx base.IActionContext) (*base.ActionOutput, e
 }
 
 // OnActionErrorHook func
-func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Action, error) {
+func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*base.Action, error) {
 
 	// retry on net err, skip others
 	if _, ok := aout.Records[0].Error.(net.Error); ok {

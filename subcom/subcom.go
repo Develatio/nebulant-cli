@@ -23,11 +23,13 @@
 package subcom
 
 import (
-	"fmt"
+	"time"
 
-	"github.com/develatio/nebulant-cli/interactive"
+	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/subsystem"
 	"github.com/develatio/nebulant-cli/term"
+	"github.com/develatio/nebulant-cli/tui"
 )
 
 func RegisterSubcommands() {
@@ -63,29 +65,17 @@ func RegisterSubcommands() {
 			Help:          "  interactive\t\t" + term.EmojiSet["Television"] + " Start interactive menu\n",
 			Sec:           subsystem.SecMain,
 			Call: func(nblc *subsystem.NBLcommand) (int, error) {
-				// Interactive mode
-				err := interactive.LoopV2(nblc)
-				if err != nil {
-					if err == term.ErrInterrupt {
-						fmt.Println("^C")
-						// cast.SBus.Close().Wait()
-						return 0, nil
-						// os.Exit(0)
-					}
-					if err == term.ErrEOF {
-						fmt.Println("^D")
-						// cast.SBus.Close().Wait()
-						return 0, nil
-						// os.Exit(0)
-					}
-					return 1, err
-					// exitCode := 1
-					// cast.LogErr(err.Error(), nil)
-					// os.Exit(exitCode)
-				}
-				// cast.SBus.Close().Wait()
+				cast.PushMixedLogEventBusData(&cast.BusData{
+					EventID:       cast.EP(cast.EventInteractiveMenuStart),
+					ActionID:      nil,
+					ActionName:    nil,
+					LogLevel:      cast.EP(base.InfoLevel),
+					ThreadID:      nil,
+					ExecutionUUID: nil,
+					Timestamp:     time.Now().UTC().UnixMicro(),
+				})
+				tui.Wait()
 				return 0, nil
-				// os.Exit(0)
 			},
 		},
 		"auth": {
@@ -95,6 +85,17 @@ func RegisterSubcommands() {
 			Help:          "  auth\t\t\t" + term.EmojiSet["Key"] + " Server authentication\n",
 			Sec:           subsystem.SecMain,
 			Call:          AuthCmd,
+		},
+		"help": {
+			UpgradeTerm:   true,
+			WelcomeMsg:    true,
+			InitProviders: false,
+			Help:          "  help\t\t\t" + term.EmojiSet["WhiteQuestionMark"] + " shows this help msg\n",
+			Sec:           subsystem.SecMain,
+			Call: func(nblc *subsystem.NBLcommand) (int, error) {
+				nblc.CommandLine().Usage()
+				return 0, nil
+			},
 		},
 		"debugterm": {
 			UpgradeTerm:   true,
@@ -108,7 +109,7 @@ func RegisterSubcommands() {
 			UpgradeTerm:   true,
 			WelcomeMsg:    true,
 			InitProviders: false,
-			Help:          "  update\t\t" + term.EmojiSet["Squid"] + " Update the cli to the latest version\n",
+			Help:          "  update\t\t" + term.EmojiSet["CounterclockwiseArrowsButton"] + " Update the cli to the latest version\n",
 			Sec:           subsystem.SecMain,
 			Call:          UpdateCmd,
 		},

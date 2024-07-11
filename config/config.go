@@ -26,11 +26,15 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
+
+	"github.com/develatio/nebulant-cli/base"
 )
 
 // Version var
@@ -75,11 +79,13 @@ var FrontUrl string = "https://builder.nebulant.app"
 // FrontOriginPre var
 var FrontOriginPre string = "https://builder.nebulant.dev"
 
-// DEBUG conf
-var DEBUG bool = false
-
-// PARANOICDEBUG conf
-var PARANOICDEBUG bool = false
+// LOGLEVEL config. The default log level
+// used at console logger and uiconsole init.
+// Every log consumer should handle his own
+// loglevel filter, so this is just the initial
+// loglevel (default) or initial value setted
+// by the user.
+var LOGLEVEL int = base.InfoLevel
 
 // PROFILING conf
 var PROFILING bool = false
@@ -87,8 +93,8 @@ var PROFILING bool = false
 // BACKEND_AUTH_TOKEN conf
 var BACKEND_AUTH_TOKEN = ""
 
-// ACTIVE_CONF_PROFILE
-var ACTIVE_CONF_PROFILE = "default"
+// FALLBACK_PROFILE_NAME
+const FALLBACK_PROFILE_NAME = "default"
 
 // CREDENTIAL
 var CREDENTIAL *Credential = &Credential{}
@@ -125,7 +131,7 @@ var UpdateDescriptorURL string = "https://releases.nebulant.app/version.json"
 
 var BACKEND_REQUEST_NEW_SSO_TOKEN_PATH = "/v1/sso/"
 var PANEL_SSO_TOKEN_VALIDATION_PATH = "/sso/%s"
-var BACKEND_ENTRY_POINT_PATH = "/to/"
+var BACKEND_ENTRY_POINT_PATH = "/"
 var BACKEND_ME_PATH = "/v1/me/"
 var BACKEND_SSO_LOGIN_PATH = "/v1/sso/login/"
 var BACKEND_GET_BLUEPRINT_PATH = "/v1/blueprint/%s/%s/content/"           // coll-slug/bp-slug
@@ -142,14 +148,15 @@ var ServerModeFlag *bool
 var AddrFlag *string
 var BridgeAddrFlag *string
 var VersionFlag *bool
-var DebugFlag *bool
-var ParanoicDebugFlag *bool
+
+// var DebugFlag *bool
+// var ParanoicDebugFlag *bool
+var LogLevelFlag *string
 var Ipv6Flag *bool
-var DisableColorFlag *bool
 var UpgradeAssetsFlag *bool
 var ForceUpgradeAssetsFlag *bool
 var LookupAssetFlag *string
-var ForceTerm *bool
+var NoTermFlag *bool
 var BuildAssetIndexFlag *string
 var ForceUpgradeAssetsNoDownloadFlag *bool
 var BridgeSecretFlag *string
@@ -159,9 +166,7 @@ var BridgeCertPathFlag *string
 var BridgeKeyPathFlag *string
 var BridgeXtermRootPath *string
 
-var ForceNoTerm = false
-
-var ForceFile *bool
+var ForceFileFlag *bool
 
 var LOAD_CONF_FILES = "true"
 
@@ -175,26 +180,39 @@ func AppHomePath() string {
 	return filepath.Join(userHomePath, ".nebulant")
 }
 
+func ParseLogLevelFlag() {
+	if LogLevelFlag != nil {
+		switch *LogLevelFlag {
+		case "critical":
+			LOGLEVEL = base.CriticalLevel
+		case "error":
+			LOGLEVEL = base.ErrorLevel
+		case "warning":
+			LOGLEVEL = base.WarningLevel
+		case "info":
+			LOGLEVEL = base.InfoLevel
+		case "debug":
+			LOGLEVEL = base.DebugLevel
+		case "paranoic":
+			LOGLEVEL = base.ParanoicDebugLevel
+		case "silent":
+			LOGLEVEL = base.SilentLevel
+		case "default":
+			log.Panic("unknown log level")
+		}
+	}
+}
+
 // Order of credentials:
 // * Environment Variables
 // * Shared Credentials file
 func init() {
-	if os.Getenv("NEBULANT_DEBUG") != "" {
-		var err error
-		DEBUG, err = strconv.ParseBool(os.Getenv("NEBULANT_DEBUG"))
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
 	if os.Getenv("NEBULANT_PROFILING") != "" {
 		var err error
 		PROFILING, err = strconv.ParseBool(os.Getenv("NEBULANT_PROFILING"))
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-	if os.Getenv("NEBULANT_CONF_PROFILE") != "" {
-		ACTIVE_CONF_PROFILE = os.Getenv("NEBULANT_CONF_PROFILE")
 	}
 
 	if LOAD_CONF_FILES == "false" {
@@ -215,13 +233,11 @@ func init() {
 	}
 
 	// Load credentials from file
-	credential, err := ReadCredential(ACTIVE_CONF_PROFILE)
-	if err != nil && ACTIVE_CONF_PROFILE != "default" {
-		log.Panic("Cannot read credentials from specified profile " + ACTIVE_CONF_PROFILE)
+	credential, err := ReadCredential(os.Getenv("NEBULANT_CONF_PROFILE"))
+	if err != nil {
+		log.Panic(errors.Join(fmt.Errorf("cannot read credential file"), err))
 	}
-	if credential != nil {
-		CREDENTIAL = credential
-	}
+	CREDENTIAL = credential
 
 	// Use credentials from env vars if exists
 	if os.Getenv("NEBULANT_TOKEN_ID") != "" && os.Getenv("NEBULANT_TOKEN_SECRET") != "" {

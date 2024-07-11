@@ -42,8 +42,7 @@ var CharBell = []byte(fmt.Sprintf("%c", 7))[0]
 var ErrInterrupt = fmt.Errorf("^C")
 var ErrEOF = fmt.Errorf("^D")
 
-func GetOSPTY(cfg *OSPTYConf) (OSPTY, error)            { return nil, nil }
-func EnableColorSupport() error                         { return nil }
-func SetHideCursor() error                              { return nil }
-func SetShowCursor() error                              { return nil }
-func getCursorPosition() (width, height int, err error) { return -1, -1, nil }
+func GetOSPTY(cfg *OSPTYConf) (OSPTY, error) { return nil, nil }
+func EnableColorSupport() error              { return nil }
+func SetHideCursor() error                   { return nil }
+func SetShowCursor() error                   { return nil }

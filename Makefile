@@ -1,9 +1,9 @@
 # Nebulant cli Makefile.
-# github.com/develation/nebulant-cli
+# github.com/develatio/nebulant-cli
 
 VERSION = 0
-PATCHLEVEL = 4
-SUBLEVEL = 1
+PATCHLEVEL = 5
+SUBLEVEL = 0
 EXTRAVERSION = -beta
 # EXTRAVERSION := -beta-git-$(shell git log -1 --format=%h)
 NAME =
@@ -71,6 +71,10 @@ endif
 
 GOEXE=$(shell go env GOEXE)
 
+.PHONY: create-network
+create-network:
+	docker network create nebulant-lan 2> /dev/null || true
+
 .PHONY: runrace
 runrace:
 	CGO_ENABLED=1 go run -race -ldflags "-X github.com/develatio/nebulant-cli/config.LOAD_CONF_FILES=false $(LDFLAGS) $(LOCALLDFLAGS)" nebulant.go $(ARGS)
@@ -82,6 +86,10 @@ runracebridge:
 .PHONY: runbridge
 runbridge:
 	CGO_ENABLED=1 go run -ldflags "-X github.com/develatio/nebulant-cli/config.LOAD_CONF_FILES=false $(LDFLAGS) $(LOCALLDFLAGS)" ./bridge $(ARGS)
+
+.PHONY: runbridgedocker
+runbridgedocker: create-network
+	docker compose -f docker-compose.yml up bridge
 
 .PHONY: run
 run:
@@ -115,49 +123,35 @@ buildlocal:
 builddev:
 	go build -ldflags "$(LDFLAGS) $(DEVLDFLAGS)" -trimpath -o dist/nebulant-dev-NOPROD nebulant.go
 
+.PHONY: build_platform
+build_platform:
+	@mkdir -p dist/v$(CLIVERSION)
+	@GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant$(DIST_SUFFIX) nebulant.go
+	@shasum -a 256 dist/v$(CLIVERSION)/nebulant$(DIST_SUFFIX) > dist/v$(CLIVERSION)/nebulant$(DIST_SUFFIX).checksum
+	@printf "sha256: "
+	@cat dist/v$(CLIVERSION)/nebulant$(DIST_SUFFIX).checksum
+
 .PHONY: buildall
 buildall:
-	@echo "Building..."
-	mkdir -p dist/v$(CLIVERSION)
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-linux-arm nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-linux-arm > dist/v$(CLIVERSION)/nebulant-linux-arm.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-linux-arm64 nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-linux-arm64 > dist/v$(CLIVERSION)/nebulant-linux-arm64.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-linux-386 nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-linux-386 > dist/v$(CLIVERSION)/nebulant-linux-386.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-linux-amd64 nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-linux-amd64 > dist/v$(CLIVERSION)/nebulant-linux-amd64.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=freebsd GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-freebsd-386 nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-freebsd-386 > dist/v$(CLIVERSION)/nebulant-freebsd-386.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-freebsd-amd64 nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-freebsd-amd64 > dist/v$(CLIVERSION)/nebulant-freebsd-amd64.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=freebsd GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-freebsd-arm64 nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-freebsd-arm64 > dist/v$(CLIVERSION)/nebulant-freebsd-arm64.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=freebsd GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-freebsd-arm nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-freebsd-arm > dist/v$(CLIVERSION)/nebulant-freebsd-arm.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-openbsd-386 nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-openbsd-386 > dist/v$(CLIVERSION)/nebulant-openbsd-386.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-openbsd-amd64 nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-openbsd-amd64 > dist/v$(CLIVERSION)/nebulant-openbsd-amd64.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-openbsd-arm64 nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-openbsd-arm64 > dist/v$(CLIVERSION)/nebulant-openbsd-arm64.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=openbsd GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-openbsd-arm nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-openbsd-arm > dist/v$(CLIVERSION)/nebulant-openbsd-arm.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-windows-386.exe nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-windows-386.exe > dist/v$(CLIVERSION)/nebulant-windows-386.exe.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-windows-amd64.exe nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-windows-amd64.exe > dist/v$(CLIVERSION)/nebulant-windows-amd64.exe.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-windows-arm64.exe nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-windows-arm64.exe > dist/v$(CLIVERSION)/nebulant-windows-arm64.exe.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=windows GOARCH=arm go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-windows-arm.exe nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-windows-arm.exe > dist/v$(CLIVERSION)/nebulant-windows-arm.exe.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-darwin-amd64 nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-darwin-amd64 > dist/v$(CLIVERSION)/nebulant-darwin-amd64.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-darwin-arm64 nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-darwin-arm64 > dist/v$(CLIVERSION)/nebulant-darwin-arm64.checksum
-	GO111MODULE=on CGO_ENABLED=0 GOOS=js GOARCH=wasm go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant-js-wasm nebulant.go
-	shasum -a 256 dist/v$(CLIVERSION)/nebulant-js-wasm > dist/v$(CLIVERSION)/nebulant-js-wasm.checksum
-	@echo "Check dist/ for builds"
+	GOOS=linux GOARCH=arm GOEXE= DIST_SUFFIX=-linux-arm $(MAKE) build_platform
+	GOOS=linux GOARCH=arm64 GOEXE= DIST_SUFFIX=-linux-arm64 $(MAKE) build_platform
+	GOOS=linux GOARCH=386 GOEXE= DIST_SUFFIX=-linux-386 $(MAKE) build_platform
+	GOOS=linux GOARCH=amd64 GOEXE= DIST_SUFFIX=-linux-amd64 $(MAKE) build_platform
+	GOOS=freebsd GOARCH=arm GOEXE= DIST_SUFFIX=-freebsd-arm $(MAKE) build_platform
+	GOOS=freebsd GOARCH=arm64 GOEXE= DIST_SUFFIX=-freebsd-arm64 $(MAKE) build_platform
+	GOOS=freebsd GOARCH=386 GOEXE= DIST_SUFFIX=-freebsd-386 $(MAKE) build_platform
+	GOOS=freebsd GOARCH=amd64 GOEXE= DIST_SUFFIX=-freebsd-amd64 $(MAKE) build_platform
+	GOOS=openbsd GOARCH=arm GOEXE= DIST_SUFFIX=-openbsd-arm $(MAKE) build_platform
+	GOOS=openbsd GOARCH=arm64 GOEXE= DIST_SUFFIX=-openbsd-arm64 $(MAKE) build_platform
+	GOOS=openbsd GOARCH=386 GOEXE= DIST_SUFFIX=-openbsd-386 $(MAKE) build_platform
+	GOOS=openbsd GOARCH=amd64 GOEXE= DIST_SUFFIX=-openbsd-amd64 $(MAKE) build_platform
+	GOOS=windows GOARCH=arm GOEXE=.exe DIST_SUFFIX=-windows-arm.exe $(MAKE) build_platform
+	GOOS=windows GOARCH=arm64 GOEXE=.exe DIST_SUFFIX=-windows-arm64.exe $(MAKE) build_platform
+	GOOS=windows GOARCH=386 GOEXE=.exe DIST_SUFFIX=-windows-386.exe $(MAKE) build_platform
+	GOOS=windows GOARCH=amd64 GOEXE=.exe DIST_SUFFIX=-windows-amd64.exe $(MAKE) build_platform
+	GOOS=darwin GOARCH=arm64 GOEXE= DIST_SUFFIX=-darwin-arm64 $(MAKE) build_platform
+	GOOS=darwin GOARCH=amd64 GOEXE= DIST_SUFFIX=-darwin-amd64 $(MAKE) build_platform
+	GOOS=js GOARCH=wasm GOEXE= DIST_SUFFIX=-js-wasm $(MAKE) build_platform
 
 .PHONY: buildalldev
 buildalldev: EXTRAFLAGS=$(DEVLDFLAGS)
@@ -203,7 +197,3 @@ versiondate:
 .PHONY: goversion
 goversion:
 	@echo $(MINGOVERSION)
-
-.PHONY: shasum
-shasum:
-	shasum bin/*

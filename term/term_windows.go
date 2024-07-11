@@ -33,15 +33,6 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func getCursorPosition() (width, height int16, err error) {
-	var info windows.ConsoleScreenBufferInfo
-	if err := windows.GetConsoleScreenBufferInfo(windows.Handle(int(os.Stdout.Fd())), &info); err != nil {
-		return 0, 0, err
-	}
-
-	return info.CursorPosition.X, info.CursorPosition.Y, nil
-}
-
 func EnableColorSupport() error {
 	var st uint32
 	err := windows.GetConsoleMode(windows.Handle(int(os.Stdin.Fd())), &st)

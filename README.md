@@ -1,175 +1,233 @@
 Nebulant CLI
 ============
 
-- Website: https://nebulant.app
-- Documentation: [https://nebulant.app/docs.html](https://nebulant.app/docs.html)
-
 ![Nebulant](https://raw.githubusercontent.com/develatio/nebulant-cli/master/logo.png)
 
-The Nebulant CLI tool is a single binary that can be used as a helper for the web editor (providing live-run and autocomplete features) or as a standalone executor of Nebulant blueprint files (suitable for CI/CD environments).
+The Nebulant CLI tool is a single binary that can be used as a companion tool
+for the web editor (providing live-run and autocomplete features) or as a
+standalone executor of Nebulant blueprint files (suitable for CI/CD
+environments).
 
-The Nebulant project is a simplet yet powerful UI-based tool that allows you to define and execute a chain of actions. Think about it as a "cloud automation toolkit" that you can use to script and automate actions performed on your cloud services providers, without writing code.
+The Nebulant project is a simple yet powerful UI-based tool that allows you to
+define and execute a chain of actions. Think of it as "cloud automation
+toolkit" that you can use to script and automate actions performed on your cloud
+providers, without writing code.
 
-Actions can be anything, from simple operations such as sleep or print, to execution control with conditional evaluation and loops, to API calls (eg. create an AWS EC2 instance) performed on your favourite cloud services provider.
+Actions can be anything, from simple operations such as `sleep` or `print`, to
+execution control with conditional evaluation and loops, to API calls (e.g..
+`create an AWS EC2 instance`) performed on your favorite cloud provider.
 
-Nebulant is an imperative way for controling resources, which means that instead of describing the final result you're willing to obtain, you have the power to define exactly how and when each action should be done.
+Nebulant is an imperative way of controlling resources, which means that instead
+of describing the final result you're willing to obtain, you have the power to
+define exactly how and when each action should be done.
 
 For more information, see the [website](https://nebulant.app) of the Nebulant.
 
-Documentation
--------------
-Documentation is available on the [Nebulant website](https://nebulant.app) at [Docs](https://nebulant.app/docs.html) section.
+<br />
 
-Quick Start
------------
+📖 Documentation
+--------------------------------------------------------------------------------
 
-Using this tool is very simple.
+Find information about how to use the CLI, showcases, supported cloud providers
+and much more at
+[our docs website](https://nebulant.app/docs/cli/).
 
-```
-Usage: nebulant [-options] <nebulantblueprint.json>
+<br />
 
-  -d	Enable server mode at localhost:15678 to use within Nebulant Pipeline Builder.
-  -p	Console colors control. -p=<true|false>. (default true)
-```
+🏁 Quick Start
+--------------------------------------------------------------------------------
 
+There are **two** main ways you can use this CLI:
 
-You can choose between server mode:
+* as a companion tool for the [Nebulant Builder](https://builder.nebulant.app)
+* in a CI/CD pipeline
 
-- `$ ./nebulant -d`
+Let's start with the first one:
 
-which will be useful to develop your blueprints with the [Nebulant Builder](https://builder.nebulant.app), or production mode:
+Running the CLI as a companion tool for the
+[Nebulant Builder](https://builder.nebulant.app) will allow you to enjoy
+additional features such as:
 
-- `$ ./nebulant myblueprint.json`
+* real time data retrieval from your cloud providers
+* blueprint execution directly from the browser
+* faster searching in specific cloud providers pre-fetched datasets (eg: AWS's
+AMIs)
 
-with which you will run your blueprints indicating only the path to the json file.
+In order to execute this mode, run the CLI tool with the `serve` command:
 
-You can also run blueprints from your account if you know the UUID. This will download your project blueprint and run it.
-
-- `./nebulant "nebulant://45de9da7-a0af-4236-b168-61834f111f82"`
-
-Reproducible Build
-------------------
-[Reproducible builds](https://reproducible-builds.org/) *are a set of software development practices that create an independently-verifiable path from source to binary code.*
-
-At Develatio we believe in transparency and we emphasize the safety of our products. For this reason we have included the `make reproducible_buildall` command with which the builds of the binaries officially distributed can be reproduced.
-
-To reproduce *nix and windows builds, just run `make reproducible_buildall` and make a diff between both binaries, the distributed one and the just created.
-
-To reproduce MacOS builds, the process is similar but we just remove the signature before test the differences. Supossing you downloaded a release binary called `nebulant-0.2.0-beta-20220207-darwin-arm64` and you already executed `make reproducible_buildall` wich bring the `bin/nebulant-0.2.0-beta-20220209-darwin-arm64` binary, the steps to test the reproducible build are as simple as follow:
-
-```
-$ codesign --remove-signature nebulant-0.2.0-beta-20220207-darwin-arm64
-$ codesign --remove-signature nebulant-0.2.0-beta-20220209-darwin-arm64
-$ xxd nebulant-0.2.0-beta-20220207-darwin-arm64 >rm_signed_hex
-$ xxd nebulant-0.2.0-beta-20220209-darwin-arm64 >unsigned_hex
-$ diff rm_signed_hex unsigned_hex >differences_hex
-$ cat differences_hex
-93c93
-< 000005c0: 0080 3400 0000 0000 0000 1401 0000 0000  ..4.............
----
-> 000005c0: 120c 3400 0000 0000 0000 1401 0000 0000  ..4.............
-258,263c258,263
-< 00001010: 505a 2d79 3545 544c 4451 5244 4536 4430  PZ-y5ETLDQRDE6D0
-< 00001020: 6f44 4a61 2f57 2d36 6650 374c 797a 4c76  oDJa/W-6fP7LyzLv
-< 00001030: 6d54 7632 2d6f 4631 422f 4a37 6768 7971  mTv2-oF1B/J7ghyq
-< 00001040: 7973 5f34 724e 545f 3438 304d 4e67 2f65  ys_4rNT_480MNg/e
-< 00001050: 5178 7a41 784f 6b62 7455 6947 4b66 7773  QxzAxOkbtUiGKfws
-< 00001060: 4a63 6e22 0a20 ff00 0000 0000 0000 0000  Jcn". ..........
----
-> 00001010: 3959 5854 4f45 6772 7336 7336 354f 3937  9YXTOEgrs6s65O97
-> 00001020: 422d 7572 2f71 6b47 7157 3850 5277 4167  B-ur/qkGqW8PRwAg
-> 00001030: 4e67 5135 5f4d 754f 362f 4a37 6768 7971  NgQ5_MuO6/J7ghyq
-> 00001040: 7973 5f34 724e 545f 3438 304d 4e67 2f4c  ys_4rNT_480MNg/L
-> 00001050: 3051 4877 3864 4e75 566f 6c64 7377 735a  0QHw8dNuVoldswsZ
-> 00001060: 4439 4b22 0a20 ff00 0000 0000 0000 0000  D9K". ..........
-563194c563194
-< 00897f90: 0300 0000 0000 0000 3230 3232 3032 3037  ........20220207
----
-> 00897f90: 0300 0000 0000 0000 3230 3232 3032 3039  ........20220209
+```shell
+$ ./nebulant serve
 ```
 
-The big difference here is the path in wich the binary was builded (commonly your user home path). This path is inserted by go compiler. The second big difference is the build date inserted into the code during the compilation.
+The CLI should start listening at port `15678` in your `localhost`, which will
+allow you to connect to it from the
+[Nebulant Builder](https://builder.nebulant.app)
 
+TODO: <^ PUT HERE A SHORT VIDEO OF THE ABOVE ^>
 
-AWS Specific configuration
---------------------------
+The second way that you can use this CLI is by running blueprints directly with
+it. You'll most probably want to do this in any of the following situations:
 
-For AWS use files `~/.aws/config` and `~/.aws/credentials`
+* you've finished creating your blueprint and you want to run it in a CI/CD pipeline
+* you found a blueprint in the
+[Nebulant Marketplace](https://builder.nebulant.app) and you want to run it.
 
-* `~/.aws/config` file example content:
+Executing a blueprint is as simple as:
 
-```
-[profile nebulant-cli-tests]
-region=us-west-2
-output=json
-```
-
-* `~/.aws/credentials` file example content:
-
-```
-[nebulant-cli-tests]
-aws_access_key_id=your-key-id
-aws_secret_access_key=your-key-secret
+```shell
+$ ./nebulant run -f your_blueprint.nbp
 ```
 
-* Environment vars are also allowed. These will take precedence over files.
+You can also fetch and run blueprints directly from the marketplace:
 
+```shell
+$ ./nebulant run organization/collection/blueprint
 ```
-$ export AWS_ACCESS_KEY_ID=AKIAI...
-$ export AWS_SECRET_ACCESS_KEY=wJalrX...
-$ export AWS_DEFAULT_REGION=us-west-2
+
+Or from your own private organization, which requires you to sign up and create
+a token from the [Nebulant Panel](https://builder.nebulant.app) (check the
+`Nebulant CLI configuration` section for more info):
+
+```shell
+$ export NEBULANT_TOKEN_ID=...
+$ export NEBULANT_TOKEN_SECRET=...
+$ ./nebulant run organization/collection/blueprint
 ```
+
+TODO: <^ PUT HERE A SHORT VIDEO OF THE ABOVE ^>
+
+<br />
+
+⚙️ Building locally
+--------------------------------------------------------------------------------
+
+If you want to compile the source code yourself, you can follow these steps:
+
+Using Docker:
+
+```shell
+$ docker compose -f docker-compose.yml build
+$ docker compose -f docker-compose.yml run buildenv all
+```
+
+This will build the source code for all supported OSs and architectures.
+
+You can build the code for a specific combination of OS and architecture by
+replacing `all` with the desired target in the second command. Example:
+
+```shell
+$ docker compose -f docker-compose.yml run buildenv linux-amd64
+```
+
+Check the table of supported OSs and architectures.
+
+<br />
+
+🖥️ Supported OSs and architectures:
+--------------------------------------------------------------------------------
+
+|         | arm | arm64 | 386 | amd64 |
+| ------- | --- | ----- | --- | ----- |
+| linux   | ✅  |  ✅   | ✅  | ✅   |
+| freebsd | ✅  |  ✅   | ✅  | ✅   |
+| openbsd | ✅  |  ✅   | ✅  | ✅   |
+| windows | ✅  |  ✅   | ✅  | ✅   |
+| darwin  | N/A |  ✅   | N/A | ✅   |
+
+<br />
+
+🧰 Reproducible Build
+--------------------------------------------------------------------------------
+
+[Reproducible builds](https://reproducible-builds.org/) *are a set of software
+development practices that create an independently-verifiable path from source
+to binary code.*
+
+At Develatio, we believe in transparency, and we emphasize the safety of our
+products. For this reason we offer you the means to build the source code
+yourself and verify that the resulting binaries match the ones that we provide.
+
+To reproduce ***nix** and **windows** builds follow these steps:
+
+1. Clone the repo: `git clone https://github.com/Develatio/nebulant-cli.git`
+2. Checkout the version you'd like to build and check: `git checkout v0.5.0`
+3. Build the source code (check the `Building locally` section)
+4. Run `diff` between the binary that you just built and the binary that we
+provide. Make sure that both binaries have the same **version**, **OS** and
+**architecture**. You should see no differences, meaning that the binary that
+you downloaded contains the exact same code as the binary you just compiled.
+
+To reproduce **darwin** (aka MacOS) builds, the first 3 steps are the same, but
+before running the 4th step you need to perform an extra action.
+The binaries that we provide are signed with our private certificate, while the
+binaries that you can build from the source code aren't, which means that
+`diff`ing the darwin binaries will yield differences. You must remove the
+signature from the binary that we provide in order to be able to compare both
+binaries.
+
+Removing the signature is as easy as:
+
+```shell
+$ codesign --remove-signature nebulant-darwin-arm64
+$ xxd nebulant-darwin-arm64 > unsigned-nebulant-darwin-arm64
+```
+
+Now you should be able to follow the 4th step and see no differences.
+
+<br />
 
 Nebulant CLI Configuration
---------------------------
-To configura your credentials at Nebulant:
+--------------------------------------------------------------------------------
 
-* `~/.nebulat/credentials` file example content:
+Once you have created an account and logged in the
+[Nebulant Panel](https://builder.nebulant.app) you can create multiple tokens.
+Each token gives you full access to all the blueprints your user has access to.
+If you're the **administrator** of the organization, that would be **all
+blueprints** in the organization. On the contrary, if you're a **member** of an
+organization, that would be all **the blueprints** of all the collections you've
+been granted access to.
 
-```
-{
- 	"default": {
- 		"auth_token": "TOKENHASH"
- 	}
-}
-```
+The CLI can store tokens under profiles, which allows you to easily switch
+between them. For example, you might have generated multiple users, each one granted
+access only to certain collections of blueprints. Or you might have accounts in
+multiple organizations.
 
-If you want to add more settings, add them to this file like this:
+You can switch to a profile by either setting the following environment
+variable:
 
-```
-{
- 	"default": {
- 		"auth_token": "ID:SECRET"
- 	},
- 	"my_second_conf": {
- 		"auth_token": "ID2:SECRET"
- 	}
-}
+```shell
+$ export NEBULANT_CONF_PROFILE=my_profile
 ```
 
-You can select between the different settings by setting `ACTIVE_CONF_PROFILE`
+Or by interactively selecting the desired profile:
 
-
-```
-$  export ACTIVE_CONF_PROFILE=my_second_conf
-```
-
-Alternatively you can configure environment vars:
-
-```
-$ export NEBULANT_TOKEN_ID=356230....
-$ export NEBULANT_TOKEN_SECRET=QP1Meei5Cx9N....
+```shell
+$ ./nebulant auth profiles <- ?????
 ```
 
-Environment vars will take precedence over config files.
+Alternatively, if you don't want to use profiles you can set the following
+environment variables:
 
-Contributing
-------------
+```shell
+$ export NEBULANT_TOKEN_ID=...
+$ export NEBULANT_TOKEN_SECRET=...
+```
 
-If you find an issue, please report it on the
-[issue tracker](https://github.com/develatio/nebulant-cli/issues/new/choose).
+Note that environment variables will take precedence over config files.
 
-License
--------
+<br />
 
-[MIT License](https://github.com/develatio/nebulant-cli/blob/master/LICENSE)
+🫡 Contributing
+--------------------------------------------------------------------------------
+
+If you find an issue, please report it to the
+[issue tracker](https://github.com/develatio/nebulant-cli/issues/new).
+
+<br />
+
+📑 License
+--------------------------------------------------------------------------------
+
+Copyright (c) Develatio Technologies S.L. All rights reserved.
+
+Licensed under the [MIT](https://github.com/develatio/nebulant-cli/blob/master/LICENSE) license.

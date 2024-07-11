@@ -90,7 +90,7 @@ func OpenUrl(url string) error {
 	case "windows":
 		cmd = exec.Command("cmd", "/c", "start", url)
 	default:
-		exec.Command("xdg-open", url)
+		cmd = exec.Command("xdg-open", url)
 	}
 	return cmd.Run()
 }

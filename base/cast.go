@@ -22,6 +22,29 @@
 
 package base
 
+const SilentLevel = 100
+
+// CriticalLevel const
+const CriticalLevel = 50
+
+// ErrorLevel const
+const ErrorLevel = 40
+
+// WarningLevel const
+const WarningLevel = 30
+
+// InfoLevel const
+const InfoLevel = 20
+
+// DebugLevel const
+const DebugLevel = 10
+
+// DebugLevel const
+const ParanoicDebugLevel = 5
+
+// NotsetLevel const
+const NotsetLevel = 0
+
 // ILogger interface
 type ILogger interface {
 	LogCritical(s string)
@@ -33,5 +56,6 @@ type ILogger interface {
 	LogDebug(s string)
 	Duplicate() ILogger
 	SetActionID(ai string)
+	SetActionName(ai string)
 	SetThreadID(ti string)
 }

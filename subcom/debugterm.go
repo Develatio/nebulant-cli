@@ -36,18 +36,10 @@ import (
 )
 
 func newBar() {
-	line := term.AppendLine()
-	defer line.Close()
-	bar, err := line.GetProgressBar(int64(100), "Testing bar", false)
-	if err != nil {
-		panic(err)
-	}
+	bar := cast.NewProgress(int64(100), "Testing bar", "", "", "", "")
 
 	for i := 0; i < 100; i++ {
-		err := bar.Add(1)
-		if err != nil {
-			panic(err)
-		}
+		bar.Add(1)
 		time.Sleep(60000 * time.Microsecond)
 	}
 }
@@ -61,6 +53,7 @@ func parseTestsFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 		fmt.Fprintf(fs.Output(), "  scanln\t\tTest scanln while log\n")
 		fmt.Fprintf(fs.Output(), "  ansi\t\tTest ansi codes\n")
 		fmt.Fprintf(fs.Output(), "  raw\t\tSet raw term mode\n")
+		fmt.Fprintf(fs.Output(), "  bar\t\tTest progress bar\n")
 		fmt.Fprintf(fs.Output(), "  unraw\t\tdisable raw term mode\n")
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
@@ -85,6 +78,8 @@ func DebugtermCmd(nblc *subsystem.NBLcommand) (int, error) {
 		return testScanln()
 	case "ansi":
 		return testAnsiCodes()
+	case "bar":
+		return testBar()
 	case "raw":
 		cast.LogInfo("Not implemented yet", nil)
 		return 0, nil
@@ -128,6 +123,21 @@ func testAnsiCodes() (int, error) {
 	return 0, nil
 }
 
+func testBar() (int, error) {
+	go newBar()
+	time.Sleep(1 * time.Second)
+	go newBar()
+	time.Sleep(1 * time.Second)
+	go newBar()
+	time.Sleep(1 * time.Second)
+	go newBar()
+	time.Sleep(1 * time.Second)
+	go newBar()
+	time.Sleep(1 * time.Second)
+	newBar()
+	return 0, nil
+}
+
 func testScanln() (int, error) {
 	go func() {
 		counter1 := 0
@@ -142,17 +152,16 @@ func testScanln() (int, error) {
 	}()
 
 	counter2 := 0
-	lin := term.AppendLine()
-	defer lin.Close()
+	// lin := term.AppendLine()
+	// defer lin.Close()
 L:
 	for {
 		counter2++
-
-		var vv string
-		_, err := lin.Scanln("Nebulant "+strconv.Itoa(counter2)+"> ", nil, &vv)
+		vc, err := cast.PromptInput("> ", true, "")
 		if err != nil {
 			return 1, err
 		}
+		vv := <-vc
 		switch vv {
 		case "exit":
 			break L

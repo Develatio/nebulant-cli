@@ -22,17 +22,13 @@
 
 package base
 
-import (
-	"github.com/develatio/nebulant-cli/blueprint"
-)
-
 // ProviderInitFunc type
 type ProviderInitFunc func(store IStore) (IProvider, error)
 
 // IProvider interface
 type IProvider interface {
 	HandleAction(ctx IActionContext) (*ActionOutput, error)
-	OnActionErrorHook(aout *ActionOutput) ([]*blueprint.Action, error)
+	OnActionErrorHook(aout *ActionOutput) ([]*Action, error)
 	DumpPrivateVars(freshStore IStore)
 }
 

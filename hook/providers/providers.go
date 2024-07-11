@@ -31,7 +31,6 @@ import (
 	"strings"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 )
 
 type ProviderHookContext struct {
@@ -41,7 +40,7 @@ type ProviderHookContext struct {
 }
 
 // DefaultOnActionErrorHook func
-func DefaultOnActionErrorHook(ctx *ProviderHookContext, aout *base.ActionOutput) ([]*blueprint.Action, error) {
+func DefaultOnActionErrorHook(ctx *ProviderHookContext, aout *base.ActionOutput) ([]*base.Action, error) {
 	skipSleep := false
 	sleepIdPrefix := "internal-default-retry-control-"
 	if ctx.MaxRetries == nil {
@@ -90,13 +89,13 @@ func DefaultOnActionErrorHook(ctx *ProviderHookContext, aout *base.ActionOutput)
 		// rand.Seed(time.Now().UnixNano())
 		randIntString := fmt.Sprintf("%d", rand.Int()) // #nosec G404 -- Weak random is OK here
 		aout.Action.RetryCount = retries_count
-		actions := []*blueprint.Action{
+		actions := []*base.Action{
 			{
 				ActionID: sleepIdPrefix + randIntString,
 				SafeID:   &randIntString,
 				Provider: "generic",
-				NextAction: blueprint.NextAction{
-					NextOk: []*blueprint.Action{aout.Action},
+				NextAction: base.NextAction{
+					NextOk: []*base.Action{aout.Action},
 				},
 				ActionName: "sleep",
 				Parameters: json.RawMessage([]byte(fmt.Sprintf("{\"seconds\": %v}", seconds))),

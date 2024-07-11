@@ -31,18 +31,22 @@ import (
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/subcom"
 	"github.com/develatio/nebulant-cli/subsystem"
+	"github.com/develatio/nebulant-cli/tui"
 )
 
 func Start() (errcode int) {
-
-	// Init console logger
-	cast.InitConsoleLogger()
-	subcom.RegisterSubcommands()
-
 	if err := subsystem.ConfArgs(flag.CommandLine, os.Args[1:]); err != nil {
 		cast.LogErr(err.Error(), nil)
 		return 1
 	}
+
+	// Init console logger
+	ff := func(fLink *cast.BusConsumerLink) error {
+		_, err := tui.StartUI(fLink)
+		return err
+	}
+	cast.InitConsoleLogger(ff)
+	subcom.RegisterSubcommands()
 
 	// Version and exit
 	if *config.VersionFlag {
@@ -52,15 +56,6 @@ func Start() (errcode int) {
 		fmt.Println("Compiler version: " + config.VersionGo)
 		return 0
 		// os.Exit(0)
-	}
-
-	// Debug
-	if *config.DebugFlag {
-		config.DEBUG = true
-	}
-	if *config.ParanoicDebugFlag {
-		config.DEBUG = true
-		config.PARANOICDEBUG = true
 	}
 
 	sc := flag.Arg(0)

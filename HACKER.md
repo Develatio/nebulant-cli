@@ -17,7 +17,6 @@ Run while hack
 - set `AWS_PROFILE` to the profile you configured in config and credentials
 - add ssh key to agent as needed: `ssh-add ../../.ssh/nebulant-keypair-fortesting.pem`
 - run `export AWS_PROFILE=nebulant-cli-tests; make run ARGS="examples/dummy.json"`
-- run in debug mode `export NEBULANT_DEBUG=true; export AWS_PROFILE=nebulant-cli-tests; make run ARGS="examples/dummy.json"`
 - run as server mode `make run ARGS="-d"`
 
 

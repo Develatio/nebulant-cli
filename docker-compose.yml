@@ -1,4 +1,3 @@
-version: "3.4"
 name: nebulant
 
 services:
@@ -8,14 +7,12 @@ services:
       context: .
       dockerfile: Dockerfile
     image: develatio/nebulant_bridge
-    command: "/app/dist/nebulant-bridge -x -b 0.0.0.0:16789 -bs ultrasecret -c server.crt -k server.key"
-    ports:
-      - 16788:16789
+    command: "make runbridge ARGS='-x -b 0.0.0.0:16789 -bs ultrasecret'"
     networks:
       - nebulant-private
       - nebulant-lan
   # cli:
-  #   container_name: nebulant_cli
+  #   container_name: develatio/nebulant_cli
   #   build:
   #     context: .
   #     dockerfile: Dockerfile
@@ -26,7 +23,14 @@ services:
   #   networks:
   #     - nebulant
   #     - nebulant-external
-
+  buildenv:
+    container_name: nebulant_cli_build_environment
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: develatio/nebulant_cli
+    volumes:
+      - ./:/app
 
 networks:
   nebulant-private:

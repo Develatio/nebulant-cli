@@ -30,7 +30,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/storage"
 )
 
@@ -48,7 +47,7 @@ func (p *testProvider) HandleAction(actx base.IActionContext) (*base.ActionOutpu
 }
 
 // OnActionErrorHook func
-func (p *testProvider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Action, error) {
+func (p *testProvider) OnActionErrorHook(aout *base.ActionOutput) ([]*base.Action, error) {
 	return nil, nil
 }
 
@@ -63,6 +62,7 @@ func (l *fakeLogger) ByteLogInfo(b []byte)    {}
 func (l *fakeLogger) LogDebug(s string)       {}
 func (l *fakeLogger) Duplicate() base.ILogger { return l }
 func (l *fakeLogger) SetActionID(ai string)   {}
+func (l *fakeLogger) SetActionName(an string) {}
 func (l *fakeLogger) SetThreadID(ti string)   {}
 
 type tsie struct {
@@ -76,7 +76,7 @@ func TestInterpolate(t *testing.T) {
 	store := storage.NewStore()
 	store.SetLogger(lg)
 	ref := "OUTPUT_VAR_NAME"
-	action := &blueprint.Action{
+	action := &base.Action{
 		Provider: "generic",
 		Output:   &ref,
 	}
@@ -295,7 +295,7 @@ func TestMixedReferences(t *testing.T) {
 	var err error
 	store := storage.NewStore()
 	ref := "OUTPUT_VAR_NAME"
-	action := &blueprint.Action{
+	action := &base.Action{
 		Provider: "generic",
 		Output:   &ref,
 	}
@@ -416,7 +416,7 @@ func TestMagicReferences(t *testing.T) {
 	/////
 
 	ref := "SINGLE_VAR_NAME4"
-	action := &blueprint.Action{
+	action := &base.Action{
 		Provider: "generic",
 		Output:   &ref,
 	}
@@ -484,7 +484,7 @@ func TestDuplicate(t *testing.T) {
 	tp := &testProvider{}
 	store.StoreProvider("generic", tp)
 	ref := "SINGLE_VAR_NAME4"
-	action := &blueprint.Action{
+	action := &base.Action{
 		ActionID: "actionid",
 		Provider: "generic",
 		Output:   &ref,
@@ -619,7 +619,7 @@ func TestGetByActionID(t *testing.T) {
 	var err error
 	store := storage.NewStore()
 	ref := "OUTPUT_VAR_NAME"
-	action := &blueprint.Action{
+	action := &base.Action{
 		ActionID: "actionTestID",
 		Provider: "generic",
 		Output:   &ref,
@@ -694,7 +694,7 @@ func TestJSONPath(t *testing.T) {
 	var err error
 	store := storage.NewStore()
 	ref := "OUTPUT_VAR_NAME"
-	action := &blueprint.Action{
+	action := &base.Action{
 		Provider: "generic",
 		Output:   &ref,
 	}

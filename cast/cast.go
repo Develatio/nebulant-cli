@@ -29,29 +29,8 @@ import (
 	"time"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/config"
+	"github.com/google/uuid"
 )
-
-// CriticalLevel const
-const CriticalLevel = 50
-
-// ErrorLevel const
-const ErrorLevel = 40
-
-// WarningLevel const
-const WarningLevel = 30
-
-// InfoLevel const
-const InfoLevel = 20
-
-// DebugLevel const
-const DebugLevel = 10
-
-// DebugLevel const
-const ParanoicDebugLevel = 5
-
-// NotsetLevel const
-const NotsetLevel = 0
 
 // SBusBufferSize const
 const SBusBufferSize = 100000
@@ -131,23 +110,72 @@ const (
 	EventRuntimeStopping
 	// EventRuntimeOut const 13
 	EventRuntimeOut
-	// EventRegisteredManager 14
+	// EventRegisteredManager const 14
 	EventRegisteredManager
-	// EventWaitingStatus 15
+	// EventWaitingStatus const 15
 	EventWaitingForState
-	// EventActionUnCaughtKO 16
+	// EventActionUnCaughtKO const 16
 	EventActionUnCaughtKO
+	// EventActionUnCaughtOK const 17
+	EventActionUnCaughtOK
+	// EventActionInit const 18
+	EventActionInit
+	// EventActionKO Handled KO const 19
+	EventActionKO
+	// EventActionOK const 20
+	EventActionOK
+	// ThreadCreated const 21
+	EventNewThread
+	// ThreadDestroyed const 22
+	EventThreadDestroyed
+	//
+	EventProgressStart
+	EventProgressTick
+	EventProgressEnd
+	EventInteractiveMenuStart
+	EventPrompt
+	EventPromptDone
 )
+
+// EventPromptType int
+type EventPromptType int
+
+const (
+	EventPromptTypeInput EventPromptType = iota
+	EventPromptTypeSelect
+	EventPromptTypeBool
+)
+
+type EventPromptOptsValidateOpts struct {
+	ValueType  string // int, string ...
+	AllowEmpty bool
+}
+
+type EventPromptOpts struct {
+	UUID         string            `json:"uuid"`
+	Type         EventPromptType   `json:"type"`
+	PromptTitle  string            `json:"prompt_title"`
+	DefaultValue string            `json:"default_value"`
+	Options      map[string]string `json:"options"` // for select
+	// for responses
+	value chan string
+	//
+	Validate *EventPromptOptsValidateOpts `json:"validate"`
+}
 
 // BusData struct
 type BusData struct {
 	Timestamp int64 `json:"timestamp"`
 	//
 	// Type of data
-	TypeID   BusDataType `json:"type_id"`
-	ActionID *string     `json:"action_id,omitempty"`
-	// Msg data in bytes
+	TypeID BusDataType `json:"type_id"`
+	// id of the action sending the data
+	ActionID *string `json:"action_id,omitempty"`
+	// name of the action sending the data
+	ActionName *string `json:"action_name,omitempty"`
+	// id of the thread sending the data
 	ThreadID *string `json:"thread_id,omitempty"`
+	// Msg data in bytes
 	M        *string `json:"message,omitempty"`
 	LogLevel *int    `json:"log_level,omitempty"`
 	EOF      bool    `json:"EOF,omitempty"`
@@ -164,16 +192,24 @@ type BusData struct {
 	// Filtered feedback, sent only to client with this UUID
 	ClientUUIDFilter *string `json:"-"`
 	// Raw data
-	Raw bool `json:"raw,omitempty"`
+	Raw bool             `json:"raw,omitempty"`
+	EPO *EventPromptOpts `json:"epo,omitempty"`
 }
 
 // BusConsumerLink struct.
 // Used to connect consumer with BusData dispatcher
 type BusConsumerLink struct {
-	Name            string
-	ClientUUID      string
-	LogChan         chan *BusData
-	CommonChan      chan *BusData
+	Name       string
+	ClientUUID string
+	LogChan    chan *BusData
+	CommonChan chan *BusData
+	// tells a busreader that should stop read. This
+	// is usefull to switch readers using the same
+	// link
+	Off chan struct{}
+	// EOF msg received, so this link should not used
+	// to read any more logs
+	Degraded        bool
 	AllowEventData  bool
 	AllowStatusData bool
 }
@@ -262,15 +298,23 @@ func (s *SystemBus) Start() {
 					s.SetExecutionStatus(*busdata.ExecutionUUID, false)
 				}
 			}
-			if (busdata.TypeID == BusDataTypeLog || busdata.TypeID == BusDataTypeStatus) && busdata.ExecutionUUID != nil {
-				// WIP: el filtro de get execution status debería existir?
-				// ocurre un problema que no mola nada: cuando hay un panic
-				// el execution se pone a false y los mensajes con este
-				// execution uuid se mandan a parla
-				if s.ExistsExecution(*busdata.ExecutionUUID) && !s.GetExecutionStatus(*busdata.ExecutionUUID) {
-					continue
-				}
-			}
+
+			// RESOLUTION: si hay mensajes de log o eventos en cola, hay que mandarlos siempre.
+			// el CLI no puede actuar como filtro de mensajes cualesquiera, debe ser en todo
+			// caso el logger en cuestión. Para el caso de los loggers locales (console.go uiconsole.go)
+			// estos filtrarán con sus propios criterios. Para el caso del logger remoto (wsocket) que
+			// usa el builder, éste mandará todos los mensajes al builder y debe ser él quien descarte
+			// o haga uso de los mensajes recibidos, ya que el builder actua como un UI más, tipo uiconsole.go
+			//
+			// if (busdata.TypeID == BusDataTypeLog || busdata.TypeID == BusDataTypeStatus) && busdata.ExecutionUUID != nil {
+			// 	// WIP: el filtro de get execution status debería existir?
+			// 	// ocurre un problema que no mola nada: cuando hay un panic
+			// 	// el execution se pone a false y los mensajes con este
+			// 	// execution uuid se mandan a parla
+			// 	if s.ExistsExecution(*busdata.ExecutionUUID) && !s.GetExecutionStatus(*busdata.ExecutionUUID) {
+			// 		continue
+			// 	}
+			// }
 
 			// Dispatch busdata to consumers
 			for busConsumerLink := range s.links {
@@ -281,9 +325,6 @@ func (s *SystemBus) Start() {
 
 				sent := false                         // always ensure data receipt
 				if busdata.TypeID == BusDataTypeLog { // dispatch log data
-					if !config.DEBUG && *busdata.LogLevel == DebugLevel {
-						continue
-					}
 					for !sent {
 						select {
 						case busConsumerLink.LogChan <- busdata:
@@ -344,30 +385,47 @@ func (s *SystemBus) Close() *sync.WaitGroup {
 
 // Log func
 func Log(level int, m *string, ei *string, ai *string, ti *string, raw bool) {
-	// prevent debug messages on non-debug mode
-	if !config.DEBUG && level == DebugLevel {
-		return
-	}
-	if !config.PARANOICDEBUG && level == ParanoicDebugLevel {
-		return
-	}
+	_log(_logmsg{
+		level: level,
+		m:     m,
+		ei:    ei,
+		ai:    ai,
+		ti:    ti,
+		raw:   raw,
+	})
+}
 
+type _logmsg struct {
+	level int     // level
+	m     *string // msg
+	ei    *string // execution id
+	ai    *string // action id
+	an    *string // action name
+	ti    *string // thread id
+	raw   bool    // raw or not
+}
+
+func _log(_l _logmsg) {
 	bdata := &BusData{
 		TypeID:   BusDataTypeLog,
-		M:        m,
-		LogLevel: &level,
-		Raw:      raw,
+		M:        _l.m,
+		LogLevel: &_l.level,
+		Raw:      _l.raw,
 	}
-	if ei != nil {
-		eei := *ei
+	if _l.ei != nil {
+		eei := *_l.ei
 		bdata.ExecutionUUID = &eei
 	}
-	if ai != nil {
-		aai := *ai
+	if _l.ai != nil {
+		aai := *_l.ai
 		bdata.ActionID = &aai
 	}
-	if ti != nil {
-		tti := *ti
+	if _l.an != nil {
+		aan := *_l.an
+		bdata.ActionName = &aan
+	}
+	if _l.ti != nil {
+		tti := *_l.ti
 		bdata.ThreadID = &tti
 	}
 	bdata.Timestamp = time.Now().UTC().UnixMicro()
@@ -376,27 +434,27 @@ func Log(level int, m *string, ei *string, ai *string, ti *string, raw bool) {
 
 // LogCritical func
 func LogCritical(s string, re *string) {
-	Log(CriticalLevel, &s, re, nil, nil, false)
+	Log(base.CriticalLevel, &s, re, nil, nil, false)
 }
 
 // LogErr func
 func LogErr(s string, re *string) {
-	Log(ErrorLevel, &s, re, nil, nil, false)
+	Log(base.ErrorLevel, &s, re, nil, nil, false)
 }
 
 // LogWarn func
 func LogWarn(s string, re *string) {
-	Log(WarningLevel, &s, re, nil, nil, false)
+	Log(base.WarningLevel, &s, re, nil, nil, false)
 }
 
 // LogInfo func
 func LogInfo(s string, re *string) {
-	Log(InfoLevel, &s, re, nil, nil, false)
+	Log(base.InfoLevel, &s, re, nil, nil, false)
 }
 
 // LogDebug func
 func LogDebug(s string, re *string) {
-	Log(DebugLevel, &s, re, nil, nil, false)
+	Log(base.DebugLevel, &s, re, nil, nil, false)
 }
 
 // SBusConnect func
@@ -425,6 +483,28 @@ L:
 	}
 }
 
+// PushMixedLogEventBusData send a two copies of bdata
+// to bus buffer overriding bdata.TypeID and setting it
+// to cast.BusDataTypeEvent and cast.BusDataTypeLog.
+// This is usefull on init/end of action or something
+// to fine-log init events of an action before the
+// output of that action.
+func PushMixedLogEventBusData(bdata *BusData) {
+	bdata.TypeID = BusDataTypeEvent
+	PushBusData(bdata)
+	bbdata := BusData(*bdata)
+	bbdata.TypeID = BusDataTypeLog
+	PushBusData(&bbdata)
+}
+
+func EP(e int) *int {
+	return &e
+}
+
+func SEP(s string) *string {
+	return &s
+}
+
 // PushEvent func
 func PushEvent(eid int, re *string) {
 	var euuid string
@@ -440,6 +520,7 @@ func PushEvent(eid int, re *string) {
 	PushBusData(bdata)
 }
 
+// TODO: look for a better way to do this
 // PushEvent func
 func PushEventWithExtra(eid int, ei *string, extra map[string]interface{}) {
 	bdata := &BusData{
@@ -495,6 +576,7 @@ func PushFilteredBusData(clientUUIDFilter string, extra map[string]interface{}) 
 type Logger struct {
 	ExecutionUUID *string
 	ActionID      *string
+	ActionName    *string
 	ThreadID      *string
 }
 
@@ -521,6 +603,11 @@ func (l *Logger) SetActionID(ai string) {
 	l.ActionID = &ai
 }
 
+// SetActionName func
+func (l *Logger) SetActionName(an string) {
+	l.ActionName = &an
+}
+
 // SetThreadID func
 func (l *Logger) SetThreadID(ti string) {
 	l.ThreadID = &ti
@@ -528,51 +615,116 @@ func (l *Logger) SetThreadID(ti string) {
 
 // LogCritical func
 func (l *Logger) LogCritical(s string) {
-	Log(CriticalLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
+	_log(_logmsg{
+		level: base.CriticalLevel,
+		m:     &s,
+		ei:    l.ExecutionUUID,
+		ai:    l.ActionID,
+		an:    l.ActionName,
+		ti:    l.ThreadID,
+		raw:   false,
+	})
 }
 
 // LogErr func
 func (l *Logger) LogErr(s string) {
-	Log(ErrorLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
+	_log(_logmsg{
+		level: base.ErrorLevel,
+		m:     &s,
+		ei:    l.ExecutionUUID,
+		ai:    l.ActionID,
+		an:    l.ActionName,
+		ti:    l.ThreadID,
+		raw:   false,
+	})
 }
 
 // ByteLogErr func
 func (l *Logger) ByteLogErr(b []byte) {
 	// last chance to determine encoding
 	s := string(b)
-	Log(ErrorLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, true)
+	_log(_logmsg{
+		level: base.ErrorLevel,
+		m:     &s,
+		ei:    l.ExecutionUUID,
+		ai:    l.ActionID,
+		an:    l.ActionName,
+		ti:    l.ThreadID,
+		raw:   true,
+	})
 }
 
 // LogWarn func
 func (l *Logger) LogWarn(s string) {
-	Log(WarningLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
+	_log(_logmsg{
+		level: base.WarningLevel,
+		m:     &s,
+		ei:    l.ExecutionUUID,
+		ai:    l.ActionID,
+		an:    l.ActionName,
+		ti:    l.ThreadID,
+		raw:   false,
+	})
 }
 
 // LogInfo func
 func (l *Logger) LogInfo(s string) {
-	Log(InfoLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
+	_log(_logmsg{
+		level: base.InfoLevel,
+		m:     &s,
+		ei:    l.ExecutionUUID,
+		ai:    l.ActionID,
+		an:    l.ActionName,
+		ti:    l.ThreadID,
+		raw:   false,
+	})
 }
 
 // ByteLogInfo func
 func (l *Logger) ByteLogInfo(b []byte) {
 	// last chance to determine encoding
 	s := string(b)
-	Log(InfoLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, true)
+	_log(_logmsg{
+		level: base.InfoLevel,
+		m:     &s,
+		ei:    l.ExecutionUUID,
+		ai:    l.ActionID,
+		an:    l.ActionName,
+		ti:    l.ThreadID,
+		raw:   true,
+	})
 }
 
 // LogDebug func
 func (l *Logger) LogDebug(s string) {
-	Log(DebugLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
+	_log(_logmsg{
+		level: base.DebugLevel,
+		m:     &s,
+		ei:    l.ExecutionUUID,
+		ai:    l.ActionID,
+		an:    l.ActionName,
+		ti:    l.ThreadID,
+		raw:   false,
+	})
 }
 
 // ParanoicLogDebug func
 func (l *Logger) ParanoicLogDebug(s string) {
-	Log(ParanoicDebugLevel, &s, l.ExecutionUUID, l.ActionID, l.ThreadID, false)
+	_log(_logmsg{
+		level: base.ParanoicDebugLevel,
+		m:     &s,
+		ei:    l.ExecutionUUID,
+		ai:    l.ActionID,
+		an:    l.ActionName,
+		ti:    l.ThreadID,
+		raw:   false,
+	})
 }
 
 type DummyLogger struct {
 	ExecutionUUID *string
 	ActionID      *string
+	ActionName    *string
 	ThreadID      *string
 }
 
@@ -595,6 +747,9 @@ func (l *DummyLogger) Duplicate() base.ILogger {
 }
 func (l *DummyLogger) SetActionID(ai string) {
 	l.ActionID = &ai
+}
+func (l *DummyLogger) SetActionName(an string) {
+	l.ActionName = &an
 }
 func (l *DummyLogger) SetThreadID(ti string) {
 	l.ThreadID = &ti
@@ -623,4 +778,119 @@ func (b *BusInfo) GetLoad() float64 {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.Load
+}
+
+func PromptInput(title string, required bool, def string) (chan string, error) {
+	uid7, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
+	bdata := &BusData{
+		TypeID:    BusDataTypeEvent,
+		EventID:   EP(EventPrompt),
+		Timestamp: time.Now().UTC().UnixMicro(),
+		EPO: &EventPromptOpts{
+			UUID:         uid7.String(),
+			Type:         EventPromptTypeInput,
+			PromptTitle:  title,
+			DefaultValue: def,
+			value:        make(chan string, 1),
+			Validate: &EventPromptOptsValidateOpts{
+				ValueType:  "string",
+				AllowEmpty: !required,
+			},
+		},
+	}
+	PushBusData(bdata)
+	return bdata.EPO.value, nil
+}
+
+func PromptInt(title string, required bool, def string) (chan string, error) {
+	uid7, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
+	bdata := &BusData{
+		TypeID:    BusDataTypeEvent,
+		EventID:   EP(EventPrompt),
+		Timestamp: time.Now().UTC().UnixMicro(),
+		EPO: &EventPromptOpts{
+			UUID:         uid7.String(),
+			Type:         EventPromptTypeInput,
+			PromptTitle:  title,
+			DefaultValue: def,
+			value:        make(chan string, 1),
+			Validate: &EventPromptOptsValidateOpts{
+				ValueType:  "int",
+				AllowEmpty: !required,
+			},
+		},
+	}
+	PushBusData(bdata)
+	return bdata.EPO.value, nil
+}
+
+func PromptSelect(title string, required bool, options map[string]string) (chan string, error) {
+	uid7, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
+	bdata := &BusData{
+		TypeID:    BusDataTypeEvent,
+		EventID:   EP(EventPrompt),
+		Timestamp: time.Now().UTC().UnixMicro(),
+		EPO: &EventPromptOpts{
+			UUID:        uid7.String(),
+			Type:        EventPromptTypeSelect,
+			PromptTitle: title,
+			Options:     options,
+			value:       make(chan string, 1),
+			Validate: &EventPromptOptsValidateOpts{
+				ValueType:  "string",
+				AllowEmpty: !required,
+			},
+		},
+	}
+	PushBusData(bdata)
+	return bdata.EPO.value, nil
+}
+
+// PromptBool
+// def is true or false string
+func PromptBool(title string, required bool, def string) (chan string, error) {
+	uid7, err := uuid.NewV7()
+	if err != nil {
+		return nil, err
+	}
+	bdata := &BusData{
+		TypeID:    BusDataTypeEvent,
+		EventID:   EP(EventPrompt),
+		Timestamp: time.Now().UTC().UnixMicro(),
+		EPO: &EventPromptOpts{
+			UUID:         uid7.String(),
+			Type:         EventPromptTypeBool,
+			PromptTitle:  title,
+			DefaultValue: def,
+			value:        make(chan string, 1),
+			Validate: &EventPromptOptsValidateOpts{
+				ValueType:  "bool",
+				AllowEmpty: !required,
+			},
+		},
+	}
+	PushBusData(bdata)
+	return bdata.EPO.value, nil
+}
+
+func AnswerPrompt(b *BusData, v string) {
+	bdata := &BusData{
+		TypeID:    BusDataTypeEvent,
+		EventID:   EP(EventPromptDone),
+		Timestamp: time.Now().UTC().UnixMicro(),
+		EPO: &EventPromptOpts{
+			UUID: b.EPO.UUID,
+		},
+	}
+	b.EPO.value <- v
+	PushBusData(bdata)
 }

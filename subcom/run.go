@@ -38,18 +38,12 @@ import (
 func parseRunFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
-	config.ForceFile = fs.Bool("f", false, "Run local file")
+	config.ForceFileFlag = fs.Bool("f", false, "Run local file")
 	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "\nUsage: nebulant [file://, nebulant://][org/coll/bp][filepath] [--varname=varvalue --varname=varvalue]\n\n")
+		fmt.Fprintf(fs.Output(), "\nUsage: nebulant run [org/coll/bp] [-f filepath] [--varname=varvalue --varname=varvalue]\n\n")
 		fmt.Fprintf(fs.Output(), "Examples:\n")
-		fmt.Fprintf(fs.Output(), "\tnebulant develatio/utils/debug\n")
-		fmt.Fprintf(fs.Output(), "\tnebulant nebulant://develatio/utils/debug\n")
-		fmt.Fprintf(fs.Output(), "\tnebulant -f ./local/file/project.nbp\n")
-		fmt.Fprintf(fs.Output(), "\tnebulant file://local/file/project.nbp\n")
 		fmt.Fprintf(fs.Output(), "\tnebulant run develatio/utils/debug\n")
-		fmt.Fprintf(fs.Output(), "\tnebulant run nebulant://develatio/utils/debug\n")
 		fmt.Fprintf(fs.Output(), "\tnebulant run -f ./local/file/project.nbp\n")
-		fmt.Fprintf(fs.Output(), "\tnebulant run file://local/file/project.nbp\n")
 		fmt.Fprintf(fs.Output(), "\n\n")
 	}
 	err := fs.Parse(cmdline.Args()[1:])
@@ -77,7 +71,7 @@ func RunCmd(nblc *subsystem.NBLcommand) (int, error) {
 		irbConf.Args = args[1:]
 	}
 	var bpUrl *blueprint.BlueprintURL
-	if config.ForceFile != nil && *config.ForceFile {
+	if config.ForceFileFlag != nil && *config.ForceFileFlag {
 		bpUrl, err = blueprint.ParsePath(bluePrintFilePath)
 	} else {
 		bpUrl, err = blueprint.ParseURL(bluePrintFilePath)

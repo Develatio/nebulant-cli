@@ -27,7 +27,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 )
 
 type ec2Client func() ec2iface.EC2API
@@ -36,15 +35,16 @@ type ec2Client func() ec2iface.EC2API
 type ActionContext struct {
 	Rehearsal    bool
 	AwsSess      *session.Session
-	Action       *blueprint.Action
+	Action       *base.Action
 	Store        base.IStore
 	Logger       base.ILogger
 	NewEC2Client ec2Client
 }
 
-var NewActionContext = func(awsSess *session.Session, action *blueprint.Action, store base.IStore, logger base.ILogger) *ActionContext {
+var NewActionContext = func(awsSess *session.Session, action *base.Action, store base.IStore, logger base.ILogger) *ActionContext {
 	l := logger.Duplicate()
 	l.SetActionID(action.ActionID)
+	l.SetActionName(action.ActionName)
 	return &ActionContext{
 		AwsSess: awsSess,
 		Action:  action,

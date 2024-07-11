@@ -328,7 +328,7 @@ func (s *Store) Interpolate(sourcetext *string) error {
 				return fmt.Errorf("environment var access with empty var name " + refname)
 			}
 			if strings.ToLower(strings.TrimSpace(refpath)) == "random" {
-				*sourcetext = strings.Replace(*sourcetext, match[0], fmt.Sprintf("%d", rand.Int()), 1)
+				*sourcetext = strings.Replace(*sourcetext, match[0], fmt.Sprintf("%d", rand.Int31n(99999)), 1)
 				continue
 			}
 			varval, exists := os.LookupEnv(strings.TrimSpace(refpath))

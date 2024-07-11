@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 	"github.com/hetznercloud/hcloud-go/v2/hcloud/schema"
@@ -41,7 +40,7 @@ import (
 type ActionContext struct {
 	Rehearsal bool
 	HClient   *hcloud.Client
-	Action    *blueprint.Action
+	Action    *base.Action
 	Store     base.IStore
 	Logger    base.ILogger
 }
@@ -149,9 +148,10 @@ func UnmarshallHCloudToSchema(response *hcloud.Response, v interface{}) error {
 	return nil
 }
 
-var NewActionContext = func(client *hcloud.Client, action *blueprint.Action, store base.IStore, logger base.ILogger) *ActionContext {
+var NewActionContext = func(client *hcloud.Client, action *base.Action, store base.IStore, logger base.ILogger) *ActionContext {
 	l := logger.Duplicate()
 	l.SetActionID(action.ActionID)
+	l.SetActionName(action.ActionName)
 	return &ActionContext{
 		HClient: client,
 		Action:  action,

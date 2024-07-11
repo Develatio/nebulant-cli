@@ -26,14 +26,13 @@ import (
 	"fmt"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/blueprint"
 	"github.com/develatio/nebulant-cli/cast"
 	hook_providers "github.com/develatio/nebulant-cli/hook/providers"
 	"github.com/develatio/nebulant-cli/providers/generic/actors"
 	"github.com/develatio/nebulant-cli/util"
 )
 
-func ActionValidator(action *blueprint.Action) error {
+func ActionValidator(action *base.Action) error {
 	if action.Provider != "generic" {
 		return nil
 	}
@@ -86,6 +85,7 @@ func (p *Provider) HandleAction(actx base.IActionContext) (*base.ActionOutput, e
 	if al, exists := actors.ActionFuncMap[action.ActionName]; exists {
 		l := p.Logger.Duplicate()
 		l.SetActionID(action.ActionID)
+		l.SetActionName(action.ActionName)
 		return al.F(&actors.ActionContext{
 			Action: action,
 			Store:  p.store,
@@ -96,7 +96,7 @@ func (p *Provider) HandleAction(actx base.IActionContext) (*base.ActionOutput, e
 	return nil, fmt.Errorf("GENERIC: Unknown action: " + action.ActionName)
 }
 
-func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*blueprint.Action, error) {
+func (p *Provider) OnActionErrorHook(aout *base.ActionOutput) ([]*base.Action, error) {
 	al, exists := actors.ActionFuncMap[aout.Action.ActionName]
 	if !exists {
 		return nil, nil

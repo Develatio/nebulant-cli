@@ -46,7 +46,6 @@ import (
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/downloader"
-	"github.com/develatio/nebulant-cli/term"
 )
 
 //go:embed proxy.html
@@ -261,17 +260,9 @@ func writeIndexFile(fpath string, list *index, name string) (int, error) {
 	nn = n + nn
 	partcount := 0
 	partlen := len(list.Parts)
-	lin := term.AppendLine()
-	defer lin.Close()
-	bar, err := lin.GetProgressBar(int64(partlen), "Writing "+name+" index file", false)
-	if err != nil {
-		return 0, err
-	}
+	bar := cast.NewProgress(int64(partlen), "Writing "+name+" index file", "", "", "", "")
 	for tkn, positions := range list.Parts {
-		err := bar.Add(1)
-		if err != nil {
-			cast.LogWarn("progress bar err "+err.Error(), nil)
-		}
+		bar.Add(1)
 		partcount++
 		partsep := ""
 		if partcount < partlen {
@@ -462,7 +453,7 @@ func downloadIndex(remotedef *AssetRemoteDescription, localdef *AssetDefinition)
 }
 
 func makeIndex(assetdef *AssetDefinition) (int, error) {
-	cast.LogInfo("Building Asset index "+assetdef.Name, nil)
+	cast.LogInfo("Building asset index "+assetdef.Name, nil)
 	n, err := makeMainIndex(assetdef)
 	if err != nil {
 		return n, err
@@ -499,12 +490,7 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
-
-	lin := term.AppendLine()
-	bar, err := lin.GetProgressBar(fi.Size(), "Reading asset items", false)
-	if err != nil {
-		return 0, err
-	}
+	bar := cast.NewProgress(fi.Size(), "Reading asset items", "", "", "", "")
 
 	dec := json.NewDecoder(input)
 
@@ -515,10 +501,7 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 
 	start := time.Now()
 	readed := dec.InputOffset()
-	err = bar.Add64(readed)
-	if err != nil {
-		cast.LogWarn("progress bar err "+err.Error(), nil)
-	}
+	bar.Add64(readed)
 	// loop arr values
 	for dec.More() {
 		m := assetdef.FreshItem()
@@ -527,10 +510,7 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 		byteinit := dec.InputOffset()
 		delta := byteinit - readed
 		readed = byteinit
-		err := bar.Add64(delta)
-		if err != nil {
-			cast.LogWarn("progress bar err "+err.Error(), nil)
-		}
+		bar.Add64(delta)
 
 		err = dec.Decode(m)
 		if err != nil {
@@ -589,11 +569,7 @@ func makeSubIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
 
-	lin := term.AppendLine()
-	bar, err := lin.GetProgressBar(fi.Size(), "Optimizing "+assetdef.Name+" index", false)
-	if err != nil {
-		return 0, err
-	}
+	bar := cast.NewProgress(fi.Size(), "Optimizing "+assetdef.Name+" index", "", "", "", "")
 	dec := json.NewDecoder(input)
 
 	// read {
@@ -611,10 +587,7 @@ func makeSubIndex(assetdef *AssetDefinition) (int, error) {
 
 	start := time.Now()
 	readed := dec.InputOffset()
-	err = bar.Add64(readed)
-	if err != nil {
-		cast.LogWarn("progress bar err "+err.Error(), nil)
-	}
+	bar.Add64(readed)
 	// while the array contains values
 	for dec.More() {
 		var m tinyIndexItem
@@ -622,10 +595,7 @@ func makeSubIndex(assetdef *AssetDefinition) (int, error) {
 		byteinit := dec.InputOffset()
 		delta := byteinit - readed
 		readed = byteinit
-		err := bar.Add64(delta)
-		if err != nil {
-			cast.LogWarn("progress bar err "+err.Error(), nil)
-		}
+		bar.Add64(delta)
 
 		err = dec.Decode(&m)
 		if err != nil {
@@ -671,7 +641,7 @@ func Search(sr *SearchRequest, assetdef *AssetDefinition) (*SearchResult, error)
 	searchres := &SearchResult{Count: 0}
 	term := strings.ToLower(sr.SearchTerm)
 	if len(term) <= 1 {
-		return nil, fmt.Errorf("cannot lookup by requested term. Min char needed: 2")
+		return nil, fmt.Errorf("cannot lookup the requested term. Min char needed: 2")
 	}
 	subidx := &indexList{}
 	subIdxFile, _ := os.Open(assetdef.SubIndexPath)
@@ -1079,7 +1049,7 @@ func updateDescriptor(descpath string) error {
 		return err
 	}
 	cast.LogDebug("Downloading "+config.AssetDescriptorURL, nil)
-	return downloader.DownloadFileWithProgressBar(config.AssetDescriptorURL, descpath, "Updating asset descriptor...")
+	return downloader.DownloadFileWithProgressBar(config.AssetDescriptorURL, descpath, "Updating assets descriptor...")
 }
 
 func GenerateIndexFromFile(term string) error {
@@ -1251,16 +1221,16 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			err = nil
 			if !skipdownload {
 				cast.LogDebug("Downloading "+desc.URL, nil)
-				cast.LogInfo("Downloading "+asset_id+" asset index in bg...", nil)
+				cast.LogInfo("Downloading "+asset_id+" asset index in background...", nil)
 				err = downloadIndex(desc, def)
 			}
 			if err != nil {
 				cast.LogWarn("Cannot download "+asset_id+" index: ("+err.Error()+")", nil)
-				cast.LogWarn(asset_id+": Since the index could not be downloaded, it will be built locally. This process is long and expensive.", nil)
+				cast.LogWarn(asset_id+": Since the index could not be downloaded, it will be built locally. This process may take some time.", nil)
 			}
 			if err != nil || skipdownload {
 				cast.LogDebug("Building "+desc.URL, nil)
-				cast.LogInfo("Building "+asset_id+" index in bg...", nil)
+				cast.LogInfo("Building "+asset_id+" index in background...", nil)
 				_, err := makeIndex(def)
 				if err != nil {
 					State.setUpgradeState(UpgradeStateInProgressWithErr)
@@ -1276,7 +1246,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 	}
 
 	if State.CurrentUpgradeState == UpgradeStateInProgressWithErr {
-		err := fmt.Errorf("asset process done. Some problems found")
+		err := fmt.Errorf("assets processing finished. Some problems were found")
 		cast.LogErr(err.Error(), nil)
 		State.setUpgradeState(UpgradeStateEndWithErr)
 		err2 := State.saveState()
@@ -1284,7 +1254,7 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 			return errors.Join(err, err2)
 		}
 	} else if State.CurrentUpgradeState == UpgradeStateInProgress {
-		cast.LogInfo("Asset process done. All is up to date", nil)
+		cast.LogInfo("Assets processing finished. All assets are up to date", nil)
 		State.setUpgradeState(UpgradeStateEndOK)
 		err := State.saveState()
 		if err != nil {

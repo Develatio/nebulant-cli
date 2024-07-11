@@ -34,6 +34,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/util"
 	"golang.org/x/mod/semver"
@@ -52,64 +53,16 @@ type wrappedBlueprint struct {
 // Blueprint struct
 type Blueprint struct {
 	ExecutionUUID   *string
-	Actions         []Action `json:"actions"`
-	MinCLIVersion   *string  `json:"min_cli_version"`
+	Actions         []base.Action `json:"actions"`
+	MinCLIVersion   *string       `json:"min_cli_version"`
 	Raw             *[]byte
 	BuilderErrors   int `json:"n_errors"`
 	BuilderWarnings int `json:"n_warnings"`
 }
 
-// Action struct
-type Action struct {
-	// Filled internally.
-	Parents          []*Action
-	JoinThreadsPoint bool
-	DebugPoint       bool
-	KnowParentIDs    map[string]bool
-	SafeID           *string
-	// GENERICS //
-	Provider    string     `json:"provider" validate:"required"`
-	ActionID    string     `json:"action_id" validate:"required"`
-	ActionName  string     `json:"action" validate:"required"`
-	FirstAction bool       `json:"first_action"`
-	NextAction  NextAction `json:"next_action"`
-
-	// Delegated parse.
-	Input      json.RawMessage `json:"input" validate:"required"`
-	Parameters json.RawMessage `json:"parameters" validate:"required"`
-
-	// Actor out vars names.
-	Output         *string `json:"output"`
-	SaveRawResults bool    `json:"save_raw_results"`
-	DebugNetwork   bool    `json:"debug_network"`
-	// Not documented
-	MaxRetries *int `json:"max_retries"`
-	RetryCount int
-}
-
 type ConditionalNextActions struct {
 	True  []string `json:"true"`
 	False []string `json:"false"`
-}
-
-// NextAction struct
-type NextAction struct {
-	// Filled internally
-	NextOk []*Action
-	// Used internally. Is this a conditional next?
-	ConditionalNext bool
-	//
-	NextOkTrue  []*Action
-	NextOkFalse []*Action
-	//
-	NextKo []*Action
-	// filled internally
-	// detect loops through ok and ko
-	NextOkLoop bool
-	NextKoLoop bool
-	// Parsed in precompiling.
-	Ok json.RawMessage `json:"ok"`
-	Ko json.RawMessage `json:"ko"`
 }
 
 // InternalParameters struct
@@ -369,10 +322,10 @@ type IRBArg struct {
 type IRBlueprint struct {
 	BP            *Blueprint
 	ExecutionUUID *string
-	// [thread-action-id][thread-path]*Action
-	JoinThreadPoints map[string]*Action
-	Actions          map[string]*Action
-	StartAction      *Action
+	// [thread-action-id][thread-path]*base.Action
+	JoinThreadPoints map[string]*base.Action
+	Actions          map[string]*base.Action
+	StartAction      *base.Action
 	Args             []*IRBArg
 }
 
@@ -431,8 +384,8 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 	var errors IRBErrors
 	irb := &IRBlueprint{
 		BP:               bp,
-		Actions:          make(map[string]*Action),
-		JoinThreadPoints: make(map[string]*Action),
+		Actions:          make(map[string]*base.Action),
+		JoinThreadPoints: make(map[string]*base.Action),
 	}
 
 	err := PreValidate(bp)
@@ -590,10 +543,10 @@ func GenerateIRB(bp *Blueprint, irbConf *IRBGenConfig) (*IRBlueprint, error) {
 
 // buildDirectAscendants func
 // extract all degrees of direct ascendant
-func buildDirectAscendants(action *Action) map[string]bool {
+func buildDirectAscendants(action *base.Action) map[string]bool {
 	knowParents := make(map[string]bool)
 	queueParents := action.Parents
-	var processingParents []*Action
+	var processingParents []*base.Action
 
 	for len(queueParents) > 0 {
 		processingParents = queueParents
@@ -615,8 +568,8 @@ func buildDirectAscendants(action *Action) map[string]bool {
 	return knowParents
 }
 
-func replaceEndActions(actions []*Action, OK bool) []*Action {
-	var nextActions []*Action
+func replaceEndActions(actions []*base.Action, OK bool) []*base.Action {
+	var nextActions []*base.Action
 	for _, action := range actions {
 		if action.ActionName == "end" && action.Provider == "generic" {
 			if OK {
@@ -631,7 +584,7 @@ func replaceEndActions(actions []*Action, OK bool) []*Action {
 	return nextActions
 }
 
-func parseNextActions(okko json.RawMessage, actions map[string]*Action) ([]*Action, []*Action, []*Action, error) {
+func parseNextActions(okko json.RawMessage, actions map[string]*base.Action) ([]*base.Action, []*base.Action, []*base.Action, error) {
 	// missing field
 	if len(okko) <= 0 {
 
@@ -649,11 +602,11 @@ func parseNextActions(okko json.RawMessage, actions map[string]*Action) ([]*Acti
 	}
 
 	var err error
-	var nextActions []*Action
+	var nextActions []*base.Action
 	// Next actions from a conditional box with True at output.
-	var nextTrueActions []*Action
+	var nextTrueActions []*base.Action
 	// Next actions from a conditional box with False output.
-	var nextFalseActions []*Action
+	var nextFalseActions []*base.Action
 	var normalActions []string
 	var conditionals *ConditionalNextActions = new(ConditionalNextActions)
 

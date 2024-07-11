@@ -23,9 +23,8 @@
 package base
 
 import (
+	"encoding/json"
 	"io"
-
-	"github.com/develatio/nebulant-cli/blueprint"
 )
 
 type ActionContextRunStatus int
@@ -45,6 +44,54 @@ const (
 	RunStatusDone
 )
 
+// NextAction struct
+type NextAction struct {
+	// Filled internally
+	NextOk []*Action
+	// Used internally. Is this a conditional next?
+	ConditionalNext bool
+	//
+	NextOkTrue  []*Action
+	NextOkFalse []*Action
+	//
+	NextKo []*Action
+	// filled internally
+	// detect loops through ok and ko
+	NextOkLoop bool
+	NextKoLoop bool
+	// Parsed in precompiling.
+	Ok json.RawMessage `json:"ok"`
+	Ko json.RawMessage `json:"ko"`
+}
+
+// Action struct (should be interface? :shrug:)
+type Action struct {
+	// Filled internally.
+	Parents          []*Action
+	JoinThreadsPoint bool
+	DebugPoint       bool
+	KnowParentIDs    map[string]bool
+	SafeID           *string
+	// GENERICS //
+	Provider    string     `json:"provider" validate:"required"`
+	ActionID    string     `json:"action_id" validate:"required"`
+	ActionName  string     `json:"action" validate:"required"`
+	FirstAction bool       `json:"first_action"`
+	NextAction  NextAction `json:"next_action"`
+
+	// Delegated parse.
+	Input      json.RawMessage `json:"input" validate:"required"`
+	Parameters json.RawMessage `json:"parameters" validate:"required"`
+
+	// Actor out vars names.
+	Output         *string `json:"output"`
+	SaveRawResults bool    `json:"save_raw_results"`
+	DebugNetwork   bool    `json:"debug_network"`
+	// Not documented
+	MaxRetries *int `json:"max_retries"`
+	RetryCount int
+}
+
 // ActionContext interface
 type IActionContext interface {
 	Type() ContextType
@@ -54,7 +101,7 @@ type IActionContext interface {
 	Children() []IActionContext
 	IsThreadPoint() bool
 	IsJoinPoint() bool
-	GetAction() *blueprint.Action
+	GetAction() *Action
 	SetStore(IStore)
 	GetStore() IStore
 	// SetProvider(IProvider)
@@ -82,7 +129,7 @@ type IActionContext interface {
 
 // IActor interface
 type IActor interface {
-	RunAction(action *blueprint.Action) (*ActionOutput, error)
+	RunAction(action *Action) (*ActionOutput, error)
 }
 
 // Actor struct
@@ -92,12 +139,12 @@ type Actor struct {
 
 // ActionOutput struct
 type ActionOutput struct {
-	Action  *blueprint.Action
+	Action  *Action
 	Records []*StorageRecord
 }
 
 // NewActionOutput func.
-func NewActionOutput(action *blueprint.Action, storageRecordValue interface{}, storageRecordValueID *string) *ActionOutput {
+func NewActionOutput(action *Action, storageRecordValue interface{}, storageRecordValueID *string) *ActionOutput {
 	aout := &ActionOutput{
 		Action: action,
 	}

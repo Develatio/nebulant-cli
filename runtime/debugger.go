@@ -229,6 +229,7 @@ func (d *debugger) startLocalTermMode() {
 	d.running = true
 	oSstdin := nebulant_term.GenuineOsStdin
 
+	// TODO: replace by own IsTerminal?
 	if !term.IsTerminal(int(os.Stdout.Fd())) {
 		d.lw("No terminal detected. Remote debugger system will start. You can still press any key to start local shell")
 		started := make(chan struct{})
@@ -697,7 +698,7 @@ func (d *debugger) ExecCmd(cc *client, cmd string) {
 	switch string(fs.Arg(0)) {
 	case "nebu!":
 		fmt.Fprintf(clientFD, "lant!\n")
-	case "h", "help", "hh", "ayuda", "ajuda", "jelp", "jalp", "aiuda", "aiudapremo", "?":
+	case "h", "help", "hh", "ayuda", "ajuda", "jelp", "jalp", "aiuda", "?":
 		fmt.Fprintf(clientFD, `
 	h - This help txt ;)
 	j - Jump to another thread
