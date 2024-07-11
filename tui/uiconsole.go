@@ -388,6 +388,8 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = quitState
 			case "b":
 				cmds = append(cmds, tuicmd.OpenBuilderCmd())
+			case "p":
+				cmds = append(cmds, tuicmd.OpenPannelCmd())
 			case "l":
 				// config.DEBUG = true
 				switch m.logLevelFilter {

@@ -211,6 +211,7 @@ func ConfArgs(fflag *flag.FlagSet, arguments []string) error {
 		fmt.Fprint(fflag.Output(), "\n\ndeprecated flag. Use 'serve' command instead: ./nebulant serve\n")
 		return fmt.Errorf("deprecated flag err")
 	}
+	config.ParseLogLevelFlag()
 
 	// egg :)
 	switch fflag.Arg(0) {

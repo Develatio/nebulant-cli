@@ -180,18 +180,7 @@ func AppHomePath() string {
 	return filepath.Join(userHomePath, ".nebulant")
 }
 
-// Order of credentials:
-// * Environment Variables
-// * Shared Credentials file
-func init() {
-	if os.Getenv("NEBULANT_PROFILING") != "" {
-		var err error
-		PROFILING, err = strconv.ParseBool(os.Getenv("NEBULANT_PROFILING"))
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
+func ParseLogLevelFlag() {
 	if LogLevelFlag != nil {
 		switch *LogLevelFlag {
 		case "critical":
@@ -210,7 +199,19 @@ func init() {
 			LOGLEVEL = base.SilentLevel
 		case "default":
 			log.Panic("unknown log level")
+		}
+	}
+}
 
+// Order of credentials:
+// * Environment Variables
+// * Shared Credentials file
+func init() {
+	if os.Getenv("NEBULANT_PROFILING") != "" {
+		var err error
+		PROFILING, err = strconv.ParseBool(os.Getenv("NEBULANT_PROFILING"))
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 
