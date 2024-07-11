@@ -108,12 +108,31 @@ L:
 					break L
 				}
 			}
-			cast.LogInfo("[Director] Received instruction with id "+*instr.ExecutionUUID, nil)
+
+			inname := "unknown"
+			switch instr.Instruction {
+			case ExecStop:
+				inname = "ExecStop"
+			case ExecStart:
+				inname = "ExecStart"
+			case ExecPause:
+				inname = "ExecPause"
+			case ExecResume:
+				inname = "ExecResume"
+			case ExecState:
+				inname = "ExecState"
+			case ExecEmancipation:
+				inname = "ExecEmancipation"
+			case ExecShutdown:
+				inname = "ExecShutdown"
+			}
+			cast.LogInfo(fmt.Sprintf("[Director] Instruction %s for exec id %s", inname, *instr.ExecutionUUID), nil)
 			if len(d.managers) <= 0 {
 				cast.LogInfo("[Director] No managers available", nil)
 				cast.PushEvent(cast.EventRuntimeOut, instr.ExecutionUUID)
 				continue
 			}
+
 			managerFound := false
 			for manager := range d.managers {
 				if instr.ExecutionUUID != nil && *manager.ExecutionUUID == *instr.ExecutionUUID {

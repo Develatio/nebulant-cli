@@ -237,7 +237,11 @@ func (t *Thread) _runCurrent() {
 	if actx.IsThreadPoint() {
 		t.runtime.switchContext(actx)
 		for _, fkactx := range actx.Children() {
-			t.runtime.NewThread(fkactx)
+			if !t.runtime.NewThread(fkactx) {
+				// cannot star new thread, probably a stop
+				// event has been received, so stop exec
+				return
+			}
 		}
 		// t.runtime.deactivateContext(actx)
 		t.done = append(t.done, actx)

@@ -110,11 +110,12 @@ func (r *Runtime) NewEventListener() *base.EventListener {
 	return r.evDispatcher.NewEventListener()
 }
 
-func (r *Runtime) NewThread(actx base.IActionContext) {
+func (r *Runtime) NewThread(actx base.IActionContext) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.state == base.RuntimeStateEnding || r.state == base.RuntimeStateEnd {
-		return
+		cast.LogDebug(fmt.Sprintf("state ending, prevent start for action %s", actx.GetAction().ActionName), nil)
+		return false
 	}
 	cast.LogDebug("Stat new thread", r.irb.ExecutionUUID)
 	// r.mu.Lock()
@@ -141,6 +142,7 @@ func (r *Runtime) NewThread(actx base.IActionContext) {
 	if r.state == base.RuntimeStatePlay {
 		th.Play()
 	} else if r.state == base.RuntimeStateStill {
+		cast.LogDebug(fmt.Sprintf("net thread started in pause mode for action %s", actx.GetAction().ActionName), nil)
 		th.Pause()
 	}
 
@@ -152,6 +154,7 @@ func (r *Runtime) NewThread(actx base.IActionContext) {
 	// la cola de threads para inicializarlos
 	// y así poder tener control y dejar los
 	// threads quietos en caso de pause?
+	return true
 }
 
 func (r *Runtime) finishThread(th *Thread) {
@@ -182,8 +185,8 @@ func (r *Runtime) Play() {
 		th.Play()
 	}
 	r.state = base.RuntimeStatePlay
-	cast.PushEvent(cast.EventRuntimeStarted, r.irb.ExecutionUUID)
 	r.DispatchCurrentActiveIdsEvent()
+	cast.PushEvent(cast.EventRuntimeStarted, r.irb.ExecutionUUID)
 }
 
 func (r *Runtime) Pause() {
@@ -194,8 +197,8 @@ func (r *Runtime) Pause() {
 		th.Pause()
 	}
 	r.state = base.RuntimeStateStill
-	cast.PushEvent(cast.EventRuntimePaused, r.irb.ExecutionUUID)
 	r.DispatchCurrentActiveIdsEvent()
+	cast.PushEvent(cast.EventRuntimePaused, r.irb.ExecutionUUID)
 }
 
 func (r *Runtime) Stop() {
@@ -207,8 +210,8 @@ func (r *Runtime) Stop() {
 		th.Stop()
 	}
 	r.state = base.RuntimeStateEnd
-	cast.PushEvent(cast.EventRuntimeOut, r.irb.ExecutionUUID)
 	r.DispatchCurrentActiveIdsEvent()
+	cast.PushEvent(cast.EventRuntimeOut, r.irb.ExecutionUUID)
 }
 
 func (r *Runtime) GetThreads() map[*Thread]bool {

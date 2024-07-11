@@ -298,15 +298,23 @@ func (s *SystemBus) Start() {
 					s.SetExecutionStatus(*busdata.ExecutionUUID, false)
 				}
 			}
-			if (busdata.TypeID == BusDataTypeLog || busdata.TypeID == BusDataTypeStatus) && busdata.ExecutionUUID != nil {
-				// WIP: el filtro de get execution status debería existir?
-				// ocurre un problema que no mola nada: cuando hay un panic
-				// el execution se pone a false y los mensajes con este
-				// execution uuid se mandan a parla
-				if s.ExistsExecution(*busdata.ExecutionUUID) && !s.GetExecutionStatus(*busdata.ExecutionUUID) {
-					continue
-				}
-			}
+
+			// RESOLUTION: si hay mensajes de log o eventos en cola, hay que mandarlos siempre.
+			// el CLI no puede actuar como filtro de mensajes cualesquiera, debe ser en todo
+			// caso el logger en cuestión. Para el caso de los loggers locales (console.go uiconsole.go)
+			// estos filtrarán con sus propios criterios. Para el caso del logger remoto (wsocket) que
+			// usa el builder, éste mandará todos los mensajes al builder y debe ser él quien descarte
+			// o haga uso de los mensajes recibidos, ya que el builder actua como un UI más, tipo uiconsole.go
+			//
+			// if (busdata.TypeID == BusDataTypeLog || busdata.TypeID == BusDataTypeStatus) && busdata.ExecutionUUID != nil {
+			// 	// WIP: el filtro de get execution status debería existir?
+			// 	// ocurre un problema que no mola nada: cuando hay un panic
+			// 	// el execution se pone a false y los mensajes con este
+			// 	// execution uuid se mandan a parla
+			// 	if s.ExistsExecution(*busdata.ExecutionUUID) && !s.GetExecutionStatus(*busdata.ExecutionUUID) {
+			// 		continue
+			// 	}
+			// }
 
 			// Dispatch busdata to consumers
 			for busConsumerLink := range s.links {

@@ -22,7 +22,9 @@
 
 package base
 
-import "sync"
+import (
+	"sync"
+)
 
 type EventCode int
 
@@ -108,6 +110,17 @@ func (e *EventListener) WaitUntil(ecs []EventCode) EventCode {
 			}
 		}
 	}
+}
+
+// WaitUntilChan same as WaitUntilChan but it returns a chan that will be
+// filled on event reach
+func (e *EventListener) WaitUntilChan(ecs []EventCode) chan struct{} {
+	c := make(chan struct{})
+	go func() {
+		e.WaitUntil(ecs)
+		c <- struct{}{}
+	}()
+	return c
 }
 
 func NewEventListener() *EventListener {
