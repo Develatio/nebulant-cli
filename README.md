@@ -229,4 +229,4 @@ If you find an issue, please report it to the
 --------------------------------------------------------------------------------
 
 This project is licensed under the
-[MIT License](https://opensource.org/license/mit).
+[MIT License](https://github.com/develatio/nebulant-cli/blob/master/LICENSE).
