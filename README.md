@@ -14,7 +14,7 @@ toolkit" that you can use to script and automate actions performed on your cloud
 providers, without writing code.
 
 Actions can be anything, from simple operations such as `sleep` or `print`, to
-execution control with conditional evaluation and loops, to API calls (e.g..
+execution control with conditional evaluation and loops, to API calls (e.g.
 `create an AWS EC2 instance`) performed on your favorite cloud provider.
 
 Nebulant is an imperative way of controlling resources, which means that instead
@@ -50,7 +50,7 @@ additional features such as:
 
 * real time data retrieval from your cloud providers
 * blueprint execution directly from the browser
-* faster searching in specific cloud providers pre-fetched datasets (eg: AWS's
+* faster searching in specific cloud providers pre-fetched datasets (e.g., AWS's
 AMIs)
 
 In order to execute this mode, run the CLI tool with the `serve` command:
@@ -144,7 +144,7 @@ development practices that create an independently-verifiable path from source
 to binary code.*
 
 At Develatio, we believe in transparency, and we emphasize the safety of our
-products. For this reason we offer you the means to build the source code
+products. For this reason, we offer you the means to build the source code
 yourself and verify that the resulting binaries match the ones that we provide.
 
 To reproduce ***nix** and **windows** builds follow these steps:
@@ -205,7 +205,7 @@ Or by interactively selecting the desired profile:
 $ ./nebulant auth profiles <- ?????
 ```
 
-Alternatively, if you don't want to use profiles you can set the following
+Alternatively, if you don't want to use profiles, you can set the following
 environment variables:
 
 ```shell
