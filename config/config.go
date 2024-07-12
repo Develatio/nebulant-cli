@@ -26,8 +26,6 @@
 package config
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -235,7 +233,8 @@ func init() {
 	// Load credentials from file
 	credential, err := ReadCredential(os.Getenv("NEBULANT_CONF_PROFILE"))
 	if err != nil {
-		log.Panic(errors.Join(fmt.Errorf("cannot read credential file"), err))
+		// there is no credential, or not default credential, and this is ok
+		credential = &Credential{}
 	}
 	CREDENTIAL = credential
 
