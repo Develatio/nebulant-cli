@@ -126,7 +126,7 @@ builddev:
 .PHONY: build_platform
 build_platform:
 	@mkdir -p dist/v$(CLIVERSION)
-	@GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant$(DIST_SUFFIX) nebulant.go
+	GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -a -trimpath -ldflags "-w -s $(LDFLAGS) $(EXTRAFLAGS)" -o dist/v$(CLIVERSION)/nebulant$(DIST_SUFFIX) nebulant.go
 	@shasum -a 256 dist/v$(CLIVERSION)/nebulant$(DIST_SUFFIX) > dist/v$(CLIVERSION)/nebulant$(DIST_SUFFIX).checksum
 	@printf "sha256: "
 	@cat dist/v$(CLIVERSION)/nebulant$(DIST_SUFFIX).checksum
