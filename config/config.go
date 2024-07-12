@@ -26,6 +26,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -221,13 +222,15 @@ func init() {
 	assetsdir := filepath.Join(AppHomePath(), "assets")
 	err := os.MkdirAll(assetsdir, os.ModePerm)
 	if err != nil {
-		log.Panic(err.Error())
+		// maybe there is a read-only fs, and this is ok
+		fmt.Printf("** Warning: Cannot write assets dir: %s\n", err.Error())
 	}
 
 	// ensure credentials file
 	_, err = createEmptyCredentialsFile()
 	if err != nil {
-		log.Panic(err.Error())
+		// maybe there is a read-only fs, and this is ok
+		fmt.Printf("** Warning: Cannot write empty credential file: %s\n", err.Error())
 	}
 
 	// Load credentials from file
