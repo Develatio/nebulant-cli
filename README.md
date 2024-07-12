@@ -106,8 +106,8 @@ If you want to compile the source code yourself, you can follow these steps:
 Using Docker:
 
 ```shell
-$ docker compose -f docker-compose.yml build
-$ docker compose -f docker-compose.yml run buildenv all
+$ docker compose -f docker-compose.yml build --no-cache
+$ docker compose -f docker-compose.yml run --rm buildenv all
 ```
 
 This will build the source code for all supported OSs and architectures.
@@ -116,7 +116,7 @@ You can build the code for a specific combination of OS and architecture by
 replacing `all` with the desired target in the second command. Example:
 
 ```shell
-$ docker compose -f docker-compose.yml run buildenv linux-amd64
+$ docker compose -f docker-compose.yml run --rm buildenv linux-amd64
 ```
 
 Check the table of supported OSs and architectures.
@@ -150,7 +150,7 @@ yourself and verify that the resulting binaries match the ones that we provide.
 To reproduce ***nix** and **windows** builds follow these steps:
 
 1. Clone the repo: `git clone https://github.com/Develatio/nebulant-cli.git`
-2. Checkout the version you'd like to build and check: `git checkout v0.5.0`
+2. Checkout the version you'd like to build (e.g. `git checkout v0.6.0`)
 3. Build the source code (check the `Building locally` section)
 4. Run `diff` between the binary that you just built and the binary that we
 provide. Make sure that both binaries have the same **version**, **OS** and
