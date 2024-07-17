@@ -36,11 +36,13 @@ import (
 	"crypto/tls"
 	"encoding"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/http/cookiejar"
 	"net/textproto"
 	"net/url"
 	"os"
@@ -97,6 +99,7 @@ type httpRequestParameters struct {
 	Headers          []*httpHeader `json:"headers"`
 	BodyType         BodyType      `json:"body_type" validate:"required"`
 	IgnoreInvalidSSL bool          `json:"ignore_invalid_certs"`
+	CookieJarName    *string       `json:"cookie_jar"`
 }
 
 type httpRequestParametersMultiPartBody struct {
@@ -327,10 +330,34 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 			InsecureSkipVerify: p.IgnoreInvalidSSL,
 		},
 	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Do(req)
+
+	// creates a completly new cookie jar
+	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, err
+	}
+
+	// handles user-managed cookie jar
+	if p.CookieJarName != nil && *p.CookieJarName != "" {
+		jari := ctx.Store.GetPrivateVar("cookiejar_" + *p.CookieJarName)
+		if jari == nil {
+			// store the previous created jar into the store with
+			// the provided name
+			ctx.Store.SetPrivateVar("cookiejar_"+*p.CookieJarName, jar)
+		} else {
+			// recover stored cookie with the provided name
+			if storedjar, ok := jari.(*cookiejar.Jar); ok {
+				jar = storedjar
+			} else {
+				return nil, fmt.Errorf("cannot recover cookie %s", *p.CookieJarName)
+			}
+		}
+	}
+
+	client := &http.Client{Transport: tr, Jar: jar}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("http request error"), err)
 	}
 	defer resp.Body.Close()
 
@@ -396,20 +423,21 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	bar := cast.NewProgress(resp.ContentLength, path.Base(u.Path), "", "", "", "")
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(fmt.Errorf("internal err creating the progress bar"), err)
 	}
 
 	// swb := new(strings.Builder)
 	written, err := io.Copy(io.MultiWriter(f, bar), dcr) // #nosec G110 -- The user is free to get decompression bomb
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(fmt.Errorf("error decoding content"), err)
 	}
 
 	swb := make([]byte, 5000)
 	n, err := f.ReadAt(swb, 0)
 	if err != nil && err != io.EOF {
-		return nil, err
+		return nil, errors.Join(fmt.Errorf("error reading from request tmp file"), err)
 	}
+	err = nil
 	ctx.Logger.LogDebug("Body: " + string(swb))
 	if written > int64(n) {
 		ctx.Logger.LogDebug("...[Truncated]")
