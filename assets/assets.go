@@ -46,6 +46,7 @@ import (
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/downloader"
+	"golang.org/x/mod/semver"
 )
 
 //go:embed proxy.html
@@ -56,6 +57,7 @@ type UpgradeStateType int
 const INDEX_TOKEN_SIZE = 3
 const SUB_INDEX_TOKEN_SIZE = 2
 const USED_BY_SPA = "SPA"
+const USED_BY_CLI = "CLI"
 const (
 	UpgradeStateNone UpgradeStateType = iota
 	UpgradeStateInProgress
@@ -188,11 +190,12 @@ type SearchResult struct {
 }
 
 type AssetRemoteDescription struct {
-	ID      string `json:"id"`
-	UsedBy  string `json:"used_by"`
-	Hash    string `json:"hash"`
-	URL     string `json:"url"`
-	Version string `json:"version"`
+	ID            string `json:"id"`
+	UsedBy        string `json:"used_by"`
+	Hash          string `json:"hash"`
+	URL           string `json:"url"`
+	Version       string `json:"version"`
+	MinCLIVersion string `json:"min_cli_version"`
 }
 
 var AssetsDefinition map[string]*AssetDefinition = make(map[string]*AssetDefinition)
@@ -1108,7 +1111,22 @@ func UpgradeAssets(force bool, skipdownload bool) error {
 	}
 
 	for _, desc := range descriptor {
-		if desc.UsedBy == USED_BY_SPA {
+		if desc.UsedBy != USED_BY_CLI {
+			continue
+		}
+
+		if !semver.IsValid("v" + desc.MinCLIVersion) {
+			cast.LogWarn(fmt.Sprintf("invalid min cli version (v%s) received from asset descriptor, skip this asset", desc.MinCLIVersion), nil)
+			continue
+		}
+
+		if !semver.IsValid("v" + config.Version) {
+			cast.LogErr("invalid nebulant version: "+config.Version, nil)
+			continue
+		}
+
+		if c := semver.Compare("v"+desc.MinCLIVersion, "v"+config.Version); c == 1 {
+			cast.LogWarn("newest assets format needs updated CLI version. Please, update the CLI to obtain the new asset", nil)
 			continue
 		}
 
