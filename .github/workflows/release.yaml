@@ -27,6 +27,9 @@ jobs:
       - name: build artifacts
         run: make buildall
 
+      - name: make it executable
+        run: chmod a+x dist/*.*.*/nebulant*
+
       - name: Upload binary artifacts
         uses: actions/upload-artifact@v2
         with:
@@ -311,3 +314,18 @@ jobs:
           asset_path: ./SHASUM
           asset_name: SHASUM
           asset_content_type: text/plain
+
+      - name: Prepare upload to r2 version number
+        run: echo "VERSION_NUMBER=$(make goversion)" >> "$GITHUB_OUTPUT"
+        id: vnumber
+
+      - name: Prepare upload to r2 version date
+        run: echo "VERSION_DATE=$(git log -1 --date=format:'%Y/%m/%d' --format=%cd)" >> "$GITHUB_OUTPUT"
+        id: vdate
+
+      - name: Upload to r2
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_ACCESS_KEY_ID }}
+          CLOUDFLARE_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_SECRET_ACCESS_KEY }}
+        run: cp dist/*.*.*/nebulant-linux-amd64 ./nebulant && chmod a+x ./nebulant && ./nebulant run -f ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=nebulant-app-cli-releases --VERSION_NUMBER=${{ steps.vnumber.outputs.VERSION_NUMBER }} --VERSION_DATE=${{ steps.vdate.outputs.VERSION_DATE }} --URL_DOMAIN=releases.nebulant.app
