@@ -23,6 +23,7 @@
 package uiauth
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -38,6 +39,8 @@ import (
 type formState uint
 
 var spinnerTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render
+var keyStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#979797"))
+var descStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
 
 const (
 	defaultTime           = time.Minute
@@ -60,6 +63,7 @@ type AuthForm struct {
 	mainForm          tea.Model
 	spinner           spinner.Model
 	spinnerText       string
+	runningCancelFunc context.CancelFunc
 }
 
 func emptyForm() (*huh.Form, formState) {
@@ -184,6 +188,12 @@ func (m *AuthForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.spinner, cmd = m.spinner.Update(msg)
 			cmds = append(cmds, cmd)
+		case tea.KeyMsg:
+			switch msg.String() {
+			case "ctrl+c":
+				m.runningCancelFunc()
+			default:
+			}
 		}
 		return m, tea.Batch(cmds...)
 	}
@@ -197,7 +207,9 @@ func (m *AuthForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "new-token-cmd":
 				m.mainForm, m.state = emptyForm()
 				cmd := m.resetSpinner("Requesting new token...")
-				cmd2 := RequestNewTokenCmd()
+				ctx, cancel := context.WithCancel(context.Background())
+				m.runningCancelFunc = cancel
+				cmd2 := RequestNewTokenCmd(ctx)
 				cmds = append(cmds, cmd, cmd2)
 				m.state = runningState
 			case "set-as-default-cmd":
@@ -215,7 +227,9 @@ func (m *AuthForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "login-cmd":
 				m.mainForm, m.state = emptyForm()
 				cmd := m.resetSpinner("Login with token...")
-				cmd2 := LoginCmd(m.selectedTokenName)
+				ctx, cancel := context.WithCancel(context.Background())
+				m.runningCancelFunc = cancel
+				cmd2 := LoginCmd(ctx, m.selectedTokenName)
 				cmds = append(cmds, cmd, cmd2)
 				m.state = runningState
 			case "", "..":
@@ -276,7 +290,10 @@ func (m *AuthForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *AuthForm) View() string {
 	if m.state == runningState {
-		return fmt.Sprintf("\n %s%s\n\n", m.spinner.View(), spinnerTextStyle(m.spinnerText))
+		return lipgloss.JoinVertical(
+			lipgloss.Top,
+			fmt.Sprintf("\n %s%s\n\n", m.spinner.View(), spinnerTextStyle(m.spinnerText)),
+			keyStyle.Render("\n\nctrl+c")+descStyle.Render(" cancel\n"))
 	}
 
 	return m.mainForm.View()
@@ -288,16 +305,16 @@ func QuitAuthCmd() tea.Cmd {
 	}
 }
 
-func LoginCmd(tokenName string) tea.Cmd {
+func LoginCmd(ctx context.Context, tokenName string) tea.Cmd {
 	return func() tea.Msg {
-		_, err := config.LoginWithCredentialName(tokenName)
+		_, err := config.LoginWithCredentialName(ctx, tokenName)
 		return LoginResultMsg{Err: err}
 	}
 }
 
-func RequestNewTokenCmd() tea.Cmd {
+func RequestNewTokenCmd(ctx context.Context) tea.Cmd {
 	return func() tea.Msg {
-		err := config.RequestToken()
+		err := config.RequestToken(ctx)
 		return RequestNewTokenResultMsg{Err: err}
 	}
 }

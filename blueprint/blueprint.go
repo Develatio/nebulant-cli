@@ -24,6 +24,7 @@ package blueprint
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -212,7 +213,7 @@ func NewFromBackend(bpUrl *BlueprintURL) (*Blueprint, error) {
 		// return nil, fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token")
 	}
 
-	_, err := config.Login(nil)
+	_, err := config.Login(context.TODO(), nil)
 	if err != nil {
 		return NewFromMarket(bpUrl)
 	}

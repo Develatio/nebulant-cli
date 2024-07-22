@@ -27,6 +27,7 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -176,7 +177,7 @@ func GetJar() (*cookiejar.Jar, error) {
 	return cachedjar, nil
 }
 
-func LoginWithCredentialName(name string) (*cookiejar.Jar, error) {
+func LoginWithCredentialName(ctx context.Context, name string) (*cookiejar.Jar, error) {
 	crs, err := ReadCredentialsFile()
 	if err != nil {
 		return nil, err
@@ -184,7 +185,7 @@ func LoginWithCredentialName(name string) (*cookiejar.Jar, error) {
 	if credential, exists := crs.Credentials[name]; exists {
 		recovjar := cachedjar
 		cachedjar = nil
-		jar, err := Login(&credential)
+		jar, err := Login(ctx, &credential)
 		if err != nil {
 			cachedjar = recovjar
 			return nil, err
@@ -195,7 +196,7 @@ func LoginWithCredentialName(name string) (*cookiejar.Jar, error) {
 	}
 }
 
-func Login(credential *Credential) (*cookiejar.Jar, error) {
+func Login(ctx context.Context, credential *Credential) (*cookiejar.Jar, error) {
 	// TODO: test expiration and re-login
 	if cachedjar != nil {
 		return cachedjar, nil
@@ -234,7 +235,17 @@ func Login(credential *Credential) (*cookiejar.Jar, error) {
 		"access": "` + *credential.Access + `",
 		"secret": "` + esecret + `"
 	}`)
-	resp, err := c.Post(sso_login_url.String(), "application/json", bytes.NewBuffer(body))
+
+	req, err := http.NewRequest("POST", sso_login_url.String(), bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+	resp, err := c.Do(req)
+
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +354,7 @@ func RemoveToken(name string) error {
 	return nil
 }
 
-func RequestToken() error {
+func RequestToken(ctx context.Context) error {
 	tr := &http.Transport{
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
@@ -362,12 +373,22 @@ func RequestToken() error {
 	body := []byte(`{
 		"description": "Nebulant CLI"
 	}`)
-	resp, err := c.Post(sso_url.String(), "application/json", bytes.NewBuffer(body))
+
+	req, err := http.NewRequest("POST", sso_url.String(), bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	resp, err := c.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	// r := bufio.NewReader(resp.Body)
 
 	token := resp.Header.Get("url-token")
 	if token == "" {

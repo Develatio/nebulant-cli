@@ -349,7 +349,7 @@ func (d *debugger) reverseCloudServer() error {
 	if err != nil {
 		return err
 	}
-	jar, err := config.Login(nil)
+	jar, err := config.Login(context.TODO(), nil)
 	if err != nil {
 		return errors.Join(fmt.Errorf("backend login problem"), err)
 	}

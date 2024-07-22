@@ -23,6 +23,7 @@
 package subcom
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
@@ -59,7 +60,7 @@ func AuthCmd(nblc *subsystem.NBLcommand) (int, error) {
 	subsubcmd := cmdline.Arg(1)
 	switch subsubcmd {
 	case "newtoken":
-		err := config.RequestToken()
+		err := config.RequestToken(context.TODO())
 		if err != nil {
 			return 1, err
 		}

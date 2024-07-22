@@ -24,6 +24,7 @@ package uibrowser
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -107,7 +108,7 @@ func httpReqv2(method string, path string, body interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	jar, err := config.Login(nil)
+	jar, err := config.Login(context.TODO(), nil)
 	if err != nil {
 		return nil, err
 	}
