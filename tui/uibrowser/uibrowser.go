@@ -194,7 +194,7 @@ func blueprintsForm(collSlug string) (*huh.Form, lvlState, error) {
 		huh.NewGroup(
 			huh.NewSelect[string]().
 				Key("value").
-				Title("Choose bp").
+				Title("Choose blueprint").
 				Options(options...),
 		)).WithTheme(theme.HuhTheme()), blueprintState, nil
 }
@@ -211,7 +211,7 @@ func snapshotsForm(collectionSlug string, bpSlug string) (*huh.Form, lvlState, e
 
 	var options []huh.Option[string]
 	options = append(options, huh.NewOption("...Back", ".."))
-	options = append(options, huh.NewOption("Current (no version)", "no version"))
+	options = append(options, huh.NewOption("Current (draft)", "no version"))
 	for _, bp := range rd.Results {
 		opt := huh.NewOption(bp.Version, bp.Version)
 		options = append(options, opt)
