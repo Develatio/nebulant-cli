@@ -137,7 +137,7 @@ func FormatConsoleLogMsg(fback *BusData, verbose bool) *string {
 			span = len(aname) + 2
 			space = 2
 		}
-		format = fmt.Sprintf("%s %s%s|%s %%s %%s", color, aname, strings.Repeat(" ", space), term.Reset)
+		format = fmt.Sprintf("%s%s%s|%s %%s %%s", color, aname, strings.Repeat(" ", space), term.Reset)
 	}
 
 	if fback.EventID != nil {
@@ -264,12 +264,12 @@ L:
 
 func (c *ConsoleLogger) setDefaultTheme() {
 	prefxmap = map[int]string{
-		base.CriticalLevel:      " " + term.White + term.BGRed + " " + term.EmojiSet["FaceScreamingInFear"] + " CRITICAL ERROR " + term.Reset,
-		base.ErrorLevel:         " " + term.White + term.BGRed + " " + term.EmojiSet["PoliceCarLight"] + " ERROR " + term.Reset,
-		base.WarningLevel:       " " + term.Black + term.BGYellow + " " + term.EmojiSet["Construction"] + " WARNING " + term.Reset,
-		base.InfoLevel:          " " + term.Blue + "»" + term.Magenta + "»" + term.Reset,
-		base.DebugLevel:         " " + term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
-		base.ParanoicDebugLevel: " " + term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
+		base.CriticalLevel:      term.White + term.BGRed + " " + term.EmojiSet["FaceScreamingInFear"] + " CRITICAL ERROR " + term.Reset,
+		base.ErrorLevel:         term.White + term.BGRed + " " + term.EmojiSet["PoliceCarLight"] + " ERROR " + term.Reset,
+		base.WarningLevel:       term.Black + term.BGYellow + " " + term.EmojiSet["Construction"] + " WARNING " + term.Reset,
+		base.InfoLevel:          term.Blue + "»" + term.Magenta + "»" + term.Reset,
+		base.DebugLevel:         term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
+		base.ParanoicDebugLevel: term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
 		base.NotsetLevel:        "( · ) ",
 	}
 }

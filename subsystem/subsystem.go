@@ -128,11 +128,11 @@ func PrepareCmd(cmd *NBLcommand) error {
 		if err != nil {
 			fmt.Println("Nebulant CLI - A cloud builder by develat.io")
 		}
-		_, err = term.Println(term.Gray+" Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler, term.Reset)
+		_, err = term.Println(term.Gray+"Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler, term.Reset)
 		if err != nil {
 			fmt.Println("Version: v"+config.Version, "-", config.VersionDate, runtime.GOOS, runtime.GOARCH, runtime.Compiler)
 		}
-		term.PrintInfo(" Welcome :)\n")
+		term.PrintInfo("Welcome :)\n")
 	}
 
 	// Init Providers

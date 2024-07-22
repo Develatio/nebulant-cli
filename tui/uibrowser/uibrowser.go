@@ -38,6 +38,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/tui/theme"
 	"github.com/develatio/nebulant-cli/tuicmd"
 )
 
@@ -167,7 +168,7 @@ func collectionsForm() (*huh.Form, lvlState, error) {
 				Key("value").
 				Title("Choose collection").
 				Options(options...),
-		)), collectionState, nil
+		)).WithTheme(theme.HuhTheme()), collectionState, nil
 }
 
 func blueprintsForm(collSlug string) (*huh.Form, lvlState, error) {
@@ -195,7 +196,7 @@ func blueprintsForm(collSlug string) (*huh.Form, lvlState, error) {
 				Key("value").
 				Title("Choose bp").
 				Options(options...),
-		)), blueprintState, nil
+		)).WithTheme(theme.HuhTheme()), blueprintState, nil
 }
 
 func snapshotsForm(collectionSlug string, bpSlug string) (*huh.Form, lvlState, error) {
@@ -222,7 +223,7 @@ func snapshotsForm(collectionSlug string, bpSlug string) (*huh.Form, lvlState, e
 				Key("value").
 				Title("Choose version").
 				Options(options...),
-		)), snapshotState, nil
+		)).WithTheme(theme.HuhTheme()), snapshotState, nil
 }
 
 func newModel() (*BrowserForm, error) {

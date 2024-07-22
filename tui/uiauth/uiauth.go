@@ -34,6 +34,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/tui/theme"
 )
 
 type formState uint
@@ -94,7 +95,7 @@ func rootForm() (*huh.Form, formState, error) {
 				Key("value").
 				Title("Manage your local credentials").
 				Options(options...),
-		)).WithShowHelp(true)
+		)).WithShowHelp(true).WithTheme(theme.HuhTheme())
 	return form, rootState, nil
 }
 
@@ -125,7 +126,7 @@ func detailTokenForm(tokenName string) (*huh.Form, formState, error) {
 				Key("value").
 				Title(*cr.Access).
 				Options(options...),
-		)).WithShowHelp(true)
+		)).WithShowHelp(true).WithTheme(theme.HuhTheme())
 	return form, detailtokenState, nil
 }
 

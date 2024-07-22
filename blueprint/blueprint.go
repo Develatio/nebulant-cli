@@ -210,7 +210,6 @@ func NewFromMarket(bpUrl *BlueprintURL) (*Blueprint, error) {
 func NewFromBackend(bpUrl *BlueprintURL) (*Blueprint, error) {
 	if config.CREDENTIAL.AuthToken == nil {
 		return NewFromMarket(bpUrl)
-		// return nil, fmt.Errorf("auth token not found. Please set NEBULANT_TOKEN_ID and NEBULANT_TOKEN_SECRET environment variables or use 'nebulant auth' command to authenticate and generate a CLI token")
 	}
 
 	_, err := config.Login(context.TODO(), nil)

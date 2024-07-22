@@ -26,6 +26,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -33,6 +34,7 @@ import (
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/executive"
+	"github.com/develatio/nebulant-cli/tui/theme"
 	"github.com/develatio/nebulant-cli/tui/uiauth"
 	"github.com/develatio/nebulant-cli/tui/uibrowser"
 	"github.com/develatio/nebulant-cli/tuicmd"
@@ -61,6 +63,10 @@ func emptyForm() (*huh.Form, formState) {
 		huh.NewGroup(huh.NewNote())), emptyState
 }
 
+func spanString(s string) string {
+	return s + strings.Repeat(" ", 10-len(s))
+}
+
 func rootForm() (*huh.Form, formState) {
 	return huh.NewForm(
 		huh.NewGroup(
@@ -68,15 +74,15 @@ func rootForm() (*huh.Form, formState) {
 				Key("value").
 				Title("Main menu. What do you want to do?").
 				Options(
-					huh.NewOption("Serve\tStart server mode at "+net.JoinHostPort(config.SERVER_ADDR, config.SERVER_PORT), "serve-cmd"),
-					huh.NewOption("Build\tOpen builder app into the web browser", "build-cmd"),
-					huh.NewOption("Panel\tOpen panel app into the web browser", "panel-cmd"),
-					huh.NewOption("Path\tManually indicates the path to a blueprint", "filepicker-form"),
-					huh.NewOption("Auth\tManage tokens", "auth-cmd"),
-					huh.NewOption("Browse\tBrowse and run the blueprints stored in your account", "browser-form"),
-					huh.NewOption("Exit\tExit Nebulant CLI", "exit-cmd"),
+					huh.NewOption(spanString("Serve")+"Start server mode at "+net.JoinHostPort(config.SERVER_ADDR, config.SERVER_PORT), "serve-cmd"),
+					huh.NewOption(spanString("Build")+"Open builder app into the web browser", "build-cmd"),
+					huh.NewOption(spanString("Panel")+"Open panel app into the web browser", "panel-cmd"),
+					huh.NewOption(spanString("Path")+"Manually indicates the path to a blueprint", "filepicker-form"),
+					huh.NewOption(spanString("Auth")+"Manage tokens", "auth-cmd"),
+					huh.NewOption(spanString("Browse")+"Browse and run the blueprints stored in your account", "browser-form"),
+					huh.NewOption(spanString("Exit")+"Exit Nebulant CLI", "exit-cmd"),
 				),
-		)), rootState
+		)).WithTheme(theme.HuhTheme()), rootState
 }
 
 func filepickerForm() (*huh.Form, formState) {
@@ -87,7 +93,7 @@ func filepickerForm() (*huh.Form, formState) {
 				Title("File Picker").
 				Description("Select blueprint file").Picking(true).CurrentDirectory("/").ShowHidden(true),
 		).WithShowHelp(true),
-	).WithHeight(25)
+	).WithHeight(25).WithTheme(theme.HuhTheme())
 	fp.Init()
 	return fp, filepickerState
 }

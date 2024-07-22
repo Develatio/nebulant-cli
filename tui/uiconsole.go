@@ -37,6 +37,7 @@ import (
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/config"
+	"github.com/develatio/nebulant-cli/tui/theme"
 	"github.com/develatio/nebulant-cli/tui/uimenu"
 	"github.com/develatio/nebulant-cli/tuicmd"
 )
@@ -162,7 +163,7 @@ func newPrompt(b *cast.BusData) (*huh.Form, tea.Cmd) {
 			Value(&def)
 		cmd = cnf.Focus()
 		f = huh.NewForm(
-			huh.NewGroup(cnf))
+			huh.NewGroup(cnf)).WithTheme(theme.HuhTheme())
 	case cast.EventPromptTypeInput:
 		def := b.EPO.DefaultValue
 		inp := huh.NewInput().
@@ -186,7 +187,7 @@ func newPrompt(b *cast.BusData) (*huh.Form, tea.Cmd) {
 		inp.Validate(v)
 		cmd = inp.Focus()
 		f = huh.NewForm(
-			huh.NewGroup(inp))
+			huh.NewGroup(inp)).WithTheme(theme.HuhTheme())
 	case cast.EventPromptTypeSelect:
 		var options []huh.Option[string]
 		for v, l := range b.EPO.Options {
@@ -207,7 +208,7 @@ func newPrompt(b *cast.BusData) (*huh.Form, tea.Cmd) {
 		sel.Validate(v)
 		cmd = sel.Focus()
 		f = huh.NewForm(
-			huh.NewGroup(sel)).WithShowHelp(true)
+			huh.NewGroup(sel)).WithShowHelp(true).WithTheme(theme.HuhTheme())
 	default:
 		return nil, nil
 	}
