@@ -535,8 +535,30 @@ func (s *Store) recursiveInterpolation(v reflect.Value, il map[interface{}]bool)
 			}
 		}
 	case reflect.Map:
-		for _, e := range v.MapKeys() {
-			vv := v.MapIndex(e)
+		// interpolate map key
+		for _, mapkey := range v.MapKeys() {
+			switch skey := mapkey.Interface().(type) {
+			case string:
+				newkey := skey
+				err := s.Interpolate(&newkey)
+				if err != nil {
+					return err
+				}
+				if newkey != skey {
+					mapvalue := v.MapIndex(mapkey)
+					// interpolation ocurred, need to replace key-value
+					// setting value to Zero deletes de elem of mapkey
+					v.SetMapIndex(mapkey, reflect.Value{})
+					// now insert the value again but with the new interpolated key
+					v.SetMapIndex(reflect.ValueOf(newkey), mapvalue)
+				}
+			}
+		}
+
+		// repeat map iter to interpolate values
+		for _, mapkey := range v.MapKeys() {
+			// interpolate map value
+			vv := v.MapIndex(mapkey)
 			switch vv.Interface().(type) {
 			case string:
 				ifce := vv.Interface()
@@ -546,11 +568,14 @@ func (s *Store) recursiveInterpolation(v reflect.Value, il map[interface{}]bool)
 				if err != nil {
 					return err
 				}
-				if strv == strva {
-					// prevent not needed interpolation
-					return nil
+				if strv != strva {
+					v.SetMapIndex(mapkey, reflect.ValueOf(strv))
 				}
-				v.SetMapIndex(e, reflect.ValueOf(strv))
+			default:
+				err := s.recursiveInterpolation(vv, il)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	case reflect.String:
