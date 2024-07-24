@@ -37,6 +37,7 @@ import (
 	"github.com/develatio/nebulant-cli/tui/theme"
 	"github.com/develatio/nebulant-cli/tui/uiauth"
 	"github.com/develatio/nebulant-cli/tui/uibrowser"
+	"github.com/develatio/nebulant-cli/tui/uifilepicker"
 	"github.com/develatio/nebulant-cli/tuicmd"
 )
 
@@ -49,6 +50,8 @@ const (
 	browserState
 	authState
 	emptyState
+	pressEnterState
+	runningBlueprintState
 )
 
 type QuitMenuMsg struct{}
@@ -85,17 +88,12 @@ func rootForm() (*huh.Form, formState) {
 		)).WithTheme(theme.HuhTheme()), rootState
 }
 
-func filepickerForm() (*huh.Form, formState) {
-	fp := huh.NewForm(
-		huh.NewGroup(
-			huh.NewFilePicker().
-				Key("value").
-				Title("File Picker").
-				Description("Select blueprint file").Picking(true).CurrentDirectory("/").ShowHidden(true),
-		).WithShowHelp(true),
-	).WithHeight(25).WithTheme(theme.HuhTheme())
-	fp.Init()
-	return fp, filepickerState
+func FilePickerForm() (*uifilepicker.FilePickerForm, formState, error) {
+	fp, err := uifilepicker.New()
+	if err != nil {
+		return nil, emptyState, err
+	}
+	return fp, filepickerState, nil
 }
 
 func BrowserForm() (*uibrowser.BrowserForm, formState, error) {
@@ -131,7 +129,6 @@ func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			kl := f.GetString("value")
 			switch kl {
 			case "":
-				cast.LogErr("Unknown cmd", nil)
 				m.mainForm, m.state = rootForm()
 			case "panel-cmd":
 				cmds = append(cmds, tuicmd.OpenPannelCmd())
@@ -144,7 +141,13 @@ func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, startServerModeCmd(), QuitMenuCmd())
 				m.mainForm, m.state = emptyForm()
 			case "filepicker-form":
-				m.mainForm, m.state = filepickerForm()
+				var err error
+				m.mainForm, m.state, err = FilePickerForm()
+				cmds = append(cmds, m.mainForm.Init())
+				if err != nil {
+					cast.LogErr(err.Error(), nil)
+					m.mainForm, m.state = rootForm()
+				}
 			case "browser-form":
 				var err error
 				m.mainForm, m.state, err = BrowserForm()
@@ -174,9 +177,6 @@ func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case tea.KeyMsg:
 				switch msg.String() {
 				case "esc":
-					if m.state == filepickerState {
-						m.mainForm, m.state = rootForm()
-					}
 				case "h":
 					m.mainForm = f
 					// TOOD: show help¿
@@ -189,29 +189,17 @@ func (m *Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// f.State = huh.StateNormal
 	} else {
-		// non-form, here is the browser model
+		// non-form, here is the browser model or the filepicker model
 	}
 
 	switch msg.(type) {
 	case uibrowser.QuitBrowserMsg:
 		m.mainForm, m.state = rootForm()
+	case uifilepicker.QuitFilePickerMsg:
+		m.mainForm, m.state = rootForm()
 	case uiauth.QuitAuthMsg:
 		m.mainForm, m.state = rootForm()
 	}
-
-	// switch msg := msg.(type) {
-	// case tea.KeyMsg:
-	// 	switch msg.String() {
-	// 	case "esc":
-	// 		if m.state == quitState {
-	// 			return m, confirmQuit()
-	// 		}
-	// 	case "n":
-	// 		if m.state == quitState {
-	// 			m.state = logState
-	// 		}
-	// 	}
-	// }
 
 	return m, tea.Batch(cmds...)
 }

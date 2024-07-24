@@ -204,19 +204,18 @@ func (m *Manager) Run() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	m.Logger.LogInfo(fmt.Sprintf("Blueprint runtime finished with exit code %v", m.Runtime.ExitCode()))
 	err = m.Runtime.Error()
 	if err != nil {
 		errs := m.Runtime.Errors()
 		cerr := len(errs)
 		lerr, errs := errs[len(errs)-1], errs[:len(errs)-1]
-		cast.LogErr(fmt.Sprintf("%v unhandled errors found. Summary:\n***\n", cerr), m.ExecutionUUID)
+		cast.LogInfo(fmt.Sprintf("%v unhandled errors found. Summary:\n***\n", cerr), m.ExecutionUUID)
 		for _, rr := range errs {
 			cast.LogErr(rr.Error(), m.ExecutionUUID)
 		}
 		cast.LogErr(fmt.Sprintf("%s\n\n***", lerr.Error()), m.ExecutionUUID)
 	}
-
-	m.Logger.LogInfo(fmt.Sprintf("Blueprint runtime finished with exit code %v", m.Runtime.ExitCode()))
 	m.Logger.LogInfo("[Manager] out")
 
 	elapsedTime := time.Since(startTime).String()

@@ -373,7 +373,11 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = logState
 	case tuicmd.RunRemoteBPCmdStartMsg:
 		m.state = logState
+	case tuicmd.RunLocalBPCmdStartMsg:
+		m.state = logState
 	case tuicmd.RunRemoteBPCmdENDMsg:
+		m.state = menuState
+	case tuicmd.RunLocalBPCmdENDMsg:
 		m.state = menuState
 	case tea.QuitMsg:
 		m.state = emptyState

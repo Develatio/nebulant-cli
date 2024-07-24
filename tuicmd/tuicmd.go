@@ -40,6 +40,12 @@ type RunRemoteBPCmdENDMsg struct{ Err error }
 // run remote bp has start
 type RunRemoteBPCmdStartMsg struct{}
 
+// run local bp has end
+type RunLocalBPCmdENDMsg struct{ Err error }
+
+// run local bp has start
+type RunLocalBPCmdStartMsg struct{}
+
 // quit process request
 type QuitStateMsg struct{}
 
@@ -90,6 +96,29 @@ func RunRemoteBPCmd(orgSlug, collSlug, bpSlug, bpVersion string) tea.Cmd {
 		executive.MDirector.Wait()
 		executive.RemoveDirector()
 		return RunRemoteBPCmdENDMsg{}
+	}
+}
+
+// RunLocalBPCmd run a local file
+// Err attr to feedback if any error ocurrs
+func RunLocalBPCmd(filepath string) tea.Cmd {
+	return func() tea.Msg {
+		bpUrl, err := blueprint.ParsePath(filepath)
+		if err != nil {
+			return RunLocalBPCmdENDMsg{Err: err}
+		}
+		irb, err := blueprint.NewIRBFromAny(bpUrl, &blueprint.IRBGenConfig{})
+		if err != nil {
+			return RunLocalBPCmdENDMsg{Err: err}
+		}
+		err = executive.InitDirector(false, true)
+		if err != nil {
+			return RunLocalBPCmdENDMsg{Err: err}
+		}
+		executive.MDirector.HandleIRB <- &executive.HandleIRBConfig{IRB: irb}
+		executive.MDirector.Wait()
+		executive.RemoveDirector()
+		return RunLocalBPCmdENDMsg{}
 	}
 }
 
