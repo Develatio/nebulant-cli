@@ -94,18 +94,11 @@ func (m *FilePickerForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if f, ok := form.(*huh.Form); ok {
 		if f.State == huh.StateCompleted {
 			kl := f.GetString("value")
-			if m.state == pickingState {
-				vv := kl
-				if vv == "no version" {
-					vv = ""
-				}
-				m.currentPickerDir = filepath.Dir(kl)
-				m.pickermodel = newPickerForm(m.currentPickerDir)
-				cmds = append(cmds, m.pickermodel.Init())
-				m.state = runningState
-				cmds = append(cmds, msgRunLocalStartCmd(), tuicmd.RunLocalBPCmd(kl))
-			}
-			// m.pickermodel, m.state = rootForm()
+			m.currentPickerDir = filepath.Dir(kl)
+			m.pickermodel = newPickerForm(m.currentPickerDir)
+			cmds = append(cmds, m.pickermodel.Init())
+			m.state = runningState
+			cmds = append(cmds, msgRunLocalStartCmd(), tuicmd.RunLocalBPCmd(kl))
 		} else if f.State == huh.StateAborted {
 			m.pickermodel, m.state = emptyForm()
 			cmds = append(cmds, QuitFilePickerCmd())
