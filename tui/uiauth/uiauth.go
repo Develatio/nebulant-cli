@@ -24,6 +24,7 @@ package uiauth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -169,13 +170,21 @@ func (m *AuthForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 		case RemoveTokenResultMsg:
 			if msg.Err != nil {
-				cast.LogErr(msg.Err.Error(), nil)
+				if errors.Is(msg.Err, context.Canceled) {
+					cast.LogErr("remove token request aborted by user", nil)
+				} else {
+					cast.LogErr(msg.Err.Error(), nil)
+				}
 			}
 			cmd := m.backToRoot()
 			cmds = append(cmds, cmd)
 		case RequestNewTokenResultMsg:
 			if msg.Err != nil {
-				cast.LogErr(msg.Err.Error(), nil)
+				if errors.Is(msg.Err, context.Canceled) {
+					cast.LogErr("token request aborted by user", nil)
+				} else {
+					cast.LogErr(msg.Err.Error(), nil)
+				}
 			}
 			cmd := m.backToRoot()
 			cmds = append(cmds, cmd)
