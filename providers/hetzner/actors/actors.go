@@ -96,8 +96,6 @@ func (a *ActionContext) WaitForManyAndLog(actions []schema.Action, msg string) e
 	}
 	okCh, errCh := a.HClient.Action.WatchOverallProgress(context.Background(), act)
 	var err error
-	noprogress_msg := msg + " ... "
-	progress_msg := msg + " (%v%%...) "
 
 	errCount := 0
 L:
@@ -105,9 +103,9 @@ L:
 		select {
 		case progress := <-okCh:
 			if progress == 0 {
-				a.Logger.LogInfo(fmt.Sprint(noprogress_msg))
+				a.Logger.LogInfo(fmt.Sprintf("%s ... ", msg))
 			} else {
-				a.Logger.LogInfo(fmt.Sprintf(progress_msg, progress))
+				a.Logger.LogInfo(fmt.Sprintf("%s %v%%...", msg, progress))
 			}
 		case err = <-errCh:
 			// sometimes hc api ret err even on non

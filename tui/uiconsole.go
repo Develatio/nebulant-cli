@@ -266,7 +266,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.LogLevel != nil && *msg.LogLevel >= m.logLevelFilter {
 				s := cast.FormatConsoleLogMsg(msg, m.logLevelFilter <= base.DebugLevel)
 				if s != nil {
-					cmds = append(cmds, tea.Printf(*s))
+					cmds = append(cmds, tea.Println(*s))
 				}
 			}
 		case cast.BusDataTypeEOF:

@@ -128,7 +128,7 @@ func FormatConsoleLogMsg(fback *BusData, verbose bool) *string {
 		color = threadcolor[*fback.ThreadID]
 	}
 
-	format := "%s %s"
+	format := "%s"
 	aname := ""
 	if fback.ActionName != nil {
 		aname = *fback.ActionName
@@ -137,21 +137,21 @@ func FormatConsoleLogMsg(fback *BusData, verbose bool) *string {
 			span = len(aname) + 2
 			space = 2
 		}
-		format = fmt.Sprintf("%s%s%s|%s %%s %%s", color, aname, strings.Repeat(" ", space), term.Reset)
+		format = fmt.Sprintf("%s%s%s|%s %%s", color, aname, strings.Repeat(" ", space), term.Reset)
 	}
 
 	if fback.EventID != nil {
 		switch *fback.EventID {
 		case EventActionInit:
-			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], "start"))
+			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel]) + " start")
 		case EventActionKO:
-			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], *fback.M))
+			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel]) + " " + *fback.M)
 		case EventActionUnCaughtKO:
-			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], *fback.M))
+			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel]) + " " + *fback.M)
 		case EventActionOK:
-			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], "done"))
+			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel]) + " done")
 		case EventActionUnCaughtOK:
-			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], "done"))
+			return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel]) + " done")
 		case EventThreadDestroyed:
 			delete(threadcolor, *fback.ThreadID)
 		default:
@@ -169,9 +169,9 @@ func FormatConsoleLogMsg(fback *BusData, verbose bool) *string {
 		if fback.M != nil {
 			if verbose {
 				counter++
-				return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], fmt.Sprintf("[%v] %v", counter, *fback.M)))
+				return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel]) + fmt.Sprintf("[%v] ", counter) + *fback.M)
 			} else {
-				return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel], *fback.M))
+				return p(fmt.Sprintf(format, prefxmap[*fback.LogLevel]) + " " + *fback.M)
 			}
 		} else {
 			return nil
