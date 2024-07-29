@@ -302,6 +302,8 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
+	ctx.Logger.LogDebug("Requesting " + req.URL.String())
+	req.Header.Set("Accept-Charset", "utf-8")
 	// set headers
 	for _, hh := range p.Headers {
 		if !hh.Enabled {
@@ -374,7 +376,7 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 	if err != nil {
 		return nil, err
 	}
-	ctx.Logger.LogDebug("Headers: " + sw.String())
+	ctx.Logger.LogDebug("Response Headers: " + sw.String())
 	result.Headers = sw.String()
 
 	// debug body
