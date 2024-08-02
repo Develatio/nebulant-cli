@@ -23,6 +23,7 @@
 package subcom
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -68,6 +69,9 @@ func DebugtermCmd(nblc *subsystem.NBLcommand) (int, error) {
 	cmdline := nblc.CommandLine()
 	fs, err := parseTestsFs(cmdline)
 	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0, nil
+		}
 		return 1, err
 	}
 

@@ -24,6 +24,7 @@ package subcom
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 
@@ -53,6 +54,9 @@ func AuthCmd(nblc *subsystem.NBLcommand) (int, error) {
 	cmdline := nblc.CommandLine()
 	fs, err := parseAuthFs(cmdline)
 	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0, nil
+		}
 		return 1, err
 	}
 

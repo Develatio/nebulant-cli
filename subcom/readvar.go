@@ -23,6 +23,7 @@
 package subcom
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -58,6 +59,9 @@ func parseReadVar(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 func ReadvarCmd(nblc *subsystem.NBLcommand) (int, error) {
 	_, err := parseReadVar(nblc.CommandLine())
 	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0, nil
+		}
 		return 1, err
 	}
 

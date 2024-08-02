@@ -118,6 +118,9 @@ func AssetsCmd(nblc *subsystem.NBLcommand) (int, error) {
 	cmdline := nblc.CommandLine()
 	fs, err := parseAssetsFs(cmdline)
 	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0, nil
+		}
 		return 1, err
 	}
 
@@ -163,6 +166,9 @@ func AssetsCmd(nblc *subsystem.NBLcommand) (int, error) {
 	case "search":
 		fs, err := parseAssetsSearchFs(cmdline)
 		if err != nil {
+			if errors.Is(err, flag.ErrHelp) {
+				return 0, nil
+			}
 			return 1, err
 		}
 		assetid := fs.Lookup("a").Value.String()

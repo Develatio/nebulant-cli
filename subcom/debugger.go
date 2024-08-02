@@ -24,6 +24,7 @@ package subcom
 
 import (
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -104,6 +105,9 @@ func DebuggerCmd(nblc *subsystem.NBLcommand) (int, error) {
 	cmdline := nblc.CommandLine()
 	fs, err := parseDebuggFs(cmdline)
 	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0, nil
+		}
 		return 1, err
 	}
 	// ver si podemos exponer esta info en el sistema de envs

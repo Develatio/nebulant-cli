@@ -56,6 +56,9 @@ func parseRunFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 func RunCmd(nblc *subsystem.NBLcommand) (int, error) {
 	fs, err := parseRunFs(nblc.CommandLine())
 	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0, nil
+		}
 		return 1, err
 	}
 	bluePrintFilePath := fs.Arg(0)

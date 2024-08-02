@@ -39,6 +39,7 @@ func parseServeFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
 	fs.SetOutput(cmdline.Output())
 	config.AddrFlag = fs.String("b", config.SERVER_ADDR+":"+config.SERVER_PORT, "Bind addr:port (ipv4) or [::1]:port (ipv6)")
+	config.Ipv6Flag = fs.Bool("6", false, "Force ipv6")
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "\nUsage: nebulant serve [options]\n")
 		fmt.Fprintf(fs.Output(), "\nOptions:\n")
@@ -75,6 +76,9 @@ func parseServeFs(cmdline *flag.FlagSet) (*flag.FlagSet, error) {
 func ServeCmd(nblc *subsystem.NBLcommand) (int, error) {
 	_, err := parseServeFs(nblc.CommandLine())
 	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0, nil
+		}
 		return 1, err
 	}
 

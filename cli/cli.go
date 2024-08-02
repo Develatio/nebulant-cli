@@ -35,6 +35,7 @@ import (
 )
 
 func Start() (errcode int) {
+	subcom.RegisterSubcommands()
 	if err := subsystem.ConfArgs(flag.CommandLine, os.Args[1:]); err != nil {
 		cast.LogErr(err.Error(), nil)
 		return 1
@@ -46,7 +47,6 @@ func Start() (errcode int) {
 		return err
 	}
 	cast.InitConsoleLogger(ff)
-	subcom.RegisterSubcommands()
 
 	// Version and exit
 	if *config.VersionFlag {

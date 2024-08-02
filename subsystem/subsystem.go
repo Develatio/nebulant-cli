@@ -82,6 +82,16 @@ func (n *NBLcommand) CommandLine() *flag.FlagSet {
 var NBLCommands map[string]*NBLcommand
 
 func PrintDefaults(f *flag.FlagSet) {
+	minsize := 10
+	f.VisitAll(func(ff *flag.Flag) {
+		fsize := len(fmt.Sprintf("  -%s ", ff.Name))
+		name, _ := flag.UnquoteUsage(ff)
+		fsize = fsize + len(name)
+		if fsize > minsize {
+			minsize = fsize
+		}
+	})
+
 	f.VisitAll(func(ff *flag.Flag) {
 		var b strings.Builder
 		fmt.Fprintf(&b, "  -%s ", ff.Name)
@@ -89,10 +99,10 @@ func PrintDefaults(f *flag.FlagSet) {
 		if len(name) > 0 {
 			b.WriteString(name)
 		}
-		l := 25 - (len(b.String()) + len(name))
-		for i := 0; i < l; i++ {
-			b.WriteString(" ")
-		}
+		fsize := len(fmt.Sprintf("  -%s ", ff.Name))
+		span := minsize - fsize - len(name) + 4
+		b.WriteString(strings.Repeat(" ", span))
+		b.WriteString("\t")
 		b.WriteString(usage)
 		if ff.DefValue != "" && ff.DefValue != "false" {
 			fmt.Fprintf(&b, " (default %v)", ff.DefValue)
@@ -166,12 +176,10 @@ func ConfArgs(fflag *flag.FlagSet, arguments []string) error {
 	sflag := fflag.Bool("s", false, "Ignored for compatibility")
 	//
 	config.VersionFlag = fflag.Bool("v", false, "Show version and exit.")
-	config.LogLevelFlag = flag.String("l", "info", "\t Set the log level. \n\t\t\t\tAvail: critical, error, warning, info, debug, paranoic, silent")
-	config.Ipv6Flag = fflag.Bool("6", false, "Force ipv6")
+	config.LogLevelFlag = flag.String("l", "info", "Set the log level. \n\t\t\t\tAvail: critical, error, warning, info, debug, paranoic, silent")
 	config.NoTermFlag = fflag.Bool("n", false, "Force no terminal. This avoid the use of TUI.")
-	config.BridgeAddrFlag = fflag.String("b", "", "\t self-hosted bridge addr:port (ipv4) or [::1]:port (ipv6).")
-	config.BridgeSecretFlag = fflag.String("bs", config.BRIDGE_SECRET, "\t self-hosted bridge auth secret string (overrides env NEBULANT_BRIDGE_SECRET).")
-	config.ForceFileFlag = fflag.Bool("f", false, "Run local file")
+	config.BridgeAddrFlag = fflag.String("b", "", "Self-hosted bridge addr:port (ipv4) or [::1]:port (ipv6).")
+	config.BridgeSecretFlag = fflag.String("bs", config.BRIDGE_SECRET, "Self-hosted bridge auth secret string (overrides env NEBULANT_BRIDGE_SECRET).")
 
 	fflag.Usage = func() {
 		var runtimecmds []string
@@ -183,7 +191,7 @@ func ConfArgs(fflag *flag.FlagSet, arguments []string) error {
 			orderedcmdtxt = append(orderedcmdtxt, cmdtxt)
 		}
 		sort.Strings(orderedcmdtxt)
-		fmt.Fprint(fflag.Output(), "\nUsage: nebulant [flags] [command]\n")
+		fmt.Fprint(fflag.Output(), "\nUsage: nebulant [global flags] [command] [command flags]\n")
 		fmt.Fprint(fflag.Output(), "\nFlags:\n")
 		PrintDefaults(fflag)
 		fmt.Fprint(fflag.Output(), "\nCommands:\n")
@@ -200,7 +208,7 @@ func ConfArgs(fflag *flag.FlagSet, arguments []string) error {
 			fmt.Fprint(fflag.Output(), hh)
 		}
 		// fmt.Fprint(fflag.Output(), "  readvar\t\t"+term.EmojiSet["Key"]+" Read blueprint variable value during runtime\n")
-		fmt.Fprint(fflag.Output(), "\n\nrun nebulant [command] --help to show help for a command\n")
+		fmt.Fprint(fflag.Output(), "\n\nRun \"nebulant [command] --help\" to show help for a command\n")
 	}
 
 	if err := fflag.Parse(arguments); err != nil {
