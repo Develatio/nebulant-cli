@@ -24,6 +24,7 @@ package uiauth
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -82,9 +83,9 @@ func rootForm() (*huh.Form, formState, error) {
 		return nil, rootState, err
 	}
 	for n, cr := range crs.Credentials {
-		tit := *cr.Access
+		tit := hex.EncodeToString([]byte(*cr.Access))
 		if n == crs.ActiveProfile {
-			tit = fmt.Sprintf("* %s", *cr.Access)
+			tit = fmt.Sprintf("* %s", tit)
 		}
 		opt := huh.NewOption(tit, fmt.Sprintf("profile-%s", n))
 		options = append(options, opt)

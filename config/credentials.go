@@ -33,6 +33,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -231,8 +232,21 @@ func Login(ctx context.Context, credential *Credential) (*cookiejar.Jar, error) 
 	if err != nil {
 		return nil, err
 	}
+
+	access := *credential.Access
+	if len(*credential.Access) > 36 {
+		baccess, err := hex.DecodeString(*credential.Access)
+		if err != nil {
+			return nil, errors.Join(err, fmt.Errorf("bad access string"))
+		}
+		access = string(baccess)
+		if len(*credential.Access) != 36 {
+			return nil, fmt.Errorf("bad access string")
+		}
+	}
+
 	body := []byte(`{
-		"access": "` + *credential.Access + `",
+		"access": "` + access + `",
 		"secret": "` + esecret + `"
 	}`)
 

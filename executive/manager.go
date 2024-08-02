@@ -216,7 +216,6 @@ func (m *Manager) Run() error {
 		}
 		cast.LogErr(fmt.Sprintf("%s\n\n***", lerr.Error()), m.ExecutionUUID)
 	}
-	m.Logger.LogInfo("[Manager] out")
 
 	elapsedTime := time.Since(startTime).String()
 	m.Logger.LogInfo("[Manager] stats: " + strconv.Itoa(m.Stats.actions) + " actions executed by " + strconv.Itoa(m.Stats.stages) + " stages in " + elapsedTime)
@@ -229,6 +228,6 @@ func (m *Manager) Run() error {
 	cast.PushEvent(cast.EventRuntimeOut, m.ExecutionUUID)
 	// m.internalRegistry.SetManagerState(cast.EventRuntimeOut)
 	// m.ExternalRegistry.SetManagerState(cast.EventRuntimeOut)
-	m.Logger.LogDebug("[Manager] out")
+	m.Logger.LogInfo("[Manager] out")
 	return nil
 }
