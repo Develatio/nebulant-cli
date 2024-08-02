@@ -27,8 +27,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
-	"time"
 
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/util"
@@ -45,48 +43,13 @@ type ActionContext struct {
 	Logger    base.ILogger
 }
 
-func (a *ActionContext) WaitForAndLog(action schema.Action, msg string) error {
-	act := hcloud.ActionFromSchema(action)
-	a.Logger.LogDebug(fmt.Sprintf("waiting for action %v", act.ID))
-	okCh, errCh := a.HClient.Action.WatchProgress(context.Background(), act)
-	var err error
-	noprogress_msg := msg + " ... "
-	progress_msg := msg + " (%v%%...) "
+// func handleActionWaitingUpdate(update *hcloud.Action) error {
+// 	return nil
+// }
 
-	errCount := 0
-L:
-	for {
-		select {
-		case progress := <-okCh:
-			if progress == 0 {
-				a.Logger.LogInfo(fmt.Sprint(noprogress_msg))
-			} else {
-				a.Logger.LogInfo(fmt.Sprintf(progress_msg, progress))
-			}
-		case err = <-errCh:
-			// sometimes hc api ret err even on non
-			// failing event try to retry 5 times
-			// and exit after all if err persist
-			if err != nil {
-				// if api did not return any action, maybe the action has finished
-				if strings.HasSuffix(err.Error(), "action not returned from API") {
-					a.Logger.LogDebug(err.Error())
-					err = nil
-					break L
-				}
-				if errCount < 5 {
-					errCount++
-					time.Sleep(3 * time.Second)
-					okCh, errCh = a.HClient.Action.WatchProgress(context.Background(), act)
-					continue
-				}
-				// retry count end, let err fly as free bird
-			}
-			// on sucess, err is nil
-			break L
-		}
-	}
-	return err
+func (a *ActionContext) WaitForAndLog(action schema.Action, msg string) error {
+	acts := []schema.Action{action}
+	return a.WaitForManyAndLog(acts, msg)
 }
 
 func (a *ActionContext) WaitForManyAndLog(actions []schema.Action, msg string) error {
@@ -94,43 +57,28 @@ func (a *ActionContext) WaitForManyAndLog(actions []schema.Action, msg string) e
 	for _, aa := range act {
 		a.Logger.LogDebug(fmt.Sprintf("waiting for action %v", aa.ID))
 	}
-	okCh, errCh := a.HClient.Action.WatchOverallProgress(context.Background(), act)
-	var err error
 
-	errCount := 0
-L:
-	for {
-		select {
-		case progress := <-okCh:
-			if progress == 0 {
-				a.Logger.LogInfo(fmt.Sprintf("%s ... ", msg))
-			} else {
-				a.Logger.LogInfo(fmt.Sprintf("%s %v%%...", msg, progress))
-			}
-		case err = <-errCh:
-			// sometimes hc api ret err even on non
-			// failing event try to retry 5 times
-			// and exit after all if err persist
-			if err != nil {
-				// if api did not return any action, maybe the action has finished
-				if strings.HasSuffix(err.Error(), "action not returned from API") {
-					a.Logger.LogDebug(err.Error())
-					err = nil
-					break L
-				}
-				if errCount < 5 {
-					errCount++
-					time.Sleep(3 * time.Second)
-					okCh, errCh = a.HClient.Action.WatchOverallProgress(context.Background(), act)
-					continue
-				}
-				// retry count end, let err fly as free bird
-			}
-			// on sucess, err is nil
-			break L
+	upd := func(update *hcloud.Action) error {
+		// ActionStatusRunning ActionStatus = "running"
+		// ActionStatusSuccess ActionStatus = "success"
+		// ActionStatusError   ActionStatus = "error"
+		noprogress_msg := msg + " ... "
+		// progress_msg := msg + " (%v%%...) "
+
+		switch update.Status {
+		case hcloud.ActionStatusRunning:
+			a.Logger.LogInfo(fmt.Sprint(noprogress_msg))
+		case hcloud.ActionStatusSuccess:
+			a.Logger.LogInfo(fmt.Sprint(noprogress_msg + " DONE"))
+		case hcloud.ActionStatusError:
+			a.Logger.LogInfo(fmt.Sprint(noprogress_msg + " ERROR"))
+			return update.Error()
 		}
+
+		return nil
 	}
-	return err
+
+	return a.HClient.Action.WaitForFunc(context.Background(), upd)
 }
 
 func UnmarshallHCloudToSchema(response *hcloud.Response, v interface{}) error {
