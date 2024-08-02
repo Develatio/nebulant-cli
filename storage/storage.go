@@ -376,7 +376,8 @@ func (s *Store) Interpolate(sourcetext *string) error {
 			if len(record.ValueID) > 0 {
 				*sourcetext = strings.Replace(*sourcetext, match[0], record.ValueID, 1)
 			} else if !record.Literal {
-				return fmt.Errorf("cannot use %s as literal value", match[0])
+				return fmt.Errorf("{{ %s }} is not a primitive value. Specify one of it's attributes, eg. {{ %s.attribute }}", match[0], match[0])
+
 			} else if reflect.ValueOf(record.Value).Kind() == reflect.String {
 				if record.Value.(string) == "" {
 					s.logger.LogWarn("Interpolation results in an empty string replacement for " + match[0])
