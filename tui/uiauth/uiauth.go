@@ -126,7 +126,7 @@ func detailTokenForm(tokenName string) (*huh.Form, formState, error) {
 		huh.NewGroup(
 			huh.NewSelect[string]().
 				Key("value").
-				Title(*cr.Access).
+				Title(hex.EncodeToString([]byte(*cr.Access))).
 				Options(options...),
 		)).WithShowHelp(true).WithTheme(theme.HuhTheme())
 	return form, detailtokenState, nil
