@@ -35,6 +35,7 @@ import (
 	"os/exec"
 	"reflect"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/go-playground/validator/v10"
@@ -171,4 +172,25 @@ func IsNetError(err error) bool {
 		return true
 	}
 	return false
+}
+
+// ExpandDir supoprts ~/
+// by now, the $HOME/dir1/dir2 is not suported
+// check https://pkg.go.dev/os#ExpandEnv to add support to $HOME/dir/ expand
+func ExpandDir(dir string) (string, error) {
+	var err error
+	if strings.HasPrefix(dir, "~/") || strings.HasPrefix(dir, "~\\") {
+		ud, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		dir = ud + dir[1:]
+	}
+	if dir == "~" {
+		dir, err = os.UserHomeDir()
+		if err != nil {
+			return "", nil
+		}
+	}
+	return dir, nil
 }

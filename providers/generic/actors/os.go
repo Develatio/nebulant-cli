@@ -350,8 +350,14 @@ func DefineEnvs(ctx *ActionContext) (*base.ActionOutput, error) {
 }
 
 func ReadFile(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
 	params := new(readFileParameters)
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
+		return nil, err
+	}
+
+	*params.FilePath, err = util.ExpandDir(*params.FilePath)
+	if err != nil {
 		return nil, err
 	}
 
@@ -359,7 +365,7 @@ func ReadFile(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, nil
 	}
 
-	err := ctx.Store.Interpolate(params.FilePath)
+	err = ctx.Store.Interpolate(params.FilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -392,8 +398,14 @@ func ReadFile(ctx *ActionContext) (*base.ActionOutput, error) {
 }
 
 func WriteFile(ctx *ActionContext) (*base.ActionOutput, error) {
+	var err error
 	params := new(writeFileParameters)
 	if err := util.UnmarshalValidJSON(ctx.Action.Parameters, params); err != nil {
+		return nil, err
+	}
+
+	*params.FilePath, err = util.ExpandDir(*params.FilePath)
+	if err != nil {
 		return nil, err
 	}
 
@@ -409,7 +421,7 @@ func WriteFile(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 	}
 
-	err := ctx.Store.Interpolate(params.FilePath)
+	err = ctx.Store.Interpolate(params.FilePath)
 	if err != nil {
 		return nil, err
 	}

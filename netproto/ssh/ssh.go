@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/develatio/nebulant-cli/ipc"
+	"github.com/develatio/nebulant-cli/util"
 	"github.com/povsister/scp"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -124,6 +125,10 @@ func GetSSHClientConfig(cc *ClientConfigParameters) (*ssh.ClientConfig, error) {
 	}
 
 	if cc.PrivateKeyPath != nil {
+		*cc.PrivateKeyPath, err = util.ExpandDir(*cc.PrivateKeyPath)
+		if err != nil {
+			return nil, err
+		}
 		key, err := os.ReadFile(*cc.PrivateKeyPath)
 		if err != nil {
 			return nil, err
