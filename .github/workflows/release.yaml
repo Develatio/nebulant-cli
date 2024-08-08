@@ -323,9 +323,16 @@ jobs:
         run: echo "VERSION_DATE=$(git log -1 --date=format:'%Y/%m/%d' --format=%cd)" >> "$GITHUB_OUTPUT"
         id: vdate
 
-      - name: Upload to r2
+      - name: Upload to r2 (version path)
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_ACCESS_KEY_ID }}
           CLOUDFLARE_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_SECRET_ACCESS_KEY }}
         run: cp dist/*.*.*/nebulant-linux-amd64 ./nebulant && chmod a+x ./nebulant && ./nebulant run -f ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=nebulant-app-cli-releases --VERSION_NUMBER=${{ steps.vnumber.outputs.VERSION_NUMBER }} --VERSION_DATE=${{ steps.vdate.outputs.VERSION_DATE }} --URL_DOMAIN=releases.nebulant.app
+
+      - name: Upload to r2 (latest path)
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_ACCESS_KEY_ID }}
+          CLOUDFLARE_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_SECRET_ACCESS_KEY }}
+        run: cp dist/*.*.*/nebulant-linux-amd64 ./nebulant && chmod a+x ./nebulant && ./nebulant run -f ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="latest/" --BUCKET=nebulant-app-cli-releases --VERSION_NUMBER=${{ steps.vnumber.outputs.VERSION_NUMBER }} --VERSION_DATE=${{ steps.vdate.outputs.VERSION_DATE }} --URL_DOMAIN=releases.nebulant.app

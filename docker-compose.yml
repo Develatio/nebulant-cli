@@ -1,16 +1,6 @@
 name: nebulant
 
 services:
-  bridge:
-    container_name: nebulant_bridge
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: develatio/nebulant_bridge
-    command: "make runbridge ARGS='-x -b 0.0.0.0:16789 -bs ultrasecret'"
-    networks:
-      - nebulant-private
-      - nebulant-lan
   # cli:
   #   container_name: develatio/nebulant_cli
   #   build:

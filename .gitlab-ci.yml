@@ -26,7 +26,6 @@ before_script:
   - echo -e "-----BEGIN CERTIFICATE-----\nMIIEADCCAuigAwIBAgIID+rOSdTGfGcwDQYJKoZIhvcNAQELBQAwgYsxCzAJBgNV\nBAYTAlVTMRkwFwYDVQQKExBDbG91ZEZsYXJlLCBJbmMuMTQwMgYDVQQLEytDbG91\nZEZsYXJlIE9yaWdpbiBTU0wgQ2VydGlmaWNhdGUgQXV0aG9yaXR5MRYwFAYDVQQH\nEw1TYW4gRnJhbmNpc2NvMRMwEQYDVQQIEwpDYWxpZm9ybmlhMB4XDTE5MDgyMzIx\nMDgwMFoXDTI5MDgxNTE3MDAwMFowgYsxCzAJBgNVBAYTAlVTMRkwFwYDVQQKExBD\nbG91ZEZsYXJlLCBJbmMuMTQwMgYDVQQLEytDbG91ZEZsYXJlIE9yaWdpbiBTU0wg\nQ2VydGlmaWNhdGUgQXV0aG9yaXR5MRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMRMw\nEQYDVQQIEwpDYWxpZm9ybmlhMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC\nAQEAwEiVZ/UoQpHmFsHvk5isBxRehukP8DG9JhFev3WZtG76WoTthvLJFRKFCHXm\nV6Z5/66Z4S09mgsUuFwvJzMnE6Ej6yIsYNCb9r9QORa8BdhrkNn6kdTly3mdnykb\nOomnwbUfLlExVgNdlP0XoRoeMwbQ4598foiHblO2B/LKuNfJzAMfS7oZe34b+vLB\nyrP/1bgCSLdc1AxQc1AC0EsQQhgcyTJNgnG4va1c7ogPlwKyhbDyZ4e59N5lbYPJ\nSmXI/cAe3jXj1FBLJZkwnoDKe0v13xeF+nF32smSH0qB7aJX2tBMW4TWtFPmzs5I\nlwrFSySWAdwYdgxw180yKU0dvwIDAQABo2YwZDAOBgNVHQ8BAf8EBAMCAQYwEgYD\nVR0TAQH/BAgwBgEB/wIBAjAdBgNVHQ4EFgQUJOhTV118NECHqeuU27rhFnj8KaQw\nHwYDVR0jBBgwFoAUJOhTV118NECHqeuU27rhFnj8KaQwDQYJKoZIhvcNAQELBQAD\nggEBAHwOf9Ur1l0Ar5vFE6PNrZWrDfQIMyEfdgSKofCdTckbqXNTiXdgbHs+TWoQ\nwAB0pfJDAHJDXOTCWRyTeXOseeOi5Btj5CnEuw3P0oXqdqevM1/+uWp0CM35zgZ8\nVD4aITxity0djzE6Qnx3Syzz+ZkoBgTnNum7d9A66/V636x4vTeqbZFBr9erJzgz\nhhurjcoacvRNhnjtDRM0dPeiCJ50CP3wEYuvUzDHUaowOsnLCjQIkWbR7Ni6KEIk\nMOz2U0OBSif3FTkhCgZWQKOOLo1P42jHC3ssUZAtVNXrCk3fw9/E15k8NPkBazZ6\n0iykLhH1trywrKRMVw67F44IE8Y=\n-----END CERTIFICATE-----" > /usr/local/share/ca-certificates/cloudflare.crt
   - update-ca-certificates
 
-
 # unittest:
 #   stage: analysis
 #   tags:
@@ -70,78 +69,6 @@ before_script:
 #       when: on_success
 #     - when: never
 
-
-deploy_bridge_develop:
-  stage: deploy
-  tags:
-    - local
-  script:
-    - apk update && apk add vault make git libcap curl
-    - setcap -r /usr/sbin/vault
-    - curl "https://releases.nebulant.dev/v0.3.0-beta-git-6acffbc/nebulant-linux-amd64" -o nebulant-linux-amd64
-    - GOOS=linux GOARCH=arm64 make buildbridge
-
-    - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
-
-    - export HETZNER_CLIENT_AUTH_TOKEN=$(vault kv get -field=HETZNER_CLIENT_AUTH_TOKEN "secret/Nebulant/Sysadmin/Hetzner/NebulantPRE")
-
-    - export SSH_KEY=$(vault kv get -field=nebulant.pem "secret/Nebulant/Sysadmin/certificates/SSH")
-    - echo "$SSH_KEY" | sed 's/\r/\n/g' > nebulant.pem
-    - chmod 400 nebulant.pem
-
-    - mkdir -p deploy_conf/nginx/certs
-    - export CF_PEM=$(vault kv get -field=PEM "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.dev")
-    - echo "$CF_PEM" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.dev-cloudflare.pem
-    - export CF_KEY=$(vault kv get -field=KEY "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.dev")
-    - echo "$CF_KEY" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.dev-cloudflare.key
-
-    - rm deploy_conf/nginx/sites/nebulant.app.conf
-
-    - export ENV=$(vault kv get -field=.env "secret/Nebulant/Dev/PRE")
-    - echo "$ENV" | sed 's/\r/\n/g' > dist/.env
-
-    - chmod +x ./nebulant-linux-amd64
-    - ./nebulant-linux-amd64 run -f ./deploy_nebulant_bridge.nbp
-  rules:
-    - if: $CI_COMMIT_BRANCH == "develop"
-      when: manual
-
-deploy_bridge_master:
-  stage: deploy
-  tags:
-    - local
-  script:
-    - apk update && apk add vault make git libcap curl
-    - setcap -r /usr/sbin/vault
-    # TODO: This should point at releases.nebulant.app and use a stable release
-    - curl "https://releases.nebulant.dev/v0.3.0-beta-git-6acffbc/nebulant-linux-amd64" -o nebulant-linux-amd64
-    - GOOS=linux GOARCH=arm64 make buildbridge
-
-    - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
-
-    - export HETZNER_CLIENT_AUTH_TOKEN=$(vault kv get -field=HETZNER_CLIENT_AUTH_TOKEN "secret/Nebulant/Sysadmin/Hetzner/NebulantPROD")
-
-    - export SSH_KEY=$(vault kv get -field=nebulant.pem "secret/Nebulant/Sysadmin/certificates/SSH")
-    - echo "$SSH_KEY" | sed 's/\r/\n/g' > nebulant.pem
-    - chmod 400 nebulant.pem
-
-    - mkdir -p deploy_conf/nginx/certs
-    - export CF_PEM=$(vault kv get -field=PEM "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.app")
-    - echo "$CF_PEM" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.app-cloudflare.pem
-    - export CF_KEY=$(vault kv get -field=KEY "secret/Nebulant/Sysadmin/certificates/Cloudflare/nebulant.app")
-    - echo "$CF_KEY" | sed 's/\r/\n/g' > deploy_conf/nginx/certs/nebulant.app-cloudflare.key
-
-    - rm deploy_conf/nginx/sites/nebulant.dev.conf
-
-    - export ENV=$(vault kv get -field=.env "secret/Nebulant/Dev/PRO")
-    - echo "$ENV" | sed 's/\r/\n/g' > dist/.env
-
-    - chmod +x ./nebulant-linux-amd64
-    - ./nebulant-linux-amd64 run -f ./deploy_nebulant_bridge.nbp
-  rules:
-    - if: $CI_COMMIT_BRANCH == "master"
-      when: manual
-
 dev_gobuild_and_r2upload:
   stage: deploy
   tags:
@@ -169,31 +96,6 @@ dev_gobuild_and_r2upload:
         BUILD_BRANCH: "pre-release"
         DEPLOY_BUCKET: "nebulant-dev-cli-releases"
       when: manual
-
-prod_gobuild_and_r2upload:
-  stage: deploy
-  tags:
-    - local
-  script:
-    - echo "build for ${BUILD_BRANCH} - ${DEPLOY_BUCKET}"
-    - apk update && apk add vault make git perl-utils libcap
-    - make buildall
-    - cp dist/*.*.*/nebulant-linux-amd64 ./nebulant
-    - setcap -r /usr/sbin/vault
-    - export VAULT_TOKEN=$(vault login -token-only -method=userpass username="$VAULT_USER_GITLAB" password="$VAULT_PASSWORD_GITLAB")
-    - export CLOUDFLARE_ACCOUNT_ID=$(vault kv get -field="accountid" secret/Nebulant/Dev/Cloudflare/API/nebulant.app)
-    - export CLOUDFLARE_ACCESS_KEY_ID=$(vault kv get -field="Builder assets generator access key id" secret/Develatio/Dev/Cloudflare/API/api-tokens)
-    - export CLOUDFLARE_SECRET_ACCESS_KEY=$(vault kv get -field="Builder assets generator secret access key" secret/Develatio/Dev/Cloudflare/API/api-tokens)
-    - export VERSION_NUMBER=$(./nebulant -v | head -n 1)
-    - export VERSION_DATE=$(git log -1 --date=format:'%Y/%m/%d' --format=%cd)
-    - ./nebulant run -f ./publish_release.nbp --SOURCEPATH=./dist/ --DSTPATH="" --BUCKET=${DEPLOY_BUCKET} --VERSION_NUMBER=${VERSION_NUMBER} --VERSION_DATE=${VERSION_DATE} --URL_DOMAIN=releases.nebulant.app
-  rules:
-    - if: $CI_COMMIT_BRANCH == "master"
-      variables:
-        BUILD_BRANCH: "release"
-        DEPLOY_BUCKET: "nebulant-app-cli-releases"
-      when: manual
-
 # r2upload:
 #   stage: deploy
 #   tags:

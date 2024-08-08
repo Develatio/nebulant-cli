@@ -1,7 +1,7 @@
 Nebulant CLI
 ============
 
-![Nebulant](https://raw.githubusercontent.com/develatio/nebulant-cli/master/logo.png)
+![Nebulant](https://raw.githubusercontent.com/develatio/nebulant-cli/main/logo.png)
 
 The Nebulant CLI tool is a single binary that can be used as a companion tool
 for the web editor (providing live-run and autocomplete features) or as a
@@ -230,4 +230,4 @@ If you find an issue, please report it to the
 
 Copyright (c) Develatio Technologies S.L. All rights reserved.
 
-Licensed under the [MIT](https://github.com/develatio/nebulant-cli/blob/master/LICENSE) license.
+Licensed under the [MIT](https://github.com/develatio/nebulant-cli/blob/main/LICENSE) license.

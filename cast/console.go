@@ -256,6 +256,7 @@ L:
 				// entering shutdown mode
 				power = false
 			}
+			c.printMessage(fback)
 		case fback := <-c.fLink.LogChan:
 			c.printMessage(fback)
 		}

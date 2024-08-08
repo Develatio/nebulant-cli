@@ -113,12 +113,6 @@ var SERVER_CERT = ""
 // Server key file path
 var SERVER_KEY = ""
 
-// Bridge addr
-var BRIDGE_ADDR = ""
-
-// Bridge port
-var BRIDGE_PORT = "16789"
-
 // Bridge secret
 var BRIDGE_SECRET = os.Getenv("NEBULANT_BRIDGE_SECRET")
 
@@ -159,15 +153,8 @@ var NoTermFlag *bool
 var BuildAssetIndexFlag *string
 var ForceUpgradeAssetsNoDownloadFlag *bool
 var BridgeSecretFlag *string
-var BridgeOriginFlag *string
-
-var BridgeCertPathFlag *string
-var BridgeKeyPathFlag *string
-var BridgeXtermRootPath *string
 
 var ForceFileFlag *bool
-
-var LOAD_CONF_FILES = "true"
 
 func AppHomePath() string {
 	var userHomePath string
@@ -205,17 +192,13 @@ func ParseLogLevelFlag() {
 // Order of credentials:
 // * Environment Variables
 // * Shared Credentials file
-func init() {
+func InitConfig() {
 	if os.Getenv("NEBULANT_PROFILING") != "" {
 		var err error
 		PROFILING, err = strconv.ParseBool(os.Getenv("NEBULANT_PROFILING"))
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-
-	if LOAD_CONF_FILES == "false" {
-		return
 	}
 
 	// ensure config dir

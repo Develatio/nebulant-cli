@@ -36,6 +36,7 @@ import (
 	"github.com/develatio/nebulant-cli/base"
 	"github.com/develatio/nebulant-cli/cast"
 	"github.com/develatio/nebulant-cli/cli"
+	"github.com/develatio/nebulant-cli/config"
 	"github.com/develatio/nebulant-cli/executive"
 	"github.com/develatio/nebulant-cli/nhttpd"
 	"github.com/develatio/nebulant-cli/util"
@@ -83,6 +84,9 @@ func main() {
 		cast.SBus.Close().Wait()
 		os.Exit(exitCode)
 	}()
+	// first of all, how are the machines?, all ok?
+	// and then, init config pkg
+	config.InitConfig()
 
 	go func() {
 		count := 0
