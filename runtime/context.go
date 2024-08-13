@@ -27,7 +27,7 @@ import (
 	"io"
 
 	"github.com/develatio/nebulant-cli/base"
-	"github.com/develatio/nebulant-cli/nsterm"
+	"github.com/develatio/nsterm"
 )
 
 type actionContext struct {

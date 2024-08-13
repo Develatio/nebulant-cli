@@ -22,6 +22,7 @@ require (
 	github.com/charmbracelet/huh v0.5.2
 	github.com/charmbracelet/lipgloss v0.12.1
 	github.com/creack/pty v1.1.21
+	github.com/develatio/nsterm v0.0.0-20240813115659-c9edf7c77444
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/gorilla/websocket v1.5.3
