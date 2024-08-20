@@ -60,7 +60,11 @@ func DownloadFileWithProgressBar(url string, outfilepath string, msg string) err
 		return err
 	}
 	defer file.Close()
-	bar := cast.NewProgress(resp.ContentLength, msg, "", "", "", "")
+	bar := cast.NewProgress(&cast.ProgressConf{
+		Size:    resp.ContentLength,
+		Info:    msg,
+		Autoend: true,
+	})
 	ioreader := resp.Body
 	if strings.ToLower(resp.Header.Get("Content-Type")) == "application/x-bzip2" {
 		bz2dec := bzip2.NewReader(resp.Body)

@@ -47,7 +47,7 @@ import (
 	nebulantssh "github.com/develatio/nebulant-cli/netproto/ssh"
 	"github.com/develatio/nebulant-cli/util"
 	"github.com/develatio/nsterm"
-	"github.com/povsister/scp"
+	"github.com/develatio/scp"
 	"golang.org/x/crypto/ssh"
 )
 

@@ -96,6 +96,8 @@ github.com/creack/pty v1.1.21/go.mod h1:MOBLtS5ELjhRRrroQr9kyvTxUAFNvYEK993ew/Vr
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/develatio/scp v0.0.2 h1:7qMWdH5oxpgkMPc6cXEp5/zfYb6MvXkPbqEHysw4BUg=
+github.com/develatio/scp v0.0.2/go.mod h1:V9La7io25MJJQRByodHfVONyCyP9pWBL3UOz7rOw8J4=
 github.com/develatio/nsterm v0.0.0-20240813115659-c9edf7c77444 h1:f5NzIAjlFRc+0j/1oLgaSEpXZUFG1cUhd9r3+/8mi7I=
 github.com/develatio/nsterm v0.0.0-20240813115659-c9edf7c77444/go.mod h1:4mImJiqgRkC+rg00WALUG/qfZ+wvhZj0lRaRsBq+n7E=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
@@ -160,8 +162,6 @@ github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmd
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c/go.mod h1:7rwL4CYBLnjLxUqIJNnCWiEdr3bn6IUYi15bNlnbCCU=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/povsister/scp v0.0.0-20240802064259-28781e87b246 h1:c4D8BPWLOxxdaxQLfLKQXH2YXY/E9yo3jrDSL54XrTw=
-github.com/povsister/scp v0.0.0-20240802064259-28781e87b246/go.mod h1:i1Au86ZXK0ZalQNyBp2njCcyhSCR/QP/AMfILip+zNI=
 github.com/prometheus/client_golang v1.19.1 h1:wZWJDwK+NameRJuPGDhlnFgx8e8HN3XHQeLaYJFJBOE=
 github.com/prometheus/client_golang v1.19.1/go.mod h1:mP78NwGzrVks5S2H6ab8+ZZGJLZUq1hoULYBAYBw1Ho=
 github.com/prometheus/client_model v0.6.1 h1:ZKSh/rekM+n3CeS952MLRAdFwIKqeY8b62p8ais2e9E=

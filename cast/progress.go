@@ -24,19 +24,35 @@ package cast
 
 import (
 	"fmt"
+	"io"
+	"math"
 	"time"
 
 	"github.com/develatio/nebulant-cli/base"
 )
 
-func NewProgress(size int64, info, actionid, actionname, threadid, euuid string) *Progress {
+type ProgressConf struct {
+	Size       int64
+	Info       string
+	ActionId   string
+	ActionName string
+	ThreadId   string
+	EuuId      string
+	Autoend    bool
+}
+
+func NewProgress(cnf *ProgressConf) *Progress {
+	// func NewProgress(size int64, info, actionid, actionname, threadid, euuid string, autoend bool) *Progress {
 	p := &Progress{
-		size:       size,
-		info:       info,
-		actionid:   &actionid,
-		actionname: &actionname,
-		threadid:   &threadid,
-		euuid:      &euuid,
+		size:       cnf.Size,
+		info:       cnf.Info,
+		actionid:   &cnf.ActionId,
+		actionname: &cnf.ActionName,
+		threadid:   &cnf.ThreadId,
+		euuid:      &cnf.EuuId,
+		autoend:    cnf.Autoend,
+		start:      time.Now(),
+		lastUpdate: time.Now(),
 	}
 	p.id = fmt.Sprintf("%p", p)
 	PushMixedLogEventBusData(&BusData{
@@ -66,26 +82,70 @@ type Progress struct {
 	actionid   *string
 	threadid   *string
 	actionname *string
+	autoend    bool
+	start      time.Time
+	lastUpdate time.Time
+	err        error
+	speedRate  float64 // bytes/s
+	rwrap      io.Reader
 }
 
 func (g *Progress) Add64(n int64) {
 	g.writed = g.writed + int64(n)
-	if g.writed == g.size {
-		PushMixedLogEventBusData(&BusData{
-			EventID:       EP(EventProgressEnd),
-			ActionID:      g.actionid,
-			ActionName:    g.actionname,
-			LogLevel:      EP(base.InfoLevel),
-			ThreadID:      g.threadid,
-			ExecutionUUID: g.euuid,
-			Timestamp:     time.Now().UTC().UnixMicro(),
-			Extra: map[string]interface{}{
-				"progressid": g.id,
-				"size":       g.size,
-				"writed":     g.writed,
-				"info":       g.info,
-			},
-		})
+	g.Tick()
+}
+
+func (g *Progress) Add(n int) {
+	g.Add64(int64(n))
+}
+
+func (g *Progress) refreshRate(total bool) {
+
+	now := time.Now()
+	var elapsed time.Duration
+	if total {
+		elapsed = now.Sub(g.start)
+	} else {
+		elapsed = now.Sub(g.lastUpdate)
+		if elapsed.Milliseconds() < 300 {
+			return
+		}
+	}
+
+	g.speedRate = float64(g.writed) / elapsed.Seconds()
+
+	g.lastUpdate = time.Now()
+}
+
+func (g *Progress) Rate() float64 {
+	return g.speedRate
+}
+
+func (g *Progress) FormattedRate() string {
+	bysec := g.speedRate * 100
+	u := byte(' ')
+
+	if bysec < 100*1000 {
+		u = 'K'
+		bysec = (bysec + 512) / 1024
+	} else {
+		unit := " KMGT"
+		i := 0
+		for ; bysec >= 100*1000 && unit[i] != byte('T'); i++ {
+			bysec = (bysec + 512) / 1024
+		}
+		u = unit[i]
+	}
+
+	n := (bysec + 5) / 100
+	r := math.Mod((bysec+5)/10, 10)
+	return fmt.Sprintf("%3d.%1d%sB/s", int64(n), int64(r), string(u))
+}
+
+func (g *Progress) Tick() {
+	g.refreshRate(false)
+	if g.writed == g.size && g.autoend {
+		g.End()
 		return
 	}
 	PushMixedLogEventBusData(&BusData{
@@ -101,36 +161,15 @@ func (g *Progress) Add64(n int64) {
 			"size":       g.size,
 			"writed":     g.writed,
 			"info":       g.info,
+			"frate":      g.FormattedRate(),
 		},
 	})
 }
 
-func (g *Progress) Add(n int) {
-	g.Add64(int64(n))
-}
-
-func (g *Progress) Write(p []byte) (int, error) {
-	g.writed = g.writed + int64(len(p))
-	if g.writed == g.size {
-		PushMixedLogEventBusData(&BusData{
-			EventID:       EP(EventProgressEnd),
-			ActionID:      g.actionid,
-			ActionName:    g.actionname,
-			LogLevel:      EP(base.InfoLevel),
-			ThreadID:      g.threadid,
-			ExecutionUUID: g.euuid,
-			Timestamp:     time.Now().UTC().UnixMicro(),
-			Extra: map[string]interface{}{
-				"progressid": g.id,
-				"size":       g.size,
-				"writed":     g.writed,
-				"info":       g.info,
-			},
-		})
-		return len(p), nil
-	}
+func (g *Progress) End() {
+	g.refreshRate(true)
 	PushMixedLogEventBusData(&BusData{
-		EventID:       EP(EventProgressTick),
+		EventID:       EP(EventProgressEnd),
 		ActionID:      g.actionid,
 		ActionName:    g.actionname,
 		LogLevel:      EP(base.InfoLevel),
@@ -142,7 +181,33 @@ func (g *Progress) Write(p []byte) (int, error) {
 			"size":       g.size,
 			"writed":     g.writed,
 			"info":       g.info,
+			"error":      g.err,
+			"frate":      g.FormattedRate(),
 		},
 	})
+}
+
+func (g *Progress) Write(p []byte) (int, error) {
+	g.writed = g.writed + int64(len(p))
+	g.Tick()
 	return len(p), nil
+}
+
+func (g *Progress) Set(n int64) {
+	g.writed = n
+	g.Tick()
+}
+
+func (g *Progress) SetErr(err error) {
+	g.err = err
+}
+
+func (g *Progress) WrapRead(r io.Reader) {
+	g.rwrap = r
+}
+
+func (g *Progress) Read(p []byte) (n int, err error) {
+	n, err = g.rwrap.Read(p)
+	g.Add(n)
+	return n, err
 }

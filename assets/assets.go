@@ -263,7 +263,11 @@ func writeIndexFile(fpath string, list *index, name string) (int, error) {
 	nn = n + nn
 	partcount := 0
 	partlen := len(list.Parts)
-	bar := cast.NewProgress(int64(partlen), "Writing "+name+" index file", "", "", "", "")
+	bar := cast.NewProgress(&cast.ProgressConf{
+		Size:    int64(partlen),
+		Info:    "Writing " + name + " index file",
+		Autoend: true,
+	})
 	for tkn, positions := range list.Parts {
 		bar.Add(1)
 		partcount++
@@ -493,7 +497,11 @@ func makeMainIndex(assetdef *AssetDefinition) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
-	bar := cast.NewProgress(fi.Size(), "Reading asset items", "", "", "", "")
+	bar := cast.NewProgress(&cast.ProgressConf{
+		Size:    fi.Size(),
+		Info:    "Reading asset items",
+		Autoend: true,
+	})
 
 	dec := json.NewDecoder(input)
 
@@ -572,7 +580,11 @@ func makeSubIndex(assetdef *AssetDefinition) (int, error) {
 		return 0, fmt.Errorf("MainIndex:" + err.Error())
 	}
 
-	bar := cast.NewProgress(fi.Size(), "Optimizing "+assetdef.Name+" index", "", "", "", "")
+	bar := cast.NewProgress(&cast.ProgressConf{
+		Size:    fi.Size(),
+		Info:    "Optimizing " + assetdef.Name + " index",
+		Autoend: true,
+	})
 	dec := json.NewDecoder(input)
 
 	// read {

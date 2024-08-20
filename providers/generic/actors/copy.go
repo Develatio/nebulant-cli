@@ -30,14 +30,17 @@ package actors
 //
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/develatio/nebulant-cli/base"
+	"github.com/develatio/nebulant-cli/cast"
 	nebulantssh "github.com/develatio/nebulant-cli/netproto/ssh"
 	"github.com/develatio/nebulant-cli/util"
-	"github.com/povsister/scp"
+	"github.com/develatio/scp"
 )
 
 type scpCopyParametersPath struct {
@@ -48,7 +51,17 @@ type scpCopyParametersPath struct {
 }
 
 type scpCopyParameters struct {
-	nebulantssh.ClientConfigParameters
+	Port uint16 `json:"port"`
+	//
+	Username             *string `json:"username" validate:"required"`
+	PrivateKey           *string `json:"privkey"`
+	PrivateKeyPath       *string `json:"privkeyPath"`
+	PrivateKeyPassphrase *string `json:"passphrase"`
+	Password             *string `json:"password"`
+	//
+	Proxies []*nebulantssh.ClientConfigParameters `json:"proxies"`
+	//
+	Target *string                 `json:"target"`
 	Source *string                 `json:"source"`
 	Paths  []scpCopyParametersPath `json:"paths" validate:"required"`
 }
@@ -93,7 +106,7 @@ func ScpCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 
 	upload := true
-	// Remote to local (upload)
+	// local to remote (upload)
 	remoteAddress := params.Target
 	// Remote to local (download)
 	if params.Source != nil {
@@ -185,27 +198,92 @@ func ScpCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 	}
 	defer scpClient.Close()
 
-	var copyErr error
+	var scperr error
+	errcount := 0
+	var bar map[string]*cast.Progress = make(map[string]*cast.Progress)
 	for i := 0; i < len(params.Paths); i++ {
+		fo := &scp.FileTransferOption{
+			ObserverCallback: func(oet scp.ObserveEventType, ti scp.TransferInfo) {
+				if oet == scp.ObserveEventStart {
+					bar[ti.Path()] = cast.NewProgress(&cast.ProgressConf{
+						Size: ti.TotalSize(),
+						Info: ti.Name(),
+					})
+					return
+				}
+				if oet == scp.ObserveEventEnd {
+					if ti.Err() != nil {
+						ctx.Logger.LogErr(fmt.Sprintf("cannot upload %s: %s", ti.Path(), ti.Err().Error()))
+					}
+					bar[ti.Path()].Set(ti.TransferredSize())
+					bar[ti.Path()].End()
+					delete(bar, ti.Path())
+					return
+				}
+				bar[ti.Path()].Set(ti.TransferredSize())
+			},
+		}
+
+		do := &scp.DirTransferOption{
+			ObserverCallback: func(oet scp.ObserveEventType, ti scp.TransferInfo) {
+				if oet == scp.ObserveEventStart {
+					// fmt.Println("START", ti.Path())
+
+					bar[ti.Path()] = cast.NewProgress(&cast.ProgressConf{
+						Size: ti.TotalSize(),
+						Info: ti.Name(),
+					})
+					return
+				}
+				if oet == scp.ObserveEventEnd {
+					if ti.Err() != nil {
+						ctx.Logger.LogErr(fmt.Sprintf("cannot upload %s: %s", ti.Path(), ti.Err().Error()))
+					}
+					bar[ti.Path()].Set(ti.TransferredSize())
+					bar[ti.Path()].End()
+					delete(bar, ti.Path())
+					return
+				}
+				bar[ti.Path()].Set(ti.TransferredSize())
+			},
+		}
+
 		if upload {
+			s, err := os.Stat(*params.Paths[i].Src)
+			if err != nil {
+				return nil, err
+			}
+			if s.IsDir() {
+				params.Paths[i].Recursive = true
+			}
 			ctx.Logger.LogInfo("Uploading " + *params.Paths[i].Src + " to " + *remoteAddress + ":" + *params.Paths[i].Dst + " ...")
 			if params.Paths[i].Recursive {
-				copyErr = scpClient.CopyDirToRemote(*params.Paths[i].Src, *params.Paths[i].Dst, &scp.DirTransferOption{})
+				ctx.Logger.LogInfo("Uploading dir " + *params.Paths[i].Src + " to " + *remoteAddress + ":" + *params.Paths[i].Dst + " ...")
+				err := scpClient.CopyDirToRemote(*params.Paths[i].Src, *params.Paths[i].Dst, do)
+				scperr = errors.Join(scperr, err)
 			} else {
-				copyErr = scpClient.CopyFileToRemote(*params.Paths[i].Src, *params.Paths[i].Dst, &scp.FileTransferOption{})
-				ctx.Logger.LogDebug("Done upload")
+				err := scpClient.CopyFileToRemote(*params.Paths[i].Src, *params.Paths[i].Dst, fo)
+				scperr = errors.Join(scperr, err)
 			}
+			ctx.Logger.LogDebug("Done upload")
 		} else {
 			ctx.Logger.LogInfo("Downloading " + *remoteAddress + ":" + *params.Paths[i].Src + " to " + *params.Paths[i].Dst + " ...")
 			if params.Paths[i].Recursive {
-				copyErr = scpClient.CopyDirFromRemote(*params.Paths[i].Src, *params.Paths[i].Dst, &scp.DirTransferOption{})
+				err := scpClient.CopyDirFromRemote(*params.Paths[i].Src, *params.Paths[i].Dst, do)
+				scperr = errors.Join(scperr, err)
 			} else {
-				copyErr = scpClient.CopyFileFromRemote(*params.Paths[i].Src, *params.Paths[i].Dst, &scp.FileTransferOption{})
+				err := scpClient.CopyFileFromRemote(*params.Paths[i].Src, *params.Paths[i].Dst, fo)
+				scperr = errors.Join(scperr, err)
 			}
+			ctx.Logger.LogDebug("Done download")
 		}
-		if copyErr != nil {
-			return nil, copyErr
+
+		if errcount > 5 {
+			return nil, errors.Join(fmt.Errorf("too many scp errors"), scperr)
 		}
+	}
+	if scperr != nil {
+		return nil, scperr
 	}
 
 	ctx.Logger.LogDebug("Done SCP")

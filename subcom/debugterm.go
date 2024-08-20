@@ -37,7 +37,11 @@ import (
 )
 
 func newBar() {
-	bar := cast.NewProgress(int64(100), "Testing bar", "", "", "", "")
+	bar := cast.NewProgress(&cast.ProgressConf{
+		Size:    int64(100),
+		Info:    "Testing bar",
+		Autoend: true,
+	})
 
 	for i := 0; i < 100; i++ {
 		bar.Add(1)

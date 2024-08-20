@@ -34,7 +34,7 @@ import (
 
 	"github.com/develatio/nebulant-cli/ipc"
 	"github.com/develatio/nebulant-cli/util"
-	"github.com/povsister/scp"
+	"github.com/develatio/scp"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
@@ -385,22 +385,29 @@ func (s *SSHClient) Disconnect() error {
 		// https://cs.opensource.google/go/x/crypto/+/refs/tags/v0.12.0:ssh/streamlocal.go;l=99
 		err := s.ipcs.Close()
 		if err != nil {
+			err = errors.Join(fmt.Errorf("err on closing IPCS listener"), err)
 			errs = append(errs, err)
 		}
 	}
-	// close sublcients
+	// close subclients
 	for _, sc := range s.subClients {
 		err := sc.Disconnect()
 		if err != nil {
+			err = errors.Join(fmt.Errorf("err on closing tcp conn of subclient"), err)
 			errs = append(errs, err)
 		}
 	}
-	s.Events <- &SSHClientEvent{Type: SSHClientEventClosed, SSHClient: s}
 	// close itself
 	if s.clientConn != nil {
 		err := s.clientConn.Close()
-		errs = append(errs, err)
+		if !errors.Is(err, net.ErrClosed) {
+			err = errors.Join(fmt.Errorf("err on closing main tcp conn"), err)
+			errs = append(errs, err)
+		}
 	}
+
+	s.Events <- &SSHClientEvent{Type: SSHClientEventClosed, SSHClient: s}
+
 	// from doc: "Join returns nil if every value in errs is nil."
 	return errors.Join(errs...)
 }

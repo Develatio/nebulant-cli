@@ -73,8 +73,9 @@ var (
 )
 
 type progressInfo struct {
-	info string
-	size int64
+	info  string
+	frate string
+	size  int64
 	// writed   int64
 	progress progress.Model
 }
@@ -309,16 +310,38 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				size := msg.Extra["size"].(int64)
 				writed := msg.Extra["writed"].(int64)
 				pid := msg.Extra["progressid"].(string)
+				frate := msg.Extra["frate"].(string)
 				pinfo := m.progress[pid]
+				pinfo.frate = frate
+
 				if writed <= 0 {
 					cmds = append(cmds, pinfo.progress.SetPercent(0.0))
+				} else if writed == size {
+					cmds = append(cmds, pinfo.progress.SetPercent(100.0))
 				} else {
 					cmds = append(cmds, pinfo.progress.SetPercent(float64(writed)/float64(size)))
 				}
 			case cast.EventProgressEnd:
 				// TODO: add cmd?
 				pid := msg.Extra["progressid"].(string)
+				size := msg.Extra["size"].(int64)
 				npr := m.progress[pid]
+				frate := msg.Extra["frate"].(string)
+				npr.frate = frate
+				writed := msg.Extra["writed"].(int64)
+
+				if writed <= 0 {
+					cmds = append(cmds, npr.progress.SetPercent(0.0))
+					cmds = append(cmds, tea.Println(renderFinishBar(m.width, npr, 0.0)))
+				} else if writed == size {
+					cmds = append(cmds, npr.progress.SetPercent(100.0))
+					cmds = append(cmds, tea.Println(renderFinishBar(m.width, npr, 100.0)))
+				} else {
+					cmds = append(cmds, npr.progress.SetPercent(float64(writed)/float64(size)))
+					cmds = append(cmds, tea.Println(renderFinishBar(m.width, npr, float64(writed)/float64(size))))
+				}
+
+				// delete progress
 				for ii, _npr := range m.progessslice {
 					if npr == _npr {
 						// index found
@@ -505,6 +528,16 @@ func confirmQuit() tea.Cmd {
 	}
 }
 
+func renderFinishBar(w int, pinf *progressInfo, percent float64) string {
+	prog := pinf.progress.ViewAs(percent)
+	cellsAvail := max(0, w-lipgloss.Width(prog))
+	prgInfo := progressMsg.Render(pinf.info + " " + pinf.frate)
+	info := lipgloss.NewStyle().MaxWidth(cellsAvail).Render(prgInfo)
+	cellsRemaining := max(0, w-lipgloss.Width(info+prog))
+	gap := strings.Repeat(" ", cellsRemaining)
+	return info + gap + prog
+}
+
 func shutdownUI() tea.Cmd {
 	return tea.Quit
 }
@@ -531,18 +564,22 @@ func (m mainModel) promptView() string {
 	return ""
 }
 
+func (m mainModel) renderProgress(pinf *progressInfo) string {
+	spin := m.spinner.View() + " "
+	prog := pinf.progress.View()
+	cellsAvail := max(0, m.width-lipgloss.Width(spin+prog))
+	prgInfo := progressMsg.Render(pinf.info + " " + pinf.frate)
+	info := lipgloss.NewStyle().MaxWidth(cellsAvail).Render(prgInfo)
+	cellsRemaining := max(0, m.width-lipgloss.Width(spin+info+prog))
+	gap := strings.Repeat(" ", cellsRemaining)
+	return spin + info + gap + prog
+}
+
 func (m mainModel) View() string {
 	// progress will always be rendered
 	vv := ""
 	for _, pinf := range m.progessslice {
-		spin := m.spinner.View() + " "
-		prog := pinf.progress.View()
-		cellsAvail := max(0, m.width-lipgloss.Width(spin+prog))
-		prgInfo := progressMsg.Render(pinf.info)
-		info := lipgloss.NewStyle().MaxWidth(cellsAvail).Render(prgInfo)
-		cellsRemaining := max(0, m.width-lipgloss.Width(spin+info+prog))
-		gap := strings.Repeat(" ", cellsRemaining)
-		vv = vv + spin + info + gap + prog + "\n"
+		vv = vv + m.renderProgress(pinf) + "\n"
 	}
 
 	// render specific-state-view

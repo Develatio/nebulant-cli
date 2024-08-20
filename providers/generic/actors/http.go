@@ -423,7 +423,11 @@ func HttpRequest(ctx *ActionContext) (*base.ActionOutput, error) {
 
 	ctx.Logger.LogDebug("Storing http response into tmp file " + f.Name())
 
-	bar := cast.NewProgress(resp.ContentLength, path.Base(u.Path), "", "", "", "")
+	bar := cast.NewProgress(&cast.ProgressConf{
+		Size:    resp.ContentLength,
+		Info:    path.Base(u.Path),
+		Autoend: true,
+	})
 	if err != nil {
 		return nil, errors.Join(fmt.Errorf("internal err creating the progress bar"), err)
 	}
