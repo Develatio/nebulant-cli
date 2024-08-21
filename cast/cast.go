@@ -375,7 +375,7 @@ func (s *SystemBus) GetProviderInitFunc(strname string) (base.ProviderInitFunc, 
 
 // Close func
 func (s *SystemBus) Close() *sync.WaitGroup {
-	defer s.castWaiter.Done() // self
+	s.castWaiter.Done() // self
 
 	// gracefully shutdown
 	bdata := &BusData{
@@ -392,48 +392,23 @@ func (s *SystemBus) Close() *sync.WaitGroup {
 		done <- struct{}{}
 	}()
 
-	zombie := false
-	select {
-	case <-done:
-		// all consumers has topped gracefully
-		return s.castWaiter
-	case <-time.After(10 * time.Second):
-		// some problems after 10s timeout
-		for cl := range s.links {
-			// try to close consumer forcing Off
-			offdone := make(chan struct{})
-			go func() {
-				cl.Off <- struct{}{}
-				offdone <- struct{}{}
-			}()
-
-			select {
-			case <-offdone:
-				// the force off works
-			case <-time.After(10 * time.Second):
-				// force off fails, there is a zombies around
-				zombie = true
+	ticker := time.NewTicker(2 * time.Second)
+	tcount := 0
+	for {
+		select {
+		case <-done:
+			// all consumers has topped gracefully
+			return s.castWaiter
+		case <-ticker.C:
+			tcount++
+			if tcount < 5 {
+				continue
 			}
-		}
-
-		// fight zombies
-		if zombie {
-			ticker := time.NewTicker(2 * time.Second)
-			for {
-				// while still watching done, ignore one waiter
-				// every 2 secons until all waiters gets done
-				select {
-				case <-done:
-					return s.castWaiter
-				case <-ticker.C:
-					// all zombies ignored and waiters done
-					s.castWaiter.Done()
-				}
-			}
+			// some problems after 10s timeout, start closing
+			// waiters every 2 seconds
+			s.castWaiter.Done()
 		}
 	}
-
-	return s.castWaiter
 }
 
 // Log func
