@@ -116,7 +116,6 @@ func (m *Manager) Run() error {
 				PanicTrace: debug.Stack(),
 			})
 		}
-		cast.PushEvent(cast.EventRuntimeOut, m.ExecutionUUID)
 	}()
 	if exit {
 		return nil
@@ -124,6 +123,7 @@ func (m *Manager) Run() error {
 
 	m.Logger.LogDebug("[Manager] Starting...")
 
+	cast.LogDebug("Sending EventRuntimeStarting", nil)
 	cast.PushEvent(cast.EventRuntimeStarting, m.ExecutionUUID)
 	if m.IRB.StartAction == nil {
 		return fmt.Errorf("[Manager] First action id not found")
@@ -188,6 +188,7 @@ func (m *Manager) Run() error {
 
 	// start to run
 	if m.Runtime.NewThread(startActionContext) {
+		cast.LogDebug("Sending EventRuntimeStarted", nil)
 		cast.PushEvent(cast.EventRuntimeStarted, m.ExecutionUUID)
 		m.Logger.ParanoicLogDebug("after push event")
 		m.Logger.ParanoicLogDebug("after set manager state")
@@ -219,13 +220,7 @@ func (m *Manager) Run() error {
 
 	elapsedTime := time.Since(startTime).String()
 	m.Logger.LogInfo("[Manager] stats: " + strconv.Itoa(m.Stats.actions) + " actions executed by " + strconv.Itoa(m.Stats.stages) + " stages in " + elapsedTime)
-	if m.ExecutionUUID != nil {
-		m.Logger.LogDebug("Sending EventRuntimeOut for UUID" + *m.ExecutionUUID)
-	} else {
-		m.Logger.LogDebug("Sending EventRuntimeOut for no UUID")
-	}
 
-	cast.PushEvent(cast.EventRuntimeOut, m.ExecutionUUID)
 	// m.internalRegistry.SetManagerState(cast.EventRuntimeOut)
 	// m.ExternalRegistry.SetManagerState(cast.EventRuntimeOut)
 	m.Logger.LogInfo("[Manager] out")

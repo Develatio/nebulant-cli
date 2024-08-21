@@ -241,6 +241,10 @@ L:
 			irb := d.managers[manager]
 			delete(d.managers, manager)
 			delete(d.managersByExecutionID, *irb.ExecutionUUID)
+
+			cast.LogDebug("Sending EventRuntimeOut for UUID "+*irb.ExecutionUUID, nil)
+			cast.PushEvent(cast.EventRuntimeOut, irb.ExecutionUUID)
+
 			if len(d.managers) <= 0 && !d.serverMode {
 				d.ExitCode = exitCode
 				break L
