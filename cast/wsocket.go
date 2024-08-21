@@ -28,6 +28,7 @@ package cast
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -172,6 +173,8 @@ func (c *WSocketLogger) readCastBus() {
 			return
 		}
 		select {
+		case <-c.fLink.Off:
+			return
 		case fback, ok := <-c.fLink.CommonChan:
 			// No timeout for msg
 			if err := c.lockedSetWriteDeadline(time.Time{}); err != nil {
@@ -181,7 +184,9 @@ func (c *WSocketLogger) readCastBus() {
 			if !ok {
 				// if there is no more values to receive and channel is closed
 				if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-					log.Printf("WSocket 7a err: %v", err)
+					if !errors.Is(err, net.ErrClosed) {
+						log.Printf("WSocket 7a err: %v", err)
+					}
 				}
 				return
 			}
@@ -278,6 +283,7 @@ func NewWebSocketLogger(conn *websocket.Conn, clientUUID string) {
 		ClientUUID:      clientUUID,
 		LogChan:         make(chan *BusData, 100),
 		CommonChan:      make(chan *BusData, 100),
+		Off:             make(chan struct{}),
 		AllowEventData:  true,
 		AllowStatusData: true,
 	}

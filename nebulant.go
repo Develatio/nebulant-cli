@@ -115,6 +115,7 @@ func main() {
 	if executive.MDirector != nil {
 		executive.MDirector.Wait() // None to wait if director has stoped
 	}
+	// Here actuate the defer() and calls cast.Close()
 	//
 	// Please don't print anything here, SBus is still closing (because defer)
 	// there are still messages in the logger buffer that have to be processed.
