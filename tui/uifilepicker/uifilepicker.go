@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
@@ -76,7 +77,23 @@ func newPickerForm(currentdir string) *huh.Form {
 		Description("Select blueprint file").Picking(true).CurrentDirectory(currentdir).ShowHidden(true)
 	fp := huh.NewForm(
 		huh.NewGroup(filepicker).WithShowHelp(true),
-	).WithHeight(25).WithTheme(theme.HuhTheme())
+	).WithHeight(25).WithTheme(theme.HuhTheme()).WithKeyMap(&huh.KeyMap{
+		FilePicker: huh.FilePickerKeyMap{
+			GoToTop:  key.NewBinding(key.WithKeys("g"), key.WithHelp("g", "first"), key.WithDisabled()),
+			GoToLast: key.NewBinding(key.WithKeys("G"), key.WithHelp("G", "last"), key.WithDisabled()),
+			PageUp:   key.NewBinding(key.WithKeys("K", "pgup"), key.WithHelp("pgup", "page up"), key.WithDisabled()),
+			PageDown: key.NewBinding(key.WithKeys("J", "pgdown"), key.WithHelp("pgdown", "page down"), key.WithDisabled()),
+			Back:     key.NewBinding(key.WithKeys("h", "backspace", "left", "esc"), key.WithHelp("←", "back"), key.WithDisabled()),
+			Select:   key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select"), key.WithDisabled()),
+			Up:       key.NewBinding(key.WithKeys("up", "k", "ctrl+k", "ctrl+p"), key.WithHelp("↑", "up"), key.WithDisabled()),
+			Down:     key.NewBinding(key.WithKeys("down", "j", "ctrl+j", "ctrl+n"), key.WithHelp("↓", "down"), key.WithDisabled()),
+			Open:     key.NewBinding(key.WithKeys("l", "right", "enter"), key.WithHelp("→", "join")),
+			Close:    key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "close"), key.WithDisabled()),
+			Prev:     key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "back"), key.WithDisabled()),
+			Next:     key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "next")),
+			Submit:   key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "submit")),
+		},
+	})
 	return fp
 }
 
@@ -116,6 +133,8 @@ func (m *FilePickerForm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
+			m.pickermodel, m.state = emptyForm()
+			cmds = append(cmds, QuitFilePickerCmd())
 		case "h":
 		case "enter":
 			if m.state == waitenterState {
