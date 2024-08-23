@@ -175,13 +175,13 @@ func (m *Manager) Run() error {
 		}
 	}
 
-	m.Logger.ParanoicLogDebug(fmt.Sprintf("[Manager] Setting %s as start point", m.IRB.StartAction.ActionName))
+	m.Logger.ParanoidLogDebug(fmt.Sprintf("[Manager] Setting %s as start point", m.IRB.StartAction.ActionName))
 
 	startActionContext := m.Runtime.NewAContext(nil, m.IRB.StartAction)
-	m.Logger.ParanoicLogDebug("after set context")
+	m.Logger.ParanoidLogDebug("after set context")
 	st.SetLogger(m.GetLogger().Duplicate())
 	startActionContext.SetStore(st)
-	m.Logger.ParanoicLogDebug("after set store")
+	m.Logger.ParanoidLogDebug("after set store")
 
 	// for run stats
 	startTime := time.Now()
@@ -190,8 +190,8 @@ func (m *Manager) Run() error {
 	if m.Runtime.NewThread(startActionContext) {
 		cast.LogDebug("Sending EventRuntimeStarted", nil)
 		cast.PushEvent(cast.EventRuntimeStarted, m.ExecutionUUID)
-		m.Logger.ParanoicLogDebug("after push event")
-		m.Logger.ParanoicLogDebug("after set manager state")
+		m.Logger.ParanoidLogDebug("after push event")
+		m.Logger.ParanoidLogDebug("after set manager state")
 		m.Logger.LogDebug("[Manager] Ready")
 
 		// freezes until runtime ends
@@ -200,7 +200,7 @@ func (m *Manager) Run() error {
 		cast.LogDebug("cannot start new run. Probably a previous stop received", m.ExecutionUUID)
 	}
 
-	m.Logger.ParanoicLogDebug("after wait until")
+	m.Logger.ParanoidLogDebug("after wait until")
 
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -174,7 +174,7 @@ func ConfArgs(fflag *flag.FlagSet, arguments []string) error {
 	// var err error
 	//
 	config.VersionFlag = fflag.Bool("v", false, "Show version and exit.")
-	config.LogLevelFlag = flag.String("l", "info", "Set the log level. \n\t\t\t\tAvail: critical, error, warning, info, debug, paranoic, silent")
+	config.LogLevelFlag = flag.String("l", "info", "Set the log level. \n\t\t\t\tAvail: critical, error, warning, info, debug, paranoid, silent")
 	config.NoTermFlag = fflag.Bool("n", false, "Force no terminal. This avoid the use of TUI.")
 	config.BridgeAddrFlag = fflag.String("b", "", "Self-hosted bridge addr:port (ipv4) or [::1]:port (ipv6).")
 	config.BridgeSecretFlag = fflag.String("bs", config.BRIDGE_SECRET, "Self-hosted bridge auth secret string (overrides env NEBULANT_BRIDGE_SECRET).")

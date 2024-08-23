@@ -50,7 +50,7 @@ var logleveltranslator map[int]string = map[int]string{
 	base.WarningLevel:       "Warning",
 	base.InfoLevel:          "Info",
 	base.DebugLevel:         "Debug",
-	base.ParanoicDebugLevel: "Paranoic",
+	base.ParanoidDebugLevel: "Paranoid",
 	base.SilentLevel:        "Silent",
 }
 
@@ -430,8 +430,8 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case base.InfoLevel:
 					m.logLevelFilter = base.DebugLevel
 				case base.DebugLevel:
-					m.logLevelFilter = base.ParanoicDebugLevel
-				case base.ParanoicDebugLevel:
+					m.logLevelFilter = base.ParanoidDebugLevel
+				case base.ParanoidDebugLevel:
 					m.logLevelFilter = base.SilentLevel
 				case base.SilentLevel:
 					m.logLevelFilter = base.CriticalLevel

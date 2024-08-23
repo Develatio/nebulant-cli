@@ -143,7 +143,6 @@ var BridgeAddrFlag *string
 var VersionFlag *bool
 
 // var DebugFlag *bool
-// var ParanoicDebugFlag *bool
 var LogLevelFlag *string
 var Ipv6Flag *bool
 var UpgradeAssetsFlag *bool
@@ -179,8 +178,8 @@ func ParseLogLevelFlag() {
 			LOGLEVEL = base.InfoLevel
 		case "debug":
 			LOGLEVEL = base.DebugLevel
-		case "paranoic":
-			LOGLEVEL = base.ParanoicDebugLevel
+		case "paranoid":
+			LOGLEVEL = base.ParanoidDebugLevel
 		case "silent":
 			LOGLEVEL = base.SilentLevel
 		case "default":

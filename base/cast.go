@@ -40,7 +40,7 @@ const InfoLevel = 20
 const DebugLevel = 10
 
 // DebugLevel const
-const ParanoicDebugLevel = 5
+const ParanoidDebugLevel = 5
 
 // NotsetLevel const
 const NotsetLevel = 0

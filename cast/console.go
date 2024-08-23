@@ -275,7 +275,7 @@ func (c *ConsoleLogger) setDefaultTheme() {
 		base.WarningLevel:       term.Black + term.BGYellow + " " + term.EmojiSet["Construction"] + " WARNING " + term.Reset,
 		base.InfoLevel:          term.Blue + "»" + term.Magenta + "»" + term.Reset,
 		base.DebugLevel:         term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
-		base.ParanoicDebugLevel: term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
+		base.ParanoidDebugLevel: term.Black + term.BGMagenta + " " + term.EmojiSet["Wrench"] + term.EmojiSet["Wrench"] + " DEBUG " + term.Reset,
 		base.NotsetLevel:        "( · ) ",
 	}
 }

@@ -736,10 +736,10 @@ func (l *Logger) LogDebug(s string) {
 	})
 }
 
-// ParanoicLogDebug func
-func (l *Logger) ParanoicLogDebug(s string) {
+// ParanoidLogDebug func
+func (l *Logger) ParanoidLogDebug(s string) {
 	_log(_logmsg{
-		level: base.ParanoicDebugLevel,
+		level: base.ParanoidDebugLevel,
 		m:     &s,
 		ei:    l.ExecutionUUID,
 		ai:    l.ActionID,
