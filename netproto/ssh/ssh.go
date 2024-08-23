@@ -400,7 +400,7 @@ func (s *SSHClient) Disconnect() error {
 	// close itself
 	if s.clientConn != nil {
 		err := s.clientConn.Close()
-		if !errors.Is(err, net.ErrClosed) {
+		if err != nil && !errors.Is(err, net.ErrClosed) {
 			err = errors.Join(fmt.Errorf("err on closing main tcp conn"), err)
 			errs = append(errs, err)
 		}
