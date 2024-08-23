@@ -172,8 +172,6 @@ func PrepareCmd(cmd *NBLcommand) error {
 
 func ConfArgs(fflag *flag.FlagSet, arguments []string) error {
 	// var err error
-	// compat flags
-	sflag := fflag.Bool("s", false, "Ignored for compatibility")
 	//
 	config.VersionFlag = fflag.Bool("v", false, "Show version and exit.")
 	config.LogLevelFlag = flag.String("l", "info", "Set the log level. \n\t\t\t\tAvail: critical, error, warning, info, debug, paranoic, silent")
@@ -215,10 +213,7 @@ func ConfArgs(fflag *flag.FlagSet, arguments []string) error {
 		fflag.PrintDefaults()
 		return err
 	}
-	if *sflag {
-		fmt.Fprint(fflag.Output(), "\n\ndeprecated flag. Use 'serve' command instead: ./nebulant serve\n")
-		return fmt.Errorf("deprecated flag err")
-	}
+
 	config.ParseLogLevelFlag()
 
 	// egg :)
