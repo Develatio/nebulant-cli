@@ -33,6 +33,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -249,21 +250,42 @@ func ScpCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 		}
 
 		if upload {
-			s, err := os.Stat(*params.Paths[i].Src)
-			if err != nil {
-				return nil, err
+			var srcs []string
+			spath := *params.Paths[i].Src
+			spath = strings.TrimSpace(spath)
+			if len(spath) <= 0 {
+				return nil, errors.Join(fmt.Errorf("empty path"), scperr)
 			}
-			if s.IsDir() {
-				params.Paths[i].Recursive = true
-			}
-			ctx.Logger.LogInfo("Uploading " + *params.Paths[i].Src + " to " + *remoteAddress + ":" + *params.Paths[i].Dst + " ...")
-			if params.Paths[i].Recursive {
-				ctx.Logger.LogInfo("Uploading dir " + *params.Paths[i].Src + " to " + *remoteAddress + ":" + *params.Paths[i].Dst + " ...")
-				err := scpClient.CopyDirToRemote(*params.Paths[i].Src, *params.Paths[i].Dst, do)
-				scperr = errors.Join(scperr, err)
+			dir := filepath.Dir(spath)
+			file := filepath.Base(spath)
+
+			if file == "*" {
+				files, err := os.ReadDir(dir)
+				if err != nil {
+					return nil, err
+				}
+
+				for _, ff := range files {
+					srcs = append(srcs, filepath.Join(dir, ff.Name()))
+				}
 			} else {
-				err := scpClient.CopyFileToRemote(*params.Paths[i].Src, *params.Paths[i].Dst, fo)
-				scperr = errors.Join(scperr, err)
+				srcs = append(srcs, spath)
+			}
+
+			for _, src := range srcs {
+				s, err := os.Stat(src)
+				if err != nil {
+					return nil, err
+				}
+				if s.IsDir() {
+					ctx.Logger.LogInfo("Uploading dir " + src + " to " + *remoteAddress + ":" + *params.Paths[i].Dst + " ...")
+					err := scpClient.CopyDirToRemote(src, *params.Paths[i].Dst, do)
+					scperr = errors.Join(scperr, err)
+				} else {
+					ctx.Logger.LogInfo("Uploading " + src + " to " + *remoteAddress + ":" + *params.Paths[i].Dst + " ...")
+					err := scpClient.CopyFileToRemote(src, *params.Paths[i].Dst, fo)
+					scperr = errors.Join(scperr, err)
+				}
 			}
 			ctx.Logger.LogDebug("Done upload")
 		} else {
