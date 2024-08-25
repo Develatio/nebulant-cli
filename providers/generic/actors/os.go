@@ -426,6 +426,12 @@ func WriteFile(ctx *ActionContext) (*base.ActionOutput, error) {
 		return nil, err
 	}
 
+	dir := filepath.Dir(*params.FilePath)
+	err = os.MkdirAll(dir, 0700)
+	if err != nil {
+		return nil, err
+	}
+
 	err = os.WriteFile(*params.FilePath, []byte(scontent), 0600)
 	if err != nil {
 		return nil, err
