@@ -31,7 +31,7 @@ jobs:
         run: chmod a+x dist/*.*.*/nebulant*
 
       - name: Upload binary artifacts
-        uses: actions/upload-artifact@v4.1.7
+        uses: actions/upload-artifact@v4.5.0
         with:
           name: dist
           path: dist/
@@ -83,7 +83,7 @@ jobs:
         run: xcrun notarytool submit ./dist/v${{ steps.version.outputs.version }}/nebulant-darwin-arm64.zip --apple-id ${{ secrets.APPLE_ID_APPLICATION_USERNAME }} --team-id ${{ secrets.APPLE_TEAM_ID }} --password ${{ secrets.APPLE_ID_APPLICATION_PASSWORD }} --verbose --wait
 
       - name: Upload binary artifacts (darwin signed)
-        uses: actions/upload-artifact@v4.1.7
+        uses: actions/upload-artifact@v4.5.0
         with:
           name: dist
           path: dist/
