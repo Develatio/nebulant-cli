@@ -22,17 +22,17 @@ require (
 	github.com/charmbracelet/huh v0.5.2
 	github.com/charmbracelet/lipgloss v0.12.1
 	github.com/creack/pty v1.1.21
-	github.com/develatio/scp v0.0.2
 	github.com/develatio/nsterm v0.0.0-20240813115659-c9edf7c77444
+	github.com/develatio/scp v0.0.2
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
-	golang.org/x/crypto v0.25.0
+	golang.org/x/crypto v0.31.0
 	golang.org/x/mod v0.19.0
-	golang.org/x/term v0.22.0
+	golang.org/x/term v0.27.0
 )
 
 require (
@@ -81,7 +81,7 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 )
 
@@ -95,6 +95,6 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/schollz/progressbar/v3 v3.14.5
 	golang.org/x/net v0.27.0
-	golang.org/x/sys v0.22.0
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/sys v0.28.0
+	golang.org/x/text v0.21.0 // indirect
 )
