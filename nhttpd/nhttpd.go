@@ -36,7 +36,14 @@ import (
 	"github.com/develatio/nebulant-cli/config"
 )
 
-var server = &Httpd{urls: make(map[*regexp.Regexp]ViewFunc), validOrigins: make(map[string]bool)}
+var server = &Httpd{
+	urls: make(map[*regexp.Regexp]ViewFunc),
+	validOrigins: map[string]bool{
+		// The localhost server should always be allowed since this is how Safari
+		// will connect (using the TransparentProxy)
+		"http://" + net.JoinHostPort(config.SERVER_ADDR, config.SERVER_PORT): true,
+	},
+}
 
 func GetServer() *Httpd {
 	addr := net.JoinHostPort(config.SERVER_ADDR, config.SERVER_PORT)
@@ -90,10 +97,6 @@ func (h *Httpd) ValidateOrigin(r *http.Request) bool {
 		return false
 	}
 
-	// allow http scheme so safari can connect <https> builder -> <http> localhost
-	if url.Scheme == "http" {
-		url.Scheme = "https"
-	}
 	burl, err := url.MarshalBinary()
 	if err != nil {
 		return false
