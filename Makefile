@@ -3,7 +3,7 @@
 
 VERSION = 0
 PATCHLEVEL = 5
-SUBLEVEL = 1
+SUBLEVEL = 2
 EXTRAVERSION = -beta
 # EXTRAVERSION := -beta-git-$(shell git log -1 --format=%h)
 NAME =
