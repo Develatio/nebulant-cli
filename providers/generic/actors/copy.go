@@ -260,6 +260,7 @@ func ScpCopy(ctx *ActionContext) (*base.ActionOutput, error) {
 			file := filepath.Base(spath)
 
 			if file == "*" {
+				srcs = append(srcs, dir) // self dir without wildcard
 				files, err := os.ReadDir(dir)
 				if err != nil {
 					return nil, err
