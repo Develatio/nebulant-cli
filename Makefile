@@ -102,11 +102,11 @@ builddebug:
 
 .PHONY: buildlocal
 buildlocal:
-	go build -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" -trimpath -o dist/nebulant-dev-NOPROD nebulant.go
+	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS) $(LOCALLDFLAGS)" -trimpath -o dist/nebulant-dev-NOPROD nebulant.go
 
 .PHONY: builddev
 builddev:
-	go build -ldflags "$(LDFLAGS) $(DEVLDFLAGS)" -trimpath -o dist/nebulant-dev-NOPROD nebulant.go
+	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS) $(DEVLDFLAGS)" -trimpath -o dist/nebulant-dev-NOPROD nebulant.go
 
 .PHONY: build_platform
 build_platform:
